@@ -91,6 +91,31 @@ export type ReturnRecord = {
   createdAt: string;
 };
 
+export type ReturnOrderRow = {
+  orderId: number;
+  orderNo: string;
+  storeName?: string | null;
+  supplierName?: string | null;
+  operator?: string | null;
+  productSeries?: string | null;
+  productSku?: string | null;
+  productName?: string | null;
+  model?: string | null;
+  customerName: string;
+  customerPhone?: string | null;
+  address: string;
+  orderStatus: string;
+  returnId?: number | null;
+  returnStatus?: string | null;
+  action?: string | null;
+  shipmentTrackingNo?: string | null;
+  returnTrackingNo?: string | null;
+  reason?: string | null;
+  note?: string | null;
+  attachments: string[];
+  returnCreatedAt?: string | null;
+};
+
 export type PageOption = {
   key:
     | "dashboard"

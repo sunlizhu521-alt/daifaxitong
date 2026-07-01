@@ -91,6 +91,9 @@ test("auth, supplier, product, order and shipment flow", async () => {
   assert.equal(detail.body.shipments[0].trackingNo, "SF123");
   const shippingExport = await agent.get("/api/orders/shipping-export?status=filled").expect(200);
   assert.match(shippingExport.headers["content-type"], /spreadsheetml\.sheet/);
+  const returnOrdersBeforeReturn = await agent.get("/api/returns/orders?keyword=DF001").expect(200);
+  assert.equal(returnOrdersBeforeReturn.body[0].orderNo, "DF001");
+  assert.equal(returnOrdersBeforeReturn.body[0].returnId, null);
   const returnRecord = await agent
     .post("/api/returns")
     .field("storeName", "测试店铺")
@@ -108,6 +111,9 @@ test("auth, supplier, product, order and shipment flow", async () => {
   assert.equal(returnRecord.body.trackingNo, "SF123");
   const returnsByStatus = await agent.get("/api/returns?keyword=filled").expect(200);
   assert.equal(returnsByStatus.body[0].orderNo, "DF001");
+  const returnOrders = await agent.get("/api/returns/orders?keyword=filled").expect(200);
+  assert.equal(returnOrders.body[0].orderNo, "DF001");
+  assert.equal(returnOrders.body[0].returnId, returnRecord.body.id);
   await agent
     .post("/api/returns")
     .field("storeName", "测试店铺")

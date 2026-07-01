@@ -126,6 +126,86 @@ returnsRouter.get("/", (req, res) => {
   res.json(rows.map(rowToReturn));
 });
 
+returnsRouter.get("/orders", (req, res) => {
+  const keyword = String(req.query.keyword ?? "").trim();
+  const storeName = String(req.query.storeName ?? "").trim();
+  const supplierId = String(req.query.supplierId ?? "").trim();
+  const series = String(req.query.series ?? "").trim();
+  const sku = String(req.query.sku ?? "").trim();
+  const filters: string[] = [];
+  const params: unknown[] = [];
+  if (keyword) {
+    filters.push(
+      "(o.storeName LIKE ? OR o.orderNo LIKE ? OR o.customerName LIKE ? OR o.customerPhone LIKE ? OR o.address LIKE ? OR o.status LIKE ? OR latestReturn.action LIKE ? OR latestReturn.reason LIKE ? OR latestReturn.note LIKE ? OR latestReturn.trackingNo LIKE ? OR oi.productName LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ? OR s.name LIKE ? OR s.shortName LIKE ?)"
+    );
+    params.push(
+      `%${keyword}%`,
+      `%${keyword}%`,
+      `%${keyword}%`,
+      `%${keyword}%`,
+      `%${keyword}%`,
+      `%${keyword}%`,
+      `%${keyword}%`,
+      `%${keyword}%`,
+      `%${keyword}%`,
+      `%${keyword}%`,
+      `%${keyword}%`,
+      `%${keyword}%`,
+      `%${keyword}%`,
+      `%${keyword}%`,
+      `%${keyword}%`
+    );
+  }
+  if (storeName) {
+    filters.push("o.storeName = ?");
+    params.push(storeName);
+  }
+  if (supplierId) {
+    filters.push("COALESCE(sh.supplierId, o.supplierId) = ?");
+    params.push(Number(supplierId));
+  }
+  if (series) {
+    filters.push("p.series = ?");
+    params.push(series);
+  }
+  if (sku) {
+    filters.push("oi.productSku = ?");
+    params.push(sku);
+  }
+  const rows = getDb()
+    .prepare(
+      `SELECT o.id AS orderId, o.orderNo, o.storeName, o.customerName, o.customerPhone, o.address, o.status AS orderStatus,
+        COALESCE(s.shortName, s.name) AS supplierName,
+        GROUP_CONCAT(DISTINCT p.series) AS productSeries,
+        GROUP_CONCAT(DISTINCT oi.productSku) AS productSku,
+        GROUP_CONCAT(DISTINCT oi.productName) AS productName,
+        sh.trackingNo AS shipmentTrackingNo,
+        latestReturn.id AS returnId, latestReturn.operator, latestReturn.model, latestReturn.status AS returnStatus,
+        latestReturn.action, latestReturn.trackingNo AS returnTrackingNo, latestReturn.reason, latestReturn.note,
+        latestReturn.attachmentJson, latestReturn.createdAt AS returnCreatedAt
+       FROM orders o
+       LEFT JOIN shipments sh ON sh.id = (
+         SELECT latestShipment.id FROM shipments latestShipment WHERE latestShipment.orderId = o.id ORDER BY latestShipment.id DESC LIMIT 1
+       )
+       LEFT JOIN returns latestReturn ON latestReturn.id = (
+         SELECT latest.id FROM returns latest WHERE latest.orderNo = o.orderNo ORDER BY latest.id DESC LIMIT 1
+       )
+       LEFT JOIN suppliers s ON s.id = COALESCE(sh.supplierId, o.supplierId)
+       LEFT JOIN order_items oi ON oi.orderId = o.id
+       LEFT JOIN products p ON p.id = oi.productId
+       ${filters.length ? `WHERE ${filters.join(" AND ")}` : ""}
+       GROUP BY o.id
+       ORDER BY o.id DESC`
+    )
+    .all(...params) as Record<string, unknown>[];
+  res.json(
+    rows.map((row) => ({
+      ...row,
+      attachments: JSON.parse(String(row.attachmentJson ?? "[]")) as string[]
+    }))
+  );
+});
+
 returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
   const parsed = returnSchema.safeParse(req.body);
   if (!parsed.success) {
