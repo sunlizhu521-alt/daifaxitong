@@ -10,6 +10,7 @@ import { ProductsPage } from "./pages/ProductsPage";
 import { OrdersPage } from "./pages/OrdersPage";
 import { PermissionsPage } from "./pages/PermissionsPage";
 import { TrackingNumbersPage } from "./pages/TrackingNumbersPage";
+import { ShippingSchedulePage } from "./pages/ShippingSchedulePage";
 import { ReturnRegistrationPage } from "./pages/ReturnRegistrationPage";
 import { StoreLibraryPage } from "./pages/StoreLibraryPage";
 import "./styles.css";
@@ -25,6 +26,7 @@ const router = createBrowserRouter([
       { index: true, element: <DashboardPage /> },
       { path: "drop-shipping", element: <OrdersPage /> },
       { path: "tracking-numbers", element: <TrackingNumbersPage /> },
+      { path: "shipping-schedule", element: <ShippingSchedulePage /> },
       { path: "returns", element: <ReturnRegistrationPage /> },
       { path: "suppliers", element: <SuppliersPage /> },
       { path: "products", element: <ProductsPage /> },

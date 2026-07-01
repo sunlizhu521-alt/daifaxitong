@@ -1,4 +1,6 @@
 import { FormEvent, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { api, type User } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
 type StoreRecord = {
@@ -11,6 +13,8 @@ type StoreRecord = {
 
 export function StoreLibraryPage() {
   const [stores, setStores] = useState<StoreRecord[]>([]);
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
+  const isAdmin = me?.user?.role === "管理员" || me?.user?.username === "孙立柱";
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,6 +53,7 @@ export function StoreLibraryPage() {
                 <th>平台</th>
                 <th>负责人</th>
                 <th>备注</th>
+                {isAdmin ? <th>操作</th> : null}
               </tr>
             </thead>
             <tbody>
@@ -58,6 +63,11 @@ export function StoreLibraryPage() {
                   <td>{store.platform}</td>
                   <td>{store.owner}</td>
                   <td>{store.note}</td>
+                  {isAdmin ? (
+                    <td className="row-actions">
+                      <button onClick={() => setStores((current) => current.filter((item) => item.id !== store.id))}>删除</button>
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>

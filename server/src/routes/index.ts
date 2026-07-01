@@ -12,5 +12,5 @@ apiRouter.use("/auth", authRouter);
 apiRouter.use(requireAuth);
 apiRouter.use("/dashboard", requirePage("dashboard"), dashboardRouter);
 apiRouter.use("/products", requireAnyPage(["productLibrary", "dropShippingRegistration"]), productsRouter);
-apiRouter.use("/suppliers", requireAnyPage(["suppliers", "dropShippingRegistration"]), suppliersRouter);
-apiRouter.use("/orders", requireAnyPage(["dropShippingRegistration", "trackingNumbers"]), ordersRouter);
+apiRouter.use("/suppliers", requireAnyPage(["suppliers", "dropShippingRegistration", "shippingSchedule"]), suppliersRouter);
+apiRouter.use("/orders", requireAnyPage(["dropShippingRegistration", "trackingNumbers", "shippingSchedule"]), ordersRouter);

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { getDb, nowIso } from "../db/index.js";
+import { ROLE_ADMIN } from "../permissions.js";
 
 export const productsRouter = Router();
 
@@ -102,6 +103,10 @@ productsRouter.put("/:id", (req, res) => {
 });
 
 productsRouter.delete("/:id", (req, res) => {
+  if (req.session.user?.role !== ROLE_ADMIN) {
+    res.status(403).json({ message: "只有管理员可以删除记录" });
+    return;
+  }
   const id = Number(req.params.id);
   const db = getDb();
   const used = db.prepare("SELECT COUNT(*) AS count FROM order_items WHERE productId = ?").get(id) as { count: number };

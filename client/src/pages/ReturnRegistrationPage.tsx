@@ -1,4 +1,6 @@
 import { FormEvent, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { api, type User } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
 type ReturnRecord = {
@@ -12,6 +14,8 @@ type ReturnRecord = {
 
 export function ReturnRegistrationPage() {
   const [records, setRecords] = useState<ReturnRecord[]>([]);
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
+  const isAdmin = me?.user?.role === "管理员" || me?.user?.username === "孙立柱";
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -57,6 +61,7 @@ export function ReturnRegistrationPage() {
                 <th>原因</th>
                 <th>状态</th>
                 <th>登记时间</th>
+                {isAdmin ? <th>操作</th> : null}
               </tr>
             </thead>
             <tbody>
@@ -67,6 +72,11 @@ export function ReturnRegistrationPage() {
                   <td>{record.reason}</td>
                   <td>{record.status}</td>
                   <td>{new Date(record.createdAt).toLocaleString()}</td>
+                  {isAdmin ? (
+                    <td className="row-actions">
+                      <button onClick={() => setRecords((current) => current.filter((item) => item.id !== record.id))}>删除</button>
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>

@@ -1,13 +1,15 @@
 import { FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, Product, Supplier } from "../api";
+import { api, Product, Supplier, User } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
 export function ProductsPage() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Product | null>(null);
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
   const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers"], queryFn: () => api<Supplier[]>("/suppliers") });
   const { data = [] } = useQuery({ queryKey: ["products"], queryFn: () => api<Product[]>("/products") });
+  const isAdmin = me?.user?.role === "管理员" || me?.user?.username === "孙立柱";
   const save = useMutation({
     mutationFn: (body: Record<string, FormDataEntryValue>) =>
       api<Product>(editing ? `/products/${editing.id}` : "/products", { method: editing ? "PUT" : "POST", body: JSON.stringify(body) }),
@@ -77,7 +79,7 @@ export function ProductsPage() {
                   <td>{product.status === "active" ? "上架" : "停用"}</td>
                   <td className="row-actions">
                     <button onClick={() => setEditing(product)}>编辑</button>
-                    <button onClick={() => remove.mutate(product.id)}>删除</button>
+                    {isAdmin ? <button onClick={() => remove.mutate(product.id)}>删除</button> : null}
                   </td>
                 </tr>
               ))}

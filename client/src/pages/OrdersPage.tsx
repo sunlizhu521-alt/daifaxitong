@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, downloadFile, OrderListRow, Product, Supplier } from "../api";
+import { api, downloadFile, OrderListRow, Product, Supplier, User } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
 const statusText: Record<string, string> = {
@@ -32,12 +32,14 @@ export function OrdersPage() {
   const [shipOrder, setShipOrder] = useState<OrderListRow | null>(null);
   const [receiverRaw, setReceiverRaw] = useState("");
   const [receiver, setReceiver] = useState({ customerName: "", customerPhone: "", address: "" });
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: () => api<Product[]>("/products") });
   const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers"], queryFn: () => api<Supplier[]>("/suppliers") });
   const { data: orders = [] } = useQuery({
     queryKey: ["orders", keyword, status],
     queryFn: () => api<OrderListRow[]>(`/orders?keyword=${encodeURIComponent(keyword)}&status=${encodeURIComponent(status)}`)
   });
+  const isAdmin = me?.user?.role === "管理员" || me?.user?.username === "孙立柱";
 
   const createOrder = useMutation({
     mutationFn: (body: unknown) => api("/orders", { method: "POST", body: JSON.stringify(body) }),
@@ -59,6 +61,13 @@ export function OrdersPage() {
   const importOrders = useMutation({
     mutationFn: (form: FormData) => api("/orders/import", { method: "POST", body: form }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["orders"] })
+  });
+  const remove = useMutation({
+    mutationFn: (id: number) => api(`/orders/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["summary"] });
+    }
   });
 
   function recognizeReceiver() {
@@ -105,6 +114,11 @@ export function OrdersPage() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     importOrders.mutate(form);
+  }
+
+  function deleteOrder(order: OrderListRow) {
+    if (!window.confirm(`确定删除代发单 ${order.orderNo} 吗？`)) return;
+    remove.mutate(order.id);
   }
 
   return (
@@ -204,11 +218,13 @@ export function OrdersPage() {
                 <td>{new Date(order.createdAt).toLocaleString()}</td>
                 <td className="row-actions">
                   <button onClick={() => setShipOrder(order)}>发货</button>
+                  {isAdmin ? <button onClick={() => deleteOrder(order)}>删除</button> : null}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        {remove.error ? <div className="error">{remove.error.message}</div> : null}
       </Panel>
       {shipOrder ? (
         <div className="modal-backdrop" onClick={() => setShipOrder(null)}>

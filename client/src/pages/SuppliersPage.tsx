@@ -1,12 +1,14 @@
 import { FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, Supplier } from "../api";
+import { api, Supplier, User } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
 export function SuppliersPage() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Supplier | null>(null);
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
   const { data = [] } = useQuery({ queryKey: ["suppliers"], queryFn: () => api<Supplier[]>("/suppliers") });
+  const isAdmin = me?.user?.role === "管理员" || me?.user?.username === "孙立柱";
   const save = useMutation({
     mutationFn: (body: Partial<Supplier>) =>
       api<Supplier>(editing ? `/suppliers/${editing.id}` : "/suppliers", { method: editing ? "PUT" : "POST", body: JSON.stringify(body) }),
@@ -61,7 +63,7 @@ export function SuppliersPage() {
                   <td>{supplier.phone}</td>
                   <td className="row-actions">
                     <button onClick={() => setEditing(supplier)}>编辑</button>
-                    <button onClick={() => remove.mutate(supplier.id)}>删除</button>
+                    {isAdmin ? <button onClick={() => remove.mutate(supplier.id)}>删除</button> : null}
                   </td>
                 </tr>
               ))}

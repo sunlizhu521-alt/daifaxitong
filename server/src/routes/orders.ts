@@ -5,6 +5,7 @@ import XLSX from "xlsx";
 import { z } from "zod";
 import { config } from "../config.js";
 import { getDb, nowIso } from "../db/index.js";
+import { ROLE_ADMIN } from "../permissions.js";
 
 export const ordersRouter = Router();
 const upload = multer({ dest: config.uploadDir });
@@ -120,9 +121,15 @@ ordersRouter.get("/", (req, res) => {
   }
   const rows = getDb()
     .prepare(
-      `SELECT o.*, COUNT(oi.id) AS itemCount, SUM(oi.quantity) AS totalQuantity
+      `SELECT o.*, COUNT(oi.id) AS itemCount, SUM(oi.quantity) AS totalQuantity,
+        latest.carrier AS carrier, latest.trackingNo AS trackingNo, latest.shippedAt AS shippedAt,
+        latest.note AS shipmentNote, s.name AS supplierName
        FROM orders o
        LEFT JOIN order_items oi ON oi.orderId = o.id
+       LEFT JOIN shipments latest ON latest.id = (
+         SELECT sh.id FROM shipments sh WHERE sh.orderId = o.id ORDER BY sh.id DESC LIMIT 1
+       )
+       LEFT JOIN suppliers s ON s.id = latest.supplierId
        ${filters.length ? `WHERE ${filters.join(" AND ")}` : ""}
        GROUP BY o.id
        ORDER BY o.id DESC`
@@ -209,6 +216,10 @@ ordersRouter.put("/:id", (req, res) => {
 });
 
 ordersRouter.delete("/:id", (req, res) => {
+  if (req.session.user?.role !== ROLE_ADMIN) {
+    res.status(403).json({ message: "只有管理员可以删除记录" });
+    return;
+  }
   const result = getDb().prepare("DELETE FROM orders WHERE id = ?").run(Number(req.params.id));
   if (result.changes === 0) {
     res.status(404).json({ message: "订单不存在" });

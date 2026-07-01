@@ -79,6 +79,34 @@ test("registered users must be authorized before accessing pages", async () => {
   await member.get("/api/orders").expect(200);
   await member.get("/api/products").expect(200);
   await member.get("/api/dashboard/summary").expect(403);
+
+  const supplier = await admin.post("/api/suppliers").send({ name: "权限测试供应商" }).expect(201);
+  const product = await admin
+    .post("/api/products")
+    .send({ name: "权限测试商品", sku: "默认规格", supplierId: supplier.body.id, costPrice: 8, salePrice: 16 })
+    .expect(201);
+  const order = await admin
+    .post("/api/orders")
+    .send({
+      orderNo: "AUTH-DELETE-001",
+      customerName: "权限用户",
+      address: "上海市测试路",
+      items: [
+        {
+          productId: product.body.id,
+          productName: product.body.name,
+          productSku: product.body.sku,
+          quantity: 1,
+          unitCost: 8,
+          unitSalePrice: 16
+        }
+      ]
+    })
+    .expect(201);
+
+  await member.delete(`/api/orders/${order.body.id}`).expect(403);
+  await member.delete(`/api/products/${product.body.id}`).expect(403);
+  await admin.delete(`/api/orders/${order.body.id}`).expect(200);
 });
 
 test.after(() => {

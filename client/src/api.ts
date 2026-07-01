@@ -30,6 +30,11 @@ export type OrderListRow = {
   note?: string;
   itemCount: number;
   totalQuantity: number;
+  supplierName?: string | null;
+  carrier?: string | null;
+  trackingNo?: string | null;
+  shippedAt?: string | null;
+  shipmentNote?: string | null;
   createdAt: string;
 };
 
@@ -38,6 +43,7 @@ export type PageOption = {
     | "dashboard"
     | "dropShippingRegistration"
     | "trackingNumbers"
+    | "shippingSchedule"
     | "returnRegistration"
     | "suppliers"
     | "productLibrary"
