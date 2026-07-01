@@ -44,7 +44,7 @@ button { cursor: pointer; }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px; box-shadow: var(--shadow); margin-bottom: 14px; overflow-x: auto; }
 .panel h2 { margin: 0 0 12px; font-size: 16px; }
 .two-column { display: grid; grid-template-columns: minmax(340px, 420px) minmax(360px, 1fr); gap: 14px; align-items: start; }
-.order-entry-layout { grid-template-columns: minmax(520px, 1.35fr) minmax(320px, 1fr); }
+.order-entry-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
 .library-layout { grid-template-columns: minmax(360px, 420px) minmax(520px, 1fr); }
 .catalog-layout > .panel:last-child { grid-column: 1 / -1; }
 .catalog-layout table { table-layout: fixed; min-width: 980px; }

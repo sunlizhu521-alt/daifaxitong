@@ -132,7 +132,7 @@ export function OrdersPage() {
           </>
         }
       />
-      <div className="two-column order-entry-layout">
+      <div className="order-entry-layout">
         <Panel title="新增代发">
           <form className="form-grid order-form" onSubmit={submitOrder}>
             <div className="receiver-action">
