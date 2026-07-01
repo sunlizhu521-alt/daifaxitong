@@ -106,7 +106,7 @@ function saveOrder(data: z.infer<typeof orderSchema>, id?: number) {
 }
 
 ordersRouter.get("/", (req, res) => {
-  const { keyword = "", status = "", supplierId = "", storeName = "", startDate = "", endDate = "" } = req.query;
+  const { keyword = "", status = "", supplierId = "", storeName = "", series = "", sku = "", startDate = "", endDate = "" } = req.query;
   const filters: string[] = [];
   const params: unknown[] = [];
   if (keyword) {
@@ -124,6 +124,14 @@ ordersRouter.get("/", (req, res) => {
   if (storeName) {
     filters.push("o.storeName = ?");
     params.push(storeName);
+  }
+  if (series) {
+    filters.push("p.series = ?");
+    params.push(series);
+  }
+  if (sku) {
+    filters.push("(oi.productSku = ? OR p.sku = ? OR p.ssku = ?)");
+    params.push(sku, sku, sku);
   }
   if (startDate) {
     filters.push("date(o.createdAt) >= date(?)");

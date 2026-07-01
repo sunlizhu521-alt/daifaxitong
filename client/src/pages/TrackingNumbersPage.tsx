@@ -1,7 +1,7 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { api, type Carrier, type OrderListRow } from "../api";
+import { api, type Carrier, type OrderListRow, type Product, type Store, type Supplier } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
 const statusText: Record<string, string> = {
@@ -21,10 +21,22 @@ export function TrackingNumbersPage() {
   const qc = useQueryClient();
   const [searchParams] = useSearchParams();
   const [keyword, setKeyword] = useState(() => searchParams.get("keyword") ?? "");
+  const [storeName, setStoreName] = useState("");
+  const [supplierId, setSupplierId] = useState("");
+  const [series, setSeries] = useState("");
+  const [sku, setSku] = useState("");
   const { data: carriers = [] } = useQuery({ queryKey: ["carriers"], queryFn: () => api<Carrier[]>("/carriers") });
+  const { data: stores = [] } = useQuery({ queryKey: ["stores"], queryFn: () => api<Store[]>("/stores") });
+  const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers"], queryFn: () => api<Supplier[]>("/suppliers") });
+  const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: () => api<Product[]>("/products") });
+  const seriesOptions = useMemo(() => [...new Set(products.map((product) => product.series).filter(Boolean))], [products]);
+  const skuOptions = useMemo(() => [...new Set(products.map((product) => product.ssku ?? product.sku).filter(Boolean))], [products]);
   const { data: orders = [] } = useQuery({
-    queryKey: ["tracking-orders", keyword],
-    queryFn: () => api<OrderListRow[]>(`/orders?keyword=${encodeURIComponent(keyword)}`)
+    queryKey: ["tracking-orders", keyword, storeName, supplierId, series, sku],
+    queryFn: () =>
+      api<OrderListRow[]>(
+        `/orders?keyword=${encodeURIComponent(keyword)}&storeName=${encodeURIComponent(storeName)}&supplierId=${encodeURIComponent(supplierId)}&series=${encodeURIComponent(series)}&sku=${encodeURIComponent(sku)}`
+      )
   });
   const ship = useMutation({
     mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}/ship`, { method: "POST", body: JSON.stringify(body) }),
@@ -59,8 +71,32 @@ export function TrackingNumbersPage() {
     <>
       <PageHeader title="快递单号" description="查询代发订单状态、客户信息和快递流转记录。" />
       <Panel title="快递单号查询">
-        <div className="toolbar">
-          <input placeholder="搜索订单号/客户/商品" value={keyword} onChange={(event) => setKeyword(event.target.value)} />
+        <div className="toolbar filter-toolbar">
+          <select value={storeName} onChange={(event) => setStoreName(event.target.value)}>
+            <option value="">全部店铺</option>
+            {stores.map((store) => (
+              <option value={store.name} key={store.id}>{store.shortName || store.name}</option>
+            ))}
+          </select>
+          <select value={supplierId} onChange={(event) => setSupplierId(event.target.value)}>
+            <option value="">全部供应商</option>
+            {suppliers.map((supplier) => (
+              <option value={supplier.id} key={supplier.id}>{supplier.shortName || supplier.name}</option>
+            ))}
+          </select>
+          <select value={series} onChange={(event) => setSeries(event.target.value)}>
+            <option value="">全部系列</option>
+            {seriesOptions.map((item) => (
+              <option value={item} key={item}>{item}</option>
+            ))}
+          </select>
+          <select value={sku} onChange={(event) => setSku(event.target.value)}>
+            <option value="">全部 SKU</option>
+            {skuOptions.map((item) => (
+              <option value={item} key={item}>{item}</option>
+            ))}
+          </select>
+          <input placeholder="搜索订单号/客户/电话/地址/商品" value={keyword} onChange={(event) => setKeyword(event.target.value)} />
         </div>
         <table>
           <thead>

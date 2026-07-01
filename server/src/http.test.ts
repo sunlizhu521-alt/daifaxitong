@@ -65,6 +65,8 @@ test("auth, supplier, product, order and shipment flow", async () => {
   await agent.patch(`/api/orders/${order.body.id}/purchase-order`).send({ purchaseOrderNo: "CG20260701001" }).expect(200);
   const purchaseRows = await agent.get("/api/orders?keyword=CG20260701001").expect(200);
   assert.equal(purchaseRows.body[0].purchaseOrderNo, "CG20260701001");
+  const filteredRows = await agent.get("/api/orders?series=基础&sku=默认规格").expect(200);
+  assert.equal(filteredRows.body[0].orderNo, "DF001");
 
   await agent
     .post(`/api/orders/${order.body.id}/ship`)
