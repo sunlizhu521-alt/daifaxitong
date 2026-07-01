@@ -159,7 +159,7 @@ test("imports suppliers, products and stores from Excel", async () => {
   assert.ok(suppliers.body.some((supplier: { name: string }) => supplier.name === "导入供应商A"));
 
   const productsFile = writeWorkbook("products.xlsx", [
-    { 物料编码: "IMP-MAT-A", 产品线: "家居", 系列: "基础", sSKU: "红色", 名称: "导入商品A", 供应商型号: "GYS-A", 供应商: "导入供应商A", 备注: "测试" }
+    { 物料编码: "IMP-MAT-A", 产品线: "家居", 系列: "基础", SKU: "红色", 名称: "导入商品A", 供应商型号: "GYS-A", 供应商: "导入供应商A", 备注: "测试" }
   ]);
   await agent.post("/api/products/import").attach("file", productsFile).expect(200);
   const products = await agent.get("/api/products").expect(200);

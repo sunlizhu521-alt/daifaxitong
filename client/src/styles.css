@@ -44,6 +44,10 @@ button { cursor: pointer; }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px; box-shadow: var(--shadow); margin-bottom: 18px; }
 .panel h2 { margin: 0 0 14px; font-size: 17px; }
 .two-column { display: grid; grid-template-columns: 410px 1fr; gap: 18px; align-items: start; }
+.catalog-layout > .panel:last-child { grid-column: 1 / -1; }
+.catalog-layout table { table-layout: fixed; min-width: 980px; }
+.catalog-layout th, .catalog-layout td { text-align: left; white-space: normal; word-break: break-word; overflow-wrap: anywhere; line-height: 1.45; }
+.catalog-layout .row-actions { justify-content: flex-start; flex-wrap: wrap; }
 .dashboard-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 18px; }
 
 .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }

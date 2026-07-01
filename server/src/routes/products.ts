@@ -16,7 +16,7 @@ const productSchema = z.object({
   materialCode: z.string().trim().min(1, "物料编码不能为空"),
   productLine: z.string().optional().default(""),
   series: z.string().optional().default(""),
-  ssku: z.string().trim().min(1, "sSKU不能为空"),
+  ssku: z.string().trim().min(1, "SKU不能为空"),
   name: z.string().trim().min(1, "名称不能为空"),
   supplierModel: z.string().optional().default(""),
   supplierId: optionalId,
@@ -24,11 +24,18 @@ const productSchema = z.object({
 });
 
 function cell(row: Record<string, unknown>, names: string[]) {
+  const normalized = new Map(
+    Object.entries(row).map(([key, value]) => [normalizeHeader(key), value])
+  );
   for (const name of names) {
-    const value = row[name];
+    const value = row[name] ?? normalized.get(normalizeHeader(name));
     if (value !== undefined && value !== null && String(value).trim() !== "") return String(value).trim();
   }
   return "";
+}
+
+function normalizeHeader(value: string) {
+  return value.replace(/^\uFEFF/, "").replace(/[\s/_\-（）()：:]/g, "").toLowerCase();
 }
 
 const baseSelect = `
@@ -77,7 +84,7 @@ productsRouter.post("/", (req, res) => {
       );
     res.status(201).json(db.prepare(`${baseSelect} WHERE p.id = ?`).get(result.lastInsertRowid));
   } catch {
-    res.status(409).json({ message: "商品名称和 sSKU 已存在" });
+    res.status(409).json({ message: "商品名称和 SKU 已存在" });
   }
 });
 
@@ -106,7 +113,7 @@ productsRouter.post("/import", upload.single("file"), (req, res) => {
         materialCode: cell(row, ["物料编码", "materialCode"]),
         productLine: cell(row, ["产品线", "productLine"]),
         series: cell(row, ["系列", "series"]),
-        ssku: cell(row, ["sSKU", "SSKU", "SKU", "sku"]),
+        ssku: cell(row, ["SKU", "sSKU", "SSKU", "sku"]),
         name: cell(row, ["名称", "商品名称", "name"]),
         supplierModel: cell(row, ["供应商型号", "supplierModel"]),
         supplierId: supplier?.id ?? null,
@@ -165,6 +172,10 @@ productsRouter.post("/import", upload.single("file"), (req, res) => {
     });
     tx();
     res.json({ totalRows: rows.length, successRows: rows.length, failedRows: 0 });
+  } catch {
+    if (!res.headersSent) {
+      res.status(400).json({ message: "Excel 解析失败，请确认文件是 .xlsx/.xls 格式且第一行是表头" });
+    }
   } finally {
     fs.unlink(req.file.path, () => undefined);
   }
@@ -204,7 +215,7 @@ productsRouter.put("/:id", (req, res) => {
     }
     res.json(db.prepare(`${baseSelect} WHERE p.id = ?`).get(id));
   } catch {
-    res.status(409).json({ message: "商品名称和 sSKU 已存在" });
+    res.status(409).json({ message: "商品名称和 SKU 已存在" });
   }
 });
 

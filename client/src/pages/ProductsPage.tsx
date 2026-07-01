@@ -41,14 +41,14 @@ export function ProductsPage() {
 
   return (
     <>
-      <PageHeader title="商品库" description="维护物料编码、产品线、系列、sSKU、名称、供应商型号和备注。" />
-      <div className="two-column">
+      <PageHeader title="商品库" description="维护物料编码、产品线、系列、SKU、名称、供应商型号和备注。" />
+      <div className="two-column catalog-layout">
         <Panel title={editing ? "编辑商品" : "新增商品"}>
           <form className="form-grid" onSubmit={submit}>
             <input name="materialCode" placeholder="物料编码" defaultValue={editing?.materialCode} required />
             <input name="productLine" placeholder="产品线" defaultValue={editing?.productLine} />
             <input name="series" placeholder="系列" defaultValue={editing?.series} />
-            <input name="ssku" placeholder="sSKU" defaultValue={editing?.ssku ?? editing?.sku} required />
+            <input name="ssku" placeholder="SKU" defaultValue={editing?.ssku ?? editing?.sku} required />
             <input name="name" placeholder="名称" defaultValue={editing?.name} required />
             <input name="supplierModel" placeholder="供应商型号" defaultValue={editing?.supplierModel} />
             <select name="supplierId" defaultValue={editing?.supplierId ?? ""}>
@@ -69,7 +69,7 @@ export function ProductsPage() {
             <input name="file" type="file" accept=".xlsx,.xls" required />
             <button className="primary-button">批量导入</button>
           </form>
-          <small>支持列：物料编码、产品线、系列、sSKU、名称、供应商型号、供应商、备注。</small>
+          <small>支持列：物料编码、产品线、系列、SKU、名称、供应商型号、供应商、备注。</small>
           {importProducts.error ? <div className="error">{importProducts.error.message}</div> : null}
           {importProducts.isSuccess ? <div className="success">导入成功</div> : null}
         </Panel>
@@ -80,7 +80,7 @@ export function ProductsPage() {
                 <th>物料编码</th>
                 <th>产品线</th>
                 <th>系列</th>
-                <th>sSKU</th>
+                <th>SKU</th>
                 <th>名称</th>
                 <th>供应商型号</th>
                 <th>备注</th>

@@ -105,7 +105,13 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   }
   if (!response.ok) {
     const body = await response.json().catch(() => ({ message: "请求失败" }));
-    throw new Error(body.message ?? "请求失败");
+    const details = Array.isArray(body.errors)
+      ? body.errors
+          .slice(0, 5)
+          .map((item: { row?: number; message?: string }) => `第${item.row ?? "-"}行：${item.message ?? "解析失败"}`)
+          .join("；")
+      : "";
+    throw new Error(details ? `${body.message ?? "请求失败"}：${details}` : body.message ?? "请求失败");
   }
   return response.json();
 }

@@ -20,11 +20,18 @@ const supplierSchema = z.object({
 });
 
 function cell(row: Record<string, unknown>, names: string[]) {
+  const normalized = new Map(
+    Object.entries(row).map(([key, value]) => [normalizeHeader(key), value])
+  );
   for (const name of names) {
-    const value = row[name];
+    const value = row[name] ?? normalized.get(normalizeHeader(name));
     if (value !== undefined && value !== null && String(value).trim() !== "") return String(value).trim();
   }
   return "";
+}
+
+function normalizeHeader(value: string) {
+  return value.replace(/^\uFEFF/, "").replace(/[\s/_\-（）()：:]/g, "").toLowerCase();
 }
 
 suppliersRouter.get("/", (req, res) => {
@@ -126,6 +133,10 @@ suppliersRouter.post("/import", upload.single("file"), (req, res) => {
     });
     tx();
     res.json({ totalRows: rows.length, successRows: rows.length, failedRows: 0 });
+  } catch {
+    if (!res.headersSent) {
+      res.status(400).json({ message: "Excel 解析失败，请确认文件是 .xlsx/.xls 格式且第一行是表头" });
+    }
   } finally {
     fs.unlink(req.file.path, () => undefined);
   }
