@@ -145,6 +145,31 @@ test("registered users must be authorized before accessing pages", async () => {
   await admin.delete(`/api/orders/${order.body.id}`).expect(200);
 });
 
+test("sessions persist and require the same IP", async () => {
+  const app = createApp();
+  const login = await request(app)
+    .post("/api/auth/login")
+    .set("X-Forwarded-For", "10.0.0.1")
+    .send({ username: "admin", password: "secret" })
+    .expect(200);
+  const cookie = login.headers["set-cookie"];
+  assert.ok(cookie);
+
+  const restartedApp = createApp();
+  const me = await request(restartedApp)
+    .get("/api/auth/me")
+    .set("Cookie", cookie)
+    .set("X-Forwarded-For", "10.0.0.1")
+    .expect(200);
+  assert.equal(me.body.user.username, "admin");
+
+  await request(restartedApp)
+    .get("/api/auth/me")
+    .set("Cookie", cookie)
+    .set("X-Forwarded-For", "10.0.0.2")
+    .expect(401);
+});
+
 test("imports suppliers, products and stores from Excel", async () => {
   const app = createApp();
   const agent = request.agent(app);

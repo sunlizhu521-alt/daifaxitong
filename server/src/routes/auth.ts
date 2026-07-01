@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createUser, deleteUser, ensureAdminUser, getUserById, getUserByUsername, listUsers, toPublicUser, updateUserAccess } from "../auth/users.js";
 import { verifyPassword } from "../auth/password.js";
 import { allPageKeys, hasPageAccess, pageOptions, ROLE_ADMIN, type PageKey } from "../permissions.js";
+import { getRequestIp } from "../sessionStore.js";
 
 export const authRouter = Router();
 
@@ -91,6 +92,7 @@ authRouter.post("/login", (req, res) => {
     role: publicUser.role,
     pageAccess: publicUser.pageAccess
   };
+  req.session.loginIp = getRequestIp(req);
   res.json(publicUser);
 });
 

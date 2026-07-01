@@ -12,5 +12,6 @@ export interface SessionUser {
 declare module "express-session" {
   interface SessionData {
     user?: SessionUser;
+    loginIp?: string;
   }
 }
