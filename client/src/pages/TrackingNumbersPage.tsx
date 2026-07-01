@@ -1,6 +1,6 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, type Carrier, type OrderListRow, type Product, type Store, type Supplier } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
@@ -19,6 +19,7 @@ function defaultShipTime(value?: string | null) {
 
 export function TrackingNumbersPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [keyword, setKeyword] = useState(() => searchParams.get("keyword") ?? "");
   const [storeName, setStoreName] = useState("");
@@ -140,6 +141,7 @@ export function TrackingNumbersPage() {
                 </td>
                 <td className="row-actions">
                   <button form={`shipment-${order.id}`} className="primary-button">{order.trackingNo ? "编辑" : "提交"}</button>
+                  <button type="button" onClick={() => navigate(`/returns?keyword=${encodeURIComponent(order.orderNo)}`)}>退货</button>
                 </td>
               </tr>
             ))}
