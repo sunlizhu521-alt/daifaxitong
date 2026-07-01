@@ -5,7 +5,7 @@ set -euo pipefail
 : "${SESSION_SECRET:?SESSION_SECRET is required}"
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DEPLOY_PORT="${DEPLOY_PORT:-4005}"
+DEPLOY_PORT="${DEPLOY_PORT:-4006}"
 ADMIN_USERNAME="${ADMIN_USERNAME:-admin}"
 
 cd "$APP_DIR"

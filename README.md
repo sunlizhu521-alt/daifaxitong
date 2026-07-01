@@ -46,7 +46,7 @@ SESSION_SECRET=change-me
 
 ## 自动部署到服务器
 
-仓库已配置 GitHub Actions：推送到 `main` 或 `master` 后，会先执行测试和构建，再通过 SSH 部署到 `http://129.211.9.242:4005/`。
+仓库已配置 GitHub Actions：推送到 `main` 或 `master` 后，会先执行测试和构建，再通过 SSH 部署到 `http://129.211.9.242:4006/`。
 
 ### GitHub Secrets
 
@@ -83,10 +83,10 @@ npm run build
 pm2 startOrReload ecosystem.config.cjs --env production
 ```
 
-服务端口固定为 `4005`，健康检查地址为：
+服务端口固定为 `4006`，健康检查地址为：
 
 ```text
-http://127.0.0.1:4005/api/health
+http://127.0.0.1:4006/api/health
 ```
 
-如果服务器开启防火墙或安全组，需要放行 TCP `4005` 端口。
+如果服务器开启防火墙或安全组，需要放行 TCP `4006` 端口。

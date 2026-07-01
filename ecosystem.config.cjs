@@ -14,12 +14,12 @@ module.exports = {
       log_date_format: "YYYY-MM-DD HH:mm:ss",
       env: {
         NODE_ENV: "production",
-        PORT: "4005",
+        PORT: "4006",
         DATABASE_PATH: "server/data/daifa.sqlite"
       },
       env_production: {
         NODE_ENV: "production",
-        PORT: "4005",
+        PORT: "4006",
         DATABASE_PATH: "server/data/daifa.sqlite"
       }
     }

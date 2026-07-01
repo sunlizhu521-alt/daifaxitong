@@ -1,4 +1,4 @@
-name: Deploy to 129.211.9.242:4005
+name: Deploy to 129.211.9.242:4006
 
 on:
   push:
@@ -65,7 +65,7 @@ jobs:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           DEPLOY_BRANCH: ${{ github.ref_name }}
           REPO_URL: https://github.com/${{ github.repository }}.git
-          DEPLOY_PORT: "4005"
+          DEPLOY_PORT: "4006"
           ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
