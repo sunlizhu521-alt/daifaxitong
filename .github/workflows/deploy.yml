@@ -88,7 +88,16 @@ jobs:
             fi
 
             cd "$APP_DIR"
-            git fetch origin "$BRANCH"
+            for attempt in 1 2 3 4 5; do
+              if git fetch origin "$BRANCH"; then
+                break
+              fi
+              if [ "$attempt" = "5" ]; then
+                exit 1
+              fi
+              echo "git fetch failed, retrying (${attempt}/5)..."
+              sleep 10
+            done
             git checkout -B "$BRANCH" "origin/$BRANCH"
             git reset --hard "origin/$BRANCH"
             bash scripts/server-deploy.sh
