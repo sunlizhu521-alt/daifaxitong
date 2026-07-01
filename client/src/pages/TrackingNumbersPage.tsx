@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { api, type Carrier, type OrderListRow } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
@@ -18,7 +19,8 @@ function defaultShipTime(value?: string | null) {
 
 export function TrackingNumbersPage() {
   const qc = useQueryClient();
-  const [keyword, setKeyword] = useState("");
+  const [searchParams] = useSearchParams();
+  const [keyword, setKeyword] = useState(() => searchParams.get("keyword") ?? "");
   const { data: carriers = [] } = useQuery({ queryKey: ["carriers"], queryFn: () => api<Carrier[]>("/carriers") });
   const { data: orders = [] } = useQuery({
     queryKey: ["tracking-orders", keyword],

@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { api, type Product, type ReturnRecord, type Store, type Supplier, type User } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
 export function ReturnRegistrationPage() {
   const qc = useQueryClient();
-  const [keyword, setKeyword] = useState("");
+  const [searchParams] = useSearchParams();
+  const [keyword, setKeyword] = useState(() => searchParams.get("keyword") ?? "");
   const [storeName, setStoreName] = useState("");
   const [supplierId, setSupplierId] = useState("");
   const [series, setSeries] = useState("");

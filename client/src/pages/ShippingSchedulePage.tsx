@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { api, type OrderListRow } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
@@ -11,6 +12,7 @@ const statusText: Record<string, string> = {
 };
 
 export function ShippingSchedulePage() {
+  const navigate = useNavigate();
   const [status, setStatus] = useState("");
   const { data: orders = [] } = useQuery({
     queryKey: ["shipping-schedule", status],
@@ -41,6 +43,7 @@ export function ShippingSchedulePage() {
               <th>SKU</th>
               <th>数量</th>
               <th>状态</th>
+              <th>操作</th>
               <th>备注</th>
             </tr>
           </thead>
@@ -57,6 +60,10 @@ export function ShippingSchedulePage() {
                 <td>{order.productSku || "-"}</td>
                 <td>{order.totalQuantity ?? 0}</td>
                 <td><span className={`status ${order.status}`}>{statusText[order.status]}</span></td>
+                <td className="row-actions">
+                  <button type="button" onClick={() => navigate(`/tracking-numbers?keyword=${encodeURIComponent(order.orderNo)}`)}>提交</button>
+                  <button type="button" onClick={() => navigate(`/returns?keyword=${encodeURIComponent(order.orderNo)}`)}>退货</button>
+                </td>
                 <td>{order.note || order.shipmentNote || "-"}</td>
               </tr>
             ))}
