@@ -4,26 +4,49 @@ import { api, downloadFile, OrderListRow, Product, Supplier } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
 const statusText: Record<string, string> = {
-  pending: "待发货",
+  pending: "待代发",
   shipped: "已发货",
   exception: "异常",
   cancelled: "已取消"
 };
+
+function parseReceiverInfo(raw: string) {
+  const text = raw.replace(/\r/g, "\n").replace(/[，,]/g, " ").replace(/\s+/g, " ").trim();
+  const phoneMatch = text.match(/(?:\+?86[-\s]?)?1[3-9]\d{9}/);
+  const phone = phoneMatch?.[0].replace(/\D/g, "").replace(/^86/, "") ?? "";
+  const withoutPhone = phone ? text.replace(phoneMatch?.[0] ?? "", " ").replace(/\s+/g, " ").trim() : text;
+  const addressStart = withoutPhone.search(/(省|市|区|县|镇|乡|街道|路|号|栋|单元|室|小区|村)/);
+  const name = (addressStart > 0 ? withoutPhone.slice(0, addressStart) : withoutPhone.split(" ")[0] ?? "")
+    .replace(/(收件人|收货人|姓名|电话|手机|地址)[:：]/g, "")
+    .trim();
+  const address = (addressStart >= 0 ? withoutPhone.slice(addressStart - 2).trim() : withoutPhone.replace(name, "").trim())
+    .replace(/^(地址|收货地址)[:：]/, "")
+    .trim();
+  return { name, phone, address };
+}
 
 export function OrdersPage() {
   const qc = useQueryClient();
   const [keyword, setKeyword] = useState("");
   const [status, setStatus] = useState("");
   const [shipOrder, setShipOrder] = useState<OrderListRow | null>(null);
+  const [receiverRaw, setReceiverRaw] = useState("");
+  const [receiver, setReceiver] = useState({ customerName: "", customerPhone: "", address: "" });
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: () => api<Product[]>("/products") });
   const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers"], queryFn: () => api<Supplier[]>("/suppliers") });
   const { data: orders = [] } = useQuery({
     queryKey: ["orders", keyword, status],
     queryFn: () => api<OrderListRow[]>(`/orders?keyword=${encodeURIComponent(keyword)}&status=${encodeURIComponent(status)}`)
   });
+
   const createOrder = useMutation({
     mutationFn: (body: unknown) => api("/orders", { method: "POST", body: JSON.stringify(body) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["orders"] })
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["summary"] });
+      setReceiverRaw("");
+      setReceiver({ customerName: "", customerPhone: "", address: "" });
+    }
   });
   const ship = useMutation({
     mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}/ship`, { method: "POST", body: JSON.stringify(body) }),
@@ -37,6 +60,15 @@ export function OrdersPage() {
     mutationFn: (form: FormData) => api("/orders/import", { method: "POST", body: form }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["orders"] })
   });
+
+  function recognizeReceiver() {
+    const parsed = parseReceiverInfo(receiverRaw);
+    setReceiver({
+      customerName: parsed.name,
+      customerPhone: parsed.phone,
+      address: parsed.address
+    });
+  }
 
   function submitOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -78,22 +110,45 @@ export function OrdersPage() {
   return (
     <>
       <PageHeader
-        title="订单发货"
-        description="手工新增订单、Excel 批量导入、记录发货物流并导出订单。"
+        title="登记代发"
+        description="手工登记代发订单、识别收货信息、Excel 批量导入并维护发货物流。"
         actions={
           <>
             <button className="ghost-button" onClick={() => downloadFile("/orders/template")}>下载模板</button>
-            <button className="primary-button" onClick={() => downloadFile("/orders/export")}>导出订单</button>
+            <button className="primary-button" onClick={() => downloadFile("/orders/export")}>导出代发单</button>
           </>
         }
       />
       <div className="two-column">
-        <Panel title="新增订单">
+        <Panel title="新增代发">
           <form className="form-grid" onSubmit={submitOrder}>
-            <input name="orderNo" placeholder="订单号" required />
-            <input name="customerName" placeholder="客户姓名" required />
-            <input name="customerPhone" placeholder="客户电话" />
-            <input name="address" placeholder="收货地址" required />
+            <textarea
+              placeholder="粘贴收货信息，例如：张三 13800000000 上海市浦东新区示例路1号"
+              value={receiverRaw}
+              onChange={(event) => setReceiverRaw(event.target.value)}
+            />
+            <button type="button" className="ghost-button" onClick={recognizeReceiver}>识别姓名/电话/地址</button>
+            <input name="orderNo" placeholder="代发单号/订单号" required />
+            <input
+              name="customerName"
+              placeholder="收货人姓名"
+              value={receiver.customerName}
+              onChange={(event) => setReceiver((current) => ({ ...current, customerName: event.target.value }))}
+              required
+            />
+            <input
+              name="customerPhone"
+              placeholder="收货人电话"
+              value={receiver.customerPhone}
+              onChange={(event) => setReceiver((current) => ({ ...current, customerPhone: event.target.value }))}
+            />
+            <input
+              name="address"
+              placeholder="收货地址"
+              value={receiver.address}
+              onChange={(event) => setReceiver((current) => ({ ...current, address: event.target.value }))}
+              required
+            />
             <select name="productId" required>
               <option value="">选择商品/SKU</option>
               {products.map((product) => (
@@ -105,24 +160,24 @@ export function OrdersPage() {
             <input name="quantity" type="number" min="1" defaultValue="1" placeholder="数量" />
             <textarea name="note" placeholder="备注" />
             {createOrder.error ? <div className="error">{createOrder.error.message}</div> : null}
-            <button className="primary-button">新增订单</button>
+            <button className="primary-button">登记代发</button>
           </form>
         </Panel>
         <Panel title="Excel 导入">
           <form className="upload-box" onSubmit={uploadFile}>
             <input name="file" type="file" accept=".xlsx,.xls" required />
-            <button className="primary-button">导入订单</button>
+            <button className="primary-button">导入代发单</button>
           </form>
           {importOrders.error ? <div className="error">{importOrders.error.message}</div> : null}
           {importOrders.isSuccess ? <div className="success">导入成功</div> : null}
         </Panel>
       </div>
-      <Panel title="订单列表">
+      <Panel title="代发列表">
         <div className="toolbar">
-          <input placeholder="搜索订单号/客户/商品" value={keyword} onChange={(event) => setKeyword(event.target.value)} />
+          <input placeholder="搜索代发单号/客户/商品" value={keyword} onChange={(event) => setKeyword(event.target.value)} />
           <select value={status} onChange={(event) => setStatus(event.target.value)}>
             <option value="">全部状态</option>
-            <option value="pending">待发货</option>
+            <option value="pending">待代发</option>
             <option value="shipped">已发货</option>
             <option value="exception">异常</option>
             <option value="cancelled">已取消</option>
@@ -131,7 +186,7 @@ export function OrdersPage() {
         <table>
           <thead>
             <tr>
-              <th>订单号</th>
+              <th>代发单号</th>
               <th>客户</th>
               <th>数量</th>
               <th>状态</th>
@@ -158,7 +213,7 @@ export function OrdersPage() {
       {shipOrder ? (
         <div className="modal-backdrop" onClick={() => setShipOrder(null)}>
           <form className="modal" onSubmit={submitShipment} onClick={(event) => event.stopPropagation()}>
-            <h2>订单发货：{shipOrder.orderNo}</h2>
+            <h2>代发发货：{shipOrder.orderNo}</h2>
             <select name="supplierId">
               <option value="">选择发货供应商</option>
               {suppliers.map((supplier) => (
@@ -166,7 +221,7 @@ export function OrdersPage() {
               ))}
             </select>
             <input name="carrier" placeholder="快递公司" required />
-            <input name="trackingNo" placeholder="物流单号" required />
+            <input name="trackingNo" placeholder="快递单号" required />
             <input name="shippedAt" type="datetime-local" required />
             <select name="status" defaultValue="shipped">
               <option value="shipped">已发货</option>
