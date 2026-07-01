@@ -65,6 +65,10 @@ textarea { min-height: 76px; resize: vertical; }
 .toolbar { display: flex; gap: 10px; margin-bottom: 14px; }
 .toolbar input { max-width: 280px; }
 .toolbar select { max-width: 160px; }
+.filter-toolbar { flex-wrap: wrap; align-items: center; }
+.filter-toolbar input { max-width: 320px; }
+.inline-shipment-form { min-width: 150px; }
+td input, td select { min-width: 140px; }
 
 .primary-button, .ghost-button, .row-actions button { border-radius: 7px; border: 1px solid transparent; min-height: 36px; padding: 0 13px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-size: 14px; }
 .primary-button { background: var(--accent); color: #fff; }

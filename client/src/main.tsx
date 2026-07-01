@@ -13,6 +13,7 @@ import { TrackingNumbersPage } from "./pages/TrackingNumbersPage";
 import { ShippingSchedulePage } from "./pages/ShippingSchedulePage";
 import { ReturnRegistrationPage } from "./pages/ReturnRegistrationPage";
 import { StoreLibraryPage } from "./pages/StoreLibraryPage";
+import { CarrierLibraryPage } from "./pages/CarrierLibraryPage";
 import "./styles.css";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const router = createBrowserRouter([
       { index: true, element: <DashboardPage /> },
       { path: "drop-shipping", element: <OrdersPage /> },
       { path: "tracking-numbers", element: <TrackingNumbersPage /> },
+      { path: "carriers", element: <CarrierLibraryPage /> },
       { path: "shipping-schedule", element: <ShippingSchedulePage /> },
       { path: "returns", element: <ReturnRegistrationPage /> },
       { path: "suppliers", element: <SuppliersPage /> },

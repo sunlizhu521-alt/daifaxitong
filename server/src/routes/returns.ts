@@ -61,13 +61,21 @@ function latestTrackingNo(orderNo: string) {
 
 returnsRouter.get("/", (req, res) => {
   const keyword = String(req.query.keyword ?? "").trim();
+  const storeName = String(req.query.storeName ?? "").trim();
+  const supplierId = String(req.query.supplierId ?? "").trim();
+  const series = String(req.query.series ?? "").trim();
+  const sku = String(req.query.sku ?? "").trim();
   const filters: string[] = [];
   const params: unknown[] = [];
   if (keyword) {
     filters.push(
-      "(storeName LIKE ? OR operator LIKE ? OR orderNo LIKE ? OR model LIKE ? OR customerName LIKE ? OR customerPhone LIKE ? OR address LIKE ? OR trackingNo LIKE ? OR reason LIKE ? OR note LIKE ?)"
+      "(r.storeName LIKE ? OR r.operator LIKE ? OR r.orderNo LIKE ? OR r.model LIKE ? OR r.customerName LIKE ? OR r.customerPhone LIKE ? OR r.address LIKE ? OR r.trackingNo LIKE ? OR r.reason LIKE ? OR r.note LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ? OR s.name LIKE ? OR s.shortName LIKE ?)"
     );
     params.push(
+      `%${keyword}%`,
+      `%${keyword}%`,
+      `%${keyword}%`,
+      `%${keyword}%`,
       `%${keyword}%`,
       `%${keyword}%`,
       `%${keyword}%`,
@@ -80,8 +88,39 @@ returnsRouter.get("/", (req, res) => {
       `%${keyword}%`
     );
   }
+  if (storeName) {
+    filters.push("r.storeName = ?");
+    params.push(storeName);
+  }
+  if (supplierId) {
+    filters.push("COALESCE(sh.supplierId, o.supplierId) = ?");
+    params.push(Number(supplierId));
+  }
+  if (series) {
+    filters.push("p.series = ?");
+    params.push(series);
+  }
+  if (sku) {
+    filters.push("oi.productSku = ?");
+    params.push(sku);
+  }
   const rows = getDb()
-    .prepare(`SELECT * FROM returns ${filters.length ? `WHERE ${filters.join(" AND ")}` : ""} ORDER BY id DESC`)
+    .prepare(
+      `SELECT r.*, COALESCE(s.shortName, s.name) AS supplierName,
+        GROUP_CONCAT(DISTINCT p.series) AS productSeries,
+        GROUP_CONCAT(DISTINCT oi.productSku) AS productSku
+       FROM returns r
+       LEFT JOIN orders o ON o.orderNo = r.orderNo
+       LEFT JOIN shipments sh ON sh.id = (
+         SELECT latest.id FROM shipments latest WHERE latest.orderId = o.id ORDER BY latest.id DESC LIMIT 1
+       )
+       LEFT JOIN suppliers s ON s.id = COALESCE(sh.supplierId, o.supplierId)
+       LEFT JOIN order_items oi ON oi.orderId = o.id
+       LEFT JOIN products p ON p.id = oi.productId
+       ${filters.length ? `WHERE ${filters.join(" AND ")}` : ""}
+       GROUP BY r.id
+       ORDER BY r.id DESC`
+    )
     .all(...params) as Record<string, unknown>[];
   res.json(rows.map(rowToReturn));
 });

@@ -34,6 +34,13 @@ export type Store = {
   note?: string;
 };
 
+export type Carrier = {
+  id: number;
+  name: string;
+  contact?: string;
+  address?: string;
+};
+
 export type OrderListRow = {
   id: number;
   orderNo: string;
@@ -41,6 +48,7 @@ export type OrderListRow = {
   customerPhone?: string;
   address: string;
   supplierId?: number | null;
+  storeName?: string | null;
   supplierName?: string | null;
   registrationSupplierName?: string | null;
   registrarName?: string | null;
@@ -48,6 +56,9 @@ export type OrderListRow = {
   note?: string;
   itemCount: number;
   totalQuantity: number;
+  productSeries?: string | null;
+  productSku?: string | null;
+  carrierId?: number | null;
   carrier?: string | null;
   trackingNo?: string | null;
   shippedAt?: string | null;
@@ -69,6 +80,9 @@ export type ReturnRecord = {
   trackingNo?: string;
   reason: "七天无理由" | "质量问题";
   note?: string;
+  supplierName?: string | null;
+  productSeries?: string | null;
+  productSku?: string | null;
   attachments: string[];
   createdAt: string;
 };
@@ -78,6 +92,7 @@ export type PageOption = {
     | "dashboard"
     | "dropShippingRegistration"
     | "trackingNumbers"
+    | "carrierLibrary"
     | "shippingSchedule"
     | "returnRegistration"
     | "suppliers"

@@ -23,6 +23,7 @@ const orderItemSchema = z.object({
 const orderSchema = z.object({
   orderNo: z.string().trim().min(1, "订单号不能为空"),
   supplierId: optionalId,
+  storeName: z.string().optional().default(""),
   registrarName: z.string().optional().default(""),
   customerName: z.string().trim().min(1, "客户姓名不能为空"),
   customerPhone: z.string().optional().default(""),
@@ -34,6 +35,7 @@ const orderSchema = z.object({
 
 const shipSchema = z.object({
   supplierId: optionalId,
+  carrierId: optionalId,
   carrier: z.string().trim().min(1, "快递公司不能为空"),
   trackingNo: z.string().trim().min(1, "物流单号不能为空"),
   shippedAt: z.string().trim().min(1, "发货时间不能为空"),
@@ -48,9 +50,10 @@ function readOrder(id: number) {
   const items = db.prepare("SELECT * FROM order_items WHERE orderId = ? ORDER BY id").all(id);
   const shipments = db
     .prepare(
-      `SELECT sh.*, s.name AS supplierName
+      `SELECT sh.*, s.name AS supplierName, c.name AS carrierName
        FROM shipments sh
        LEFT JOIN suppliers s ON s.id = sh.supplierId
+       LEFT JOIN carriers c ON c.id = sh.carrierId
        WHERE sh.orderId = ?
        ORDER BY sh.id DESC`
     )
@@ -65,17 +68,17 @@ function saveOrder(data: z.infer<typeof orderSchema>, id?: number) {
     if (orderId) {
       const result = db
         .prepare(
-          "UPDATE orders SET orderNo = ?, supplierId = ?, registrarName = ?, customerName = ?, customerPhone = ?, address = ?, status = ?, note = ?, updatedAt = ? WHERE id = ?"
+          "UPDATE orders SET orderNo = ?, supplierId = ?, storeName = ?, registrarName = ?, customerName = ?, customerPhone = ?, address = ?, status = ?, note = ?, updatedAt = ? WHERE id = ?"
         )
-        .run(data.orderNo, data.supplierId ?? null, data.registrarName, data.customerName, data.customerPhone, data.address, data.status, data.note, nowIso(), orderId);
+        .run(data.orderNo, data.supplierId ?? null, data.storeName, data.registrarName, data.customerName, data.customerPhone, data.address, data.status, data.note, nowIso(), orderId);
       if (result.changes === 0) throw new Error("NOT_FOUND");
       db.prepare("DELETE FROM order_items WHERE orderId = ?").run(orderId);
     } else {
       const result = db
         .prepare(
-          "INSERT INTO orders (orderNo, supplierId, registrarName, customerName, customerPhone, address, status, note, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          "INSERT INTO orders (orderNo, supplierId, storeName, registrarName, customerName, customerPhone, address, status, note, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
-        .run(data.orderNo, data.supplierId ?? null, data.registrarName, data.customerName, data.customerPhone, data.address, data.status, data.note, nowIso());
+        .run(data.orderNo, data.supplierId ?? null, data.storeName, data.registrarName, data.customerName, data.customerPhone, data.address, data.status, data.note, nowIso());
       orderId = Number(result.lastInsertRowid);
     }
     const insertItem = db.prepare(
@@ -102,8 +105,8 @@ ordersRouter.get("/", (req, res) => {
   const filters: string[] = [];
   const params: unknown[] = [];
   if (keyword) {
-    filters.push("(o.orderNo LIKE ? OR o.customerName LIKE ? OR o.customerPhone LIKE ? OR oi.productName LIKE ?)");
-    params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
+    filters.push("(o.orderNo LIKE ? OR o.storeName LIKE ? OR o.customerName LIKE ? OR o.customerPhone LIKE ? OR o.address LIKE ? OR oi.productName LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ?)");
+    params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
   }
   if (status) {
     filters.push("o.status = ?");
@@ -124,12 +127,15 @@ ordersRouter.get("/", (req, res) => {
   const rows = getDb()
     .prepare(
       `SELECT o.*, COUNT(oi.id) AS itemCount, SUM(oi.quantity) AS totalQuantity,
-        latest.carrier AS carrier, latest.trackingNo AS trackingNo, latest.shippedAt AS shippedAt,
+        GROUP_CONCAT(DISTINCT p.series) AS productSeries,
+        GROUP_CONCAT(DISTINCT oi.productSku) AS productSku,
+        latest.carrierId AS carrierId, latest.carrier AS carrier, latest.trackingNo AS trackingNo, latest.shippedAt AS shippedAt,
         latest.note AS shipmentNote,
         COALESCE(shipSupplier.shortName, shipSupplier.name, orderSupplier.shortName, orderSupplier.name) AS supplierName,
         COALESCE(orderSupplier.shortName, orderSupplier.name) AS registrationSupplierName
        FROM orders o
        LEFT JOIN order_items oi ON oi.orderId = o.id
+       LEFT JOIN products p ON p.id = oi.productId
        LEFT JOIN shipments latest ON latest.id = (
          SELECT sh.id FROM shipments sh WHERE sh.orderId = o.id ORDER BY sh.id DESC LIMIT 1
        )
@@ -147,6 +153,7 @@ ordersRouter.get("/template", (_req, res) => {
   const rows = [
     {
       订单号: "DF20260701001",
+      店铺: "示例店铺",
       供应商: "示例供应商",
       登记人: "admin",
       客户姓名: "张三",
@@ -169,7 +176,7 @@ ordersRouter.get("/template", (_req, res) => {
 ordersRouter.get("/export", (req, res) => {
   const rows = getDb()
     .prepare(
-      `SELECT o.orderNo AS 订单号, COALESCE(orderSupplier.shortName, orderSupplier.name) AS 供应商, o.registrarName AS 登记人,
+      `SELECT o.orderNo AS 订单号, o.storeName AS 店铺, COALESCE(orderSupplier.shortName, orderSupplier.name) AS 供应商, o.registrarName AS 登记人,
         o.customerName AS 客户姓名, o.customerPhone AS 客户电话, o.address AS 收货地址,
         o.status AS 订单状态, oi.productName AS 商品名称, oi.productSku AS SKU规格, oi.quantity AS 数量,
         sh.carrier AS 快递公司, sh.trackingNo AS 物流单号, sh.shippedAt AS 发货时间, o.note AS 备注
@@ -245,14 +252,23 @@ ordersRouter.post("/:id/ship", (req, res) => {
   }
   const db = getDb();
   const id = Number(req.params.id);
-  const order = db.prepare("SELECT id FROM orders WHERE id = ?").get(id);
+  const order = db.prepare("SELECT id, supplierId FROM orders WHERE id = ?").get(id) as { id: number; supplierId?: number | null } | undefined;
   if (!order) {
     res.status(404).json({ message: "订单不存在" });
     return;
   }
+  const carrier = parsed.data.carrierId
+    ? (db.prepare("SELECT name FROM carriers WHERE id = ?").get(parsed.data.carrierId) as { name: string } | undefined)
+    : undefined;
+  if (parsed.data.carrierId && !carrier) {
+    res.status(400).json({ message: "快递公司不存在" });
+    return;
+  }
+  const supplierId = parsed.data.supplierId ?? order.supplierId ?? null;
+  const carrierName = carrier?.name ?? parsed.data.carrier;
   db.prepare(
-    "INSERT INTO shipments (orderId, supplierId, carrier, trackingNo, shippedAt, status, note) VALUES (?, ?, ?, ?, ?, ?, ?)"
-  ).run(id, parsed.data.supplierId ?? null, parsed.data.carrier, parsed.data.trackingNo, parsed.data.shippedAt, parsed.data.status, parsed.data.note);
+    "INSERT INTO shipments (orderId, supplierId, carrierId, carrier, trackingNo, shippedAt, status, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+  ).run(id, supplierId, parsed.data.carrierId ?? null, carrierName, parsed.data.trackingNo, parsed.data.shippedAt, parsed.data.status, parsed.data.note);
   db.prepare("UPDATE orders SET status = ?, updatedAt = ? WHERE id = ?").run(parsed.data.status, nowIso(), id);
   res.json(readOrder(id));
 });
@@ -280,6 +296,7 @@ ordersRouter.post("/import", upload.single("file"), (req, res) => {
     const payload = {
       orderNo: String(row["订单号"] ?? "").trim(),
       supplierId: supplier?.id ?? null,
+      storeName: String(row["店铺"] ?? row["店铺名称"] ?? "").trim(),
       registrarName: String(row["登记人"] ?? req.session.user?.username ?? "").trim(),
       customerName: String(row["客户姓名"] ?? "").trim(),
       customerPhone: String(row["客户电话"] ?? "").trim(),

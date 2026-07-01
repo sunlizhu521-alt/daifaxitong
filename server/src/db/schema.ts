@@ -68,10 +68,20 @@ CREATE TABLE IF NOT EXISTS stores (
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_stores_name_platform ON stores(name, platform);
 
+CREATE TABLE IF NOT EXISTS carriers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  contact TEXT,
+  address TEXT,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS orders (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   orderNo TEXT NOT NULL UNIQUE,
   supplierId INTEGER,
+  storeName TEXT,
   registrarName TEXT,
   customerName TEXT NOT NULL,
   customerPhone TEXT,
@@ -100,6 +110,7 @@ CREATE TABLE IF NOT EXISTS shipments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   orderId INTEGER NOT NULL,
   supplierId INTEGER,
+  carrierId INTEGER,
   carrier TEXT NOT NULL,
   trackingNo TEXT NOT NULL,
   shippedAt TEXT NOT NULL,
@@ -107,7 +118,8 @@ CREATE TABLE IF NOT EXISTS shipments (
   note TEXT,
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (orderId) REFERENCES orders(id) ON DELETE CASCADE,
-  FOREIGN KEY (supplierId) REFERENCES suppliers(id)
+  FOREIGN KEY (supplierId) REFERENCES suppliers(id),
+  FOREIGN KEY (carrierId) REFERENCES carriers(id)
 );
 
 CREATE TABLE IF NOT EXISTS returns (

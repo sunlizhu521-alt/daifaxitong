@@ -31,6 +31,7 @@ test("auth, supplier, product, order and shipment flow", async () => {
   await agent.post("/api/auth/login").send({ username: "admin", password: "secret" }).expect(200);
 
   const supplier = await agent.post("/api/suppliers").send({ name: "上海供应商", shortName: "上海供", contact: "李四", storeAddress: "上海" }).expect(201);
+  const carrier = await agent.post("/api/carriers").send({ name: "顺丰速运", contact: "客服", address: "深圳" }).expect(201);
   const product = await agent
     .post("/api/products")
     .send({ materialCode: "MAT001", productLine: "家居", series: "基础", ssku: "默认规格", name: "示例商品", supplierModel: "GYS-001", supplierId: supplier.body.id })
@@ -41,6 +42,7 @@ test("auth, supplier, product, order and shipment flow", async () => {
     .send({
       orderNo: "DF001",
       supplierId: supplier.body.id,
+      storeName: "测试店铺",
       registrarName: "admin",
       customerName: "张三",
       customerPhone: "13800000000",
@@ -61,13 +63,16 @@ test("auth, supplier, product, order and shipment flow", async () => {
 
   await agent
     .post(`/api/orders/${order.body.id}/ship`)
-    .send({ supplierId: supplier.body.id, carrier: "顺丰", trackingNo: "SF123", shippedAt: "2026-07-01T09:00" })
+    .send({ supplierId: supplier.body.id, carrierId: carrier.body.id, carrier: "顺丰", trackingNo: "SF123", shippedAt: "2026-07-01T09:00" })
     .expect(200);
 
   const detail = await agent.get(`/api/orders/${order.body.id}`).expect(200);
   assert.equal(detail.body.status, "shipped");
   assert.equal(detail.body.supplierId, supplier.body.id);
+  assert.equal(detail.body.storeName, "测试店铺");
   assert.equal(detail.body.registrarName, "admin");
+  assert.equal(detail.body.shipments[0].carrier, "顺丰速运");
+  assert.equal(detail.body.shipments[0].carrierId, carrier.body.id);
   assert.equal(detail.body.shipments[0].trackingNo, "SF123");
   const returnRecord = await agent
     .post("/api/returns")

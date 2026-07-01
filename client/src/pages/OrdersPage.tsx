@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, downloadFile, OrderListRow, Product, Supplier, User } from "../api";
+import { api, downloadFile, OrderListRow, Product, Store, Supplier, User } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
 const statusText: Record<string, string> = {
@@ -29,12 +29,12 @@ export function OrdersPage() {
   const qc = useQueryClient();
   const [keyword, setKeyword] = useState("");
   const [status, setStatus] = useState("");
-  const [shipOrder, setShipOrder] = useState<OrderListRow | null>(null);
   const [receiverRaw, setReceiverRaw] = useState("");
   const [receiver, setReceiver] = useState({ customerName: "", customerPhone: "", address: "" });
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: () => api<Product[]>("/products") });
   const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers"], queryFn: () => api<Supplier[]>("/suppliers") });
+  const { data: stores = [] } = useQuery({ queryKey: ["stores"], queryFn: () => api<Store[]>("/stores") });
   const { data: orders = [] } = useQuery({
     queryKey: ["orders", keyword, status],
     queryFn: () => api<OrderListRow[]>(`/orders?keyword=${encodeURIComponent(keyword)}&status=${encodeURIComponent(status)}`)
@@ -48,14 +48,6 @@ export function OrdersPage() {
       qc.invalidateQueries({ queryKey: ["summary"] });
       setReceiverRaw("");
       setReceiver({ customerName: "", customerPhone: "", address: "" });
-    }
-  });
-  const ship = useMutation({
-    mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}/ship`, { method: "POST", body: JSON.stringify(body) }),
-    onSuccess: () => {
-      setShipOrder(null);
-      qc.invalidateQueries({ queryKey: ["orders"] });
-      qc.invalidateQueries({ queryKey: ["summary"] });
     }
   });
   const importOrders = useMutation({
@@ -87,6 +79,7 @@ export function OrdersPage() {
     createOrder.mutate({
       orderNo: form.get("orderNo"),
       supplierId: form.get("supplierId"),
+      storeName: form.get("storeName"),
       registrarName: form.get("registrarName"),
       customerName: form.get("customerName"),
       customerPhone: form.get("customerPhone"),
@@ -104,12 +97,6 @@ export function OrdersPage() {
       ]
     });
     event.currentTarget.reset();
-  }
-
-  function submitShipment(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!shipOrder) return;
-    ship.mutate({ id: shipOrder.id, body: Object.fromEntries(new FormData(event.currentTarget)) });
   }
 
   function uploadFile(event: FormEvent<HTMLFormElement>) {
@@ -150,6 +137,14 @@ export function OrdersPage() {
               {suppliers.map((supplier) => (
                 <option value={supplier.id} key={supplier.id}>
                   {supplier.shortName || supplier.name}
+                </option>
+              ))}
+            </select>
+            <select name="storeName">
+              <option value="">选择店铺</option>
+              {stores.map((store) => (
+                <option value={store.name} key={store.id}>
+                  {store.shortName || store.name}
                 </option>
               ))}
             </select>
@@ -232,7 +227,6 @@ export function OrdersPage() {
                 <td><span className={`status ${order.status}`}>{statusText[order.status]}</span></td>
                 <td>{new Date(order.createdAt).toLocaleString()}</td>
                 <td className="row-actions">
-                  <button onClick={() => setShipOrder(order)}>发货</button>
                   {isAdmin ? <button onClick={() => deleteOrder(order)}>删除</button> : null}
                 </td>
               </tr>
@@ -241,32 +235,6 @@ export function OrdersPage() {
         </table>
         {remove.error ? <div className="error">{remove.error.message}</div> : null}
       </Panel>
-      {shipOrder ? (
-        <div className="modal-backdrop" onClick={() => setShipOrder(null)}>
-          <form className="modal" onSubmit={submitShipment} onClick={(event) => event.stopPropagation()}>
-            <h2>代发发货：{shipOrder.orderNo}</h2>
-            <select name="supplierId">
-              <option value="">选择发货供应商</option>
-              {suppliers.map((supplier) => (
-                <option value={supplier.id} key={supplier.id}>{supplier.shortName || supplier.name}</option>
-              ))}
-            </select>
-            <input name="carrier" placeholder="快递公司" required />
-            <input name="trackingNo" placeholder="快递单号" required />
-            <input name="shippedAt" type="datetime-local" required />
-            <select name="status" defaultValue="shipped">
-              <option value="shipped">已发货</option>
-              <option value="exception">异常</option>
-            </select>
-            <textarea name="note" placeholder="发货备注" />
-            {ship.error ? <div className="error">{ship.error.message}</div> : null}
-            <div className="modal-actions">
-              <button type="button" className="ghost-button" onClick={() => setShipOrder(null)}>取消</button>
-              <button className="primary-button">保存发货</button>
-            </div>
-          </form>
-        </div>
-      ) : null}
     </>
   );
 }

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type OrderListRow, type User } from "../api";
+import { api, type Carrier, type OrderListRow } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
 const statusText: Record<string, string> = {
@@ -10,27 +10,47 @@ const statusText: Record<string, string> = {
   cancelled: "已取消"
 };
 
+function defaultShipTime(value?: string | null) {
+  const date = value ? new Date(value) : new Date();
+  const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+}
+
 export function TrackingNumbersPage() {
   const qc = useQueryClient();
   const [keyword, setKeyword] = useState("");
-  const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
+  const { data: carriers = [] } = useQuery({ queryKey: ["carriers"], queryFn: () => api<Carrier[]>("/carriers") });
   const { data: orders = [] } = useQuery({
     queryKey: ["tracking-orders", keyword],
     queryFn: () => api<OrderListRow[]>(`/orders?keyword=${encodeURIComponent(keyword)}`)
   });
-  const isAdmin = me?.user?.role === "管理员" || me?.user?.username === "孙立柱";
-  const remove = useMutation({
-    mutationFn: (id: number) => api(`/orders/${id}`, { method: "DELETE" }),
+  const ship = useMutation({
+    mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}/ship`, { method: "POST", body: JSON.stringify(body) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tracking-orders"] });
+      qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["summary"] });
     }
   });
 
-  function deleteOrder(order: OrderListRow) {
-    if (!window.confirm(`确定删除订单 ${order.orderNo} 吗？`)) return;
-    remove.mutate(order.id);
+  function submitShipment(order: OrderListRow, event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const carrierId = Number(form.get("carrierId"));
+    const carrier = carriers.find((item) => item.id === carrierId);
+    ship.mutate({
+      id: order.id,
+      body: {
+        supplierId: order.supplierId ?? "",
+        carrierId: form.get("carrierId"),
+        carrier: carrier?.name ?? "",
+        trackingNo: form.get("trackingNo"),
+        shippedAt: form.get("shippedAt"),
+        status: "shipped",
+        note: order.shipmentNote ?? ""
+      }
+    });
   }
 
   return (
@@ -51,7 +71,7 @@ export function TrackingNumbersPage() {
               <th>数量</th>
               <th>状态</th>
               <th>发货时间</th>
-              {isAdmin ? <th>操作</th> : null}
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -59,24 +79,35 @@ export function TrackingNumbersPage() {
               <tr key={order.id}>
                 <td>{order.orderNo}</td>
                 <td>{order.customerName}</td>
-                <td>{order.carrier ?? "-"}</td>
-                <td>{order.trackingNo ?? "-"}</td>
+                <td>
+                  <form id={`shipment-${order.id}`} className="inline-shipment-form" onSubmit={(event) => submitShipment(order, event)}>
+                    <select name="carrierId" defaultValue={order.carrierId ?? ""} required>
+                      <option value="">选择快递</option>
+                      {carriers.map((carrier) => (
+                        <option value={carrier.id} key={carrier.id}>{carrier.name}</option>
+                      ))}
+                    </select>
+                  </form>
+                </td>
+                <td>
+                  <input form={`shipment-${order.id}`} name="trackingNo" placeholder="快递单号" defaultValue={order.trackingNo ?? ""} required />
+                </td>
                 <td>{order.supplierName ?? "-"}</td>
                 <td>{order.totalQuantity ?? 0}</td>
                 <td>
                   <span className={`status ${order.status}`}>{statusText[order.status]}</span>
                 </td>
-                <td>{order.shippedAt ? new Date(order.shippedAt).toLocaleString() : "-"}</td>
-                {isAdmin ? (
-                  <td className="row-actions">
-                    <button onClick={() => deleteOrder(order)}>删除</button>
-                  </td>
-                ) : null}
+                <td>
+                  <input form={`shipment-${order.id}`} name="shippedAt" type="datetime-local" defaultValue={defaultShipTime(order.shippedAt)} required />
+                </td>
+                <td className="row-actions">
+                  <button form={`shipment-${order.id}`} className="primary-button">{order.trackingNo ? "编辑" : "提交"}</button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
-        {remove.error ? <div className="error">{remove.error.message}</div> : null}
+        {ship.error ? <div className="error">{ship.error.message}</div> : null}
       </Panel>
     </>
   );
