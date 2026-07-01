@@ -6,6 +6,7 @@ import { PageHeader, Panel } from "../ui/Section";
 
 const statusText: Record<string, string> = {
   pending: "待发货",
+  filled: "已填单号",
   shipped: "已发货",
   exception: "异常",
   cancelled: "已取消"
@@ -48,6 +49,15 @@ export function TrackingNumbersPage() {
       qc.invalidateQueries({ queryKey: ["summary"] });
     }
   });
+  const deleteShipment = useMutation({
+    mutationFn: (id: number) => api(`/orders/${id}/shipment`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tracking-orders"] });
+      qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["summary"] });
+    }
+  });
 
   function submitShipment(order: OrderListRow, event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,10 +72,15 @@ export function TrackingNumbersPage() {
         carrier: carrier?.name ?? "",
         trackingNo: form.get("trackingNo"),
         shippedAt: form.get("shippedAt"),
-        status: "shipped",
+        status: "filled",
         note: order.shipmentNote ?? ""
       }
     });
+  }
+
+  function removeShipment(order: OrderListRow) {
+    if (!window.confirm(`确定删除订单 ${order.orderNo} 的快递单号吗？`)) return;
+    deleteShipment.mutate(order.id);
   }
 
   return (
@@ -140,7 +155,8 @@ export function TrackingNumbersPage() {
                   <input form={`shipment-${order.id}`} name="shippedAt" type="datetime-local" defaultValue={defaultShipTime(order.shippedAt)} required />
                 </td>
                 <td className="row-actions">
-                  <button form={`shipment-${order.id}`} className="primary-button">{order.trackingNo ? "编辑" : "提交"}</button>
+                  <button type="submit" form={`shipment-${order.id}`} className="primary-button">提交</button>
+                  <button type="button" onClick={() => removeShipment(order)}>删除</button>
                   <button type="button" onClick={() => navigate(`/returns?keyword=${encodeURIComponent(order.orderNo)}`)}>退货</button>
                 </td>
               </tr>
@@ -148,6 +164,7 @@ export function TrackingNumbersPage() {
           </tbody>
         </table>
         {ship.error ? <div className="error">{ship.error.message}</div> : null}
+        {deleteShipment.error ? <div className="error">{deleteShipment.error.message}</div> : null}
       </Panel>
     </>
   );

@@ -6,6 +6,7 @@ import { PageHeader, Panel } from "../ui/Section";
 
 const statusText: Record<string, string> = {
   pending: "待发货",
+  filled: "已填单号",
   shipped: "已发货",
   exception: "异常",
   cancelled: "已取消"
@@ -27,6 +28,7 @@ export function ShippingSchedulePage() {
           <select value={status} onChange={(event) => setStatus(event.target.value)}>
             <option value="">全部</option>
             <option value="pending">待发货</option>
+            <option value="filled">已填单号</option>
             <option value="shipped">已发货</option>
           </select>
         </div>

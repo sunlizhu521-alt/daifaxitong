@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS shipments (
   carrier TEXT NOT NULL,
   trackingNo TEXT NOT NULL,
   shippedAt TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'shipped',
+  status TEXT NOT NULL DEFAULT 'filled',
   note TEXT,
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (orderId) REFERENCES orders(id) ON DELETE CASCADE,

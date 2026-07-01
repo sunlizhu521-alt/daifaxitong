@@ -74,7 +74,7 @@ test("auth, supplier, product, order and shipment flow", async () => {
     .expect(200);
 
   const detail = await agent.get(`/api/orders/${order.body.id}`).expect(200);
-  assert.equal(detail.body.status, "shipped");
+  assert.equal(detail.body.status, "filled");
   assert.equal(detail.body.supplierId, supplier.body.id);
   assert.equal(detail.body.storeName, "测试店铺");
   assert.equal(detail.body.registrarName, "admin");
@@ -107,6 +107,10 @@ test("auth, supplier, product, order and shipment flow", async () => {
     .field("action", "寄回")
     .field("reason", "质量问题")
     .expect(400);
+  await agent.delete(`/api/orders/${order.body.id}/shipment`).expect(200);
+  const afterDeleteShipment = await agent.get(`/api/orders/${order.body.id}`).expect(200);
+  assert.equal(afterDeleteShipment.body.status, "pending");
+  assert.equal(afterDeleteShipment.body.shipments.length, 0);
   await agent.delete(`/api/products/${product.body.id}`).expect(409);
 });
 

@@ -29,7 +29,7 @@ const orderSchema = z.object({
   customerName: z.string().trim().min(1, "客户姓名不能为空"),
   customerPhone: z.string().optional().default(""),
   address: z.string().trim().min(1, "收货地址不能为空"),
-  status: z.enum(["pending", "shipped", "exception", "cancelled"]).default("pending"),
+  status: z.enum(["pending", "filled", "shipped", "exception", "cancelled"]).default("pending"),
   note: z.string().optional().default(""),
   items: z.array(orderItemSchema).min(1, "至少需要一个商品明细")
 });
@@ -40,7 +40,7 @@ const shipSchema = z.object({
   carrier: z.string().trim().min(1, "快递公司不能为空"),
   trackingNo: z.string().trim().min(1, "物流单号不能为空"),
   shippedAt: z.string().trim().min(1, "发货时间不能为空"),
-  status: z.enum(["shipped", "exception"]).default("shipped"),
+  status: z.enum(["filled", "shipped", "exception"]).default("filled"),
   note: z.string().optional().default("")
 });
 
@@ -306,6 +306,30 @@ ordersRouter.post("/:id/ship", (req, res) => {
     "INSERT INTO shipments (orderId, supplierId, carrierId, carrier, trackingNo, shippedAt, status, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
   ).run(id, supplierId, parsed.data.carrierId ?? null, carrierName, parsed.data.trackingNo, parsed.data.shippedAt, parsed.data.status, parsed.data.note);
   db.prepare("UPDATE orders SET status = ?, updatedAt = ? WHERE id = ?").run(parsed.data.status, nowIso(), id);
+  res.json(readOrder(id));
+});
+
+ordersRouter.delete("/:id/shipment", (req, res) => {
+  const db = getDb();
+  const id = Number(req.params.id);
+  const order = db.prepare("SELECT id FROM orders WHERE id = ?").get(id);
+  if (!order) {
+    res.status(404).json({ message: "订单不存在" });
+    return;
+  }
+  const latest = db.prepare("SELECT id FROM shipments WHERE orderId = ? ORDER BY id DESC LIMIT 1").get(id) as { id: number } | undefined;
+  if (!latest) {
+    res.status(404).json({ message: "没有可删除的快递单号" });
+    return;
+  }
+  const tx = db.transaction(() => {
+    db.prepare("DELETE FROM shipments WHERE id = ?").run(latest.id);
+    const remaining = db
+      .prepare("SELECT status FROM shipments WHERE orderId = ? ORDER BY id DESC LIMIT 1")
+      .get(id) as { status: string } | undefined;
+    db.prepare("UPDATE orders SET status = ?, updatedAt = ? WHERE id = ?").run(remaining?.status ?? "pending", nowIso(), id);
+  });
+  tx();
   res.json(readOrder(id));
 });
 

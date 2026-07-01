@@ -1,4 +1,4 @@
-export type OrderStatus = "pending" | "shipped" | "exception" | "cancelled";
+export type OrderStatus = "pending" | "filled" | "shipped" | "exception" | "cancelled";
 
 export type ProductStatus = "active" | "inactive";
 
