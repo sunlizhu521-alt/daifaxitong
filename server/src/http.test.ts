@@ -72,12 +72,13 @@ test("registered users must be authorized before accessing pages", async () => {
   const target = users.body.users.find((user: { username: string }) => user.username === "member");
   assert.ok(target);
 
-  await admin.patch(`/api/auth/users/${target.id}/access`).send({ pageAccess: ["orders"] }).expect(200);
+  await admin.patch(`/api/auth/users/${target.id}/access`).send({ pageAccess: ["dropShippingRegistration"] }).expect(200);
   const login = await member.post("/api/auth/login").send({ username: "member", password: "secret123" }).expect(200);
-  assert.deepEqual(login.body.pageAccess, ["orders"]);
+  assert.deepEqual(login.body.pageAccess, ["dropShippingRegistration"]);
 
   await member.get("/api/orders").expect(200);
-  await member.get("/api/products").expect(403);
+  await member.get("/api/products").expect(200);
+  await member.get("/api/dashboard/summary").expect(403);
 });
 
 test.after(() => {

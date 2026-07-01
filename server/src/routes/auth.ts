@@ -43,6 +43,20 @@ export function requirePage(page: PageKey): RequestHandler {
   };
 }
 
+export function requireAnyPage(pages: PageKey[]): RequestHandler {
+  return (req, res, next) => {
+    if (!req.session.user) {
+      res.status(401).json({ message: "请先登录" });
+      return;
+    }
+    if (!pages.some((page) => hasPageAccess(req.session.user, page))) {
+      res.status(403).json({ message: "当前账号没有访问该页面的权限，请联系管理员授权" });
+      return;
+    }
+    next();
+  };
+}
+
 const requireAdmin: RequestHandler = (req, res, next) => {
   if (req.session.user?.role !== ROLE_ADMIN || !hasPageAccess(req.session.user, "permissionManagement")) {
     res.status(403).json({ message: "只有管理员可以管理权限" });

@@ -4,9 +4,12 @@ import { api, type User } from "../api";
 
 const orderedPaths = [
   { key: "dashboard", path: "/" },
-  { key: "orders", path: "/orders" },
-  { key: "products", path: "/products" },
+  { key: "dropShippingRegistration", path: "/drop-shipping" },
+  { key: "trackingNumbers", path: "/tracking-numbers" },
+  { key: "returnRegistration", path: "/returns" },
   { key: "suppliers", path: "/suppliers" },
+  { key: "productLibrary", path: "/products" },
+  { key: "storeLibrary", path: "/stores" },
   { key: "permissionManagement", path: "/permissions" }
 ] as const;
 

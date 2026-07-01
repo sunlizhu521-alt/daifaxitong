@@ -34,7 +34,15 @@ export type OrderListRow = {
 };
 
 export type PageOption = {
-  key: "dashboard" | "orders" | "products" | "suppliers" | "permissionManagement";
+  key:
+    | "dashboard"
+    | "dropShippingRegistration"
+    | "trackingNumbers"
+    | "returnRegistration"
+    | "suppliers"
+    | "productLibrary"
+    | "storeLibrary"
+    | "permissionManagement";
   label: string;
   path: string;
 };

@@ -1,14 +1,17 @@
 import { useEffect } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { BarChart3, Boxes, LogOut, Package, ShieldCheck, Truck } from "lucide-react";
+import { BarChart3, Boxes, ClipboardList, LogOut, Package, RotateCcw, ShieldCheck, Store, Truck } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api, type User } from "../api";
 
 const nav = [
   { key: "dashboard", to: "/", label: "仪表盘", icon: BarChart3 },
-  { key: "orders", to: "/orders", label: "订单发货", icon: Truck },
-  { key: "products", to: "/products", label: "商品/SKU", icon: Package },
+  { key: "dropShippingRegistration", to: "/drop-shipping", label: "登记代发", icon: ClipboardList },
+  { key: "trackingNumbers", to: "/tracking-numbers", label: "快递单号", icon: Truck },
+  { key: "returnRegistration", to: "/returns", label: "退货登记", icon: RotateCcw },
   { key: "suppliers", to: "/suppliers", label: "供应商", icon: Boxes },
+  { key: "productLibrary", to: "/products", label: "商品库", icon: Package },
+  { key: "storeLibrary", to: "/stores", label: "店铺库", icon: Store },
   { key: "permissionManagement", to: "/permissions", label: "权限管理", icon: ShieldCheck }
 ] as const;
 
