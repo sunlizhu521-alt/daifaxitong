@@ -21,11 +21,21 @@ export function SuppliersPage() {
     mutationFn: (id: number) => api(`/suppliers/${id}`, { method: "DELETE" }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["suppliers"] })
   });
+  const importSuppliers = useMutation({
+    mutationFn: (form: FormData) => api("/suppliers/import", { method: "POST", body: form }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["suppliers"] })
+  });
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     save.mutate(Object.fromEntries(form));
+    event.currentTarget.reset();
+  }
+
+  function uploadFile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    importSuppliers.mutate(new FormData(event.currentTarget));
     event.currentTarget.reset();
   }
 
@@ -44,6 +54,15 @@ export function SuppliersPage() {
             {save.error ? <div className="error">{save.error.message}</div> : null}
             <button className="primary-button">{editing ? "保存修改" : "新增供应商"}</button>
           </form>
+        </Panel>
+        <Panel title="批量导入供应商">
+          <form className="upload-box" onSubmit={uploadFile}>
+            <input name="file" type="file" accept=".xlsx,.xls" required />
+            <button className="primary-button">批量导入</button>
+          </form>
+          <small>支持列：供应商名称、联系人、电话、地址、结算方式、备注。</small>
+          {importSuppliers.error ? <div className="error">{importSuppliers.error.message}</div> : null}
+          {importSuppliers.isSuccess ? <div className="success">导入成功</div> : null}
         </Panel>
         <Panel title="供应商列表">
           <table>

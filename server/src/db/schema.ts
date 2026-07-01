@@ -39,6 +39,18 @@ CREATE TABLE IF NOT EXISTS products (
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_products_name_sku ON products(name, sku);
 
+CREATE TABLE IF NOT EXISTS stores (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  platform TEXT NOT NULL,
+  owner TEXT,
+  note TEXT,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_stores_name_platform ON stores(name, platform);
+
 CREATE TABLE IF NOT EXISTS orders (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   orderNo TEXT NOT NULL UNIQUE,

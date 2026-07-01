@@ -22,11 +22,21 @@ export function ProductsPage() {
     mutationFn: (id: number) => api(`/products/${id}`, { method: "DELETE" }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] })
   });
+  const importProducts = useMutation({
+    mutationFn: (form: FormData) => api("/products/import", { method: "POST", body: form }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] })
+  });
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     save.mutate(Object.fromEntries(form));
+    event.currentTarget.reset();
+  }
+
+  function uploadFile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    importProducts.mutate(new FormData(event.currentTarget));
     event.currentTarget.reset();
   }
 
@@ -56,6 +66,15 @@ export function ProductsPage() {
             {save.error ? <div className="error">{save.error.message}</div> : null}
             <button className="primary-button">{editing ? "保存修改" : "新增商品"}</button>
           </form>
+        </Panel>
+        <Panel title="批量导入商品">
+          <form className="upload-box" onSubmit={uploadFile}>
+            <input name="file" type="file" accept=".xlsx,.xls" required />
+            <button className="primary-button">批量导入</button>
+          </form>
+          <small>支持列：商品名称、SKU、成本价、建议售价、供应商、状态、备注。</small>
+          {importProducts.error ? <div className="error">{importProducts.error.message}</div> : null}
+          {importProducts.isSuccess ? <div className="success">导入成功</div> : null}
         </Panel>
         <Panel title="商品列表">
           <table>

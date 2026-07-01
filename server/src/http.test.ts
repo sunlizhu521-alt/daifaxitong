@@ -4,6 +4,7 @@ import request from "supertest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import XLSX from "xlsx";
 
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "daifa-test-"));
 process.env.DATABASE_PATH = path.join(tempDir, "test.sqlite");
@@ -13,6 +14,14 @@ process.env.SESSION_SECRET = "test-secret";
 
 const { createApp } = await import("./http.js");
 const { closeDb } = await import("./db/index.js");
+
+function writeWorkbook(filename: string, rows: Record<string, unknown>[]) {
+  const filePath = path.join(tempDir, filename);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(rows), "Sheet1");
+  XLSX.writeFile(workbook, filePath);
+  return filePath;
+}
 
 test("auth, supplier, product, order and shipment flow", async () => {
   const app = createApp();
@@ -107,6 +116,32 @@ test("registered users must be authorized before accessing pages", async () => {
   await member.delete(`/api/orders/${order.body.id}`).expect(403);
   await member.delete(`/api/products/${product.body.id}`).expect(403);
   await admin.delete(`/api/orders/${order.body.id}`).expect(200);
+});
+
+test("imports suppliers, products and stores from Excel", async () => {
+  const app = createApp();
+  const agent = request.agent(app);
+
+  await agent.post("/api/auth/login").send({ username: "admin", password: "secret" }).expect(200);
+
+  const suppliersFile = writeWorkbook("suppliers.xlsx", [
+    { 供应商名称: "导入供应商A", 联系人: "王五", 电话: "13900000000", 地址: "杭州", 结算方式: "月结", 备注: "测试" }
+  ]);
+  await agent.post("/api/suppliers/import").attach("file", suppliersFile).expect(200);
+  const suppliers = await agent.get("/api/suppliers").expect(200);
+  assert.ok(suppliers.body.some((supplier: { name: string }) => supplier.name === "导入供应商A"));
+
+  const productsFile = writeWorkbook("products.xlsx", [
+    { 商品名称: "导入商品A", SKU: "红色", 成本价: 12, 建议售价: 29, 供应商: "导入供应商A", 状态: "上架", 备注: "测试" }
+  ]);
+  await agent.post("/api/products/import").attach("file", productsFile).expect(200);
+  const products = await agent.get("/api/products").expect(200);
+  assert.ok(products.body.some((product: { name: string; sku: string }) => product.name === "导入商品A" && product.sku === "红色"));
+
+  const storesFile = writeWorkbook("stores.xlsx", [{ 店铺名称: "导入店铺A", 平台: "淘宝", 负责人: "赵六", 备注: "测试" }]);
+  await agent.post("/api/stores/import").attach("file", storesFile).expect(200);
+  const stores = await agent.get("/api/stores").expect(200);
+  assert.ok(stores.body.some((store: { name: string; platform: string }) => store.name === "导入店铺A" && store.platform === "淘宝"));
 });
 
 test.after(() => {

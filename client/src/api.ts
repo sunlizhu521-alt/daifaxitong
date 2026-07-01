@@ -20,6 +20,14 @@ export type Product = {
   note?: string;
 };
 
+export type Store = {
+  id: number;
+  name: string;
+  platform: string;
+  owner?: string;
+  note?: string;
+};
+
 export type OrderListRow = {
   id: number;
   orderNo: string;
