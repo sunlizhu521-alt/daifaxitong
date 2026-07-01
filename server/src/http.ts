@@ -12,6 +12,7 @@ export function createApp() {
   const app = express();
   app.use(cors({ origin: "http://localhost:5173", credentials: true }));
   app.use(express.json({ limit: "2mb" }));
+  app.use("/uploads", express.static(config.uploadDir));
   app.use(
     session({
       name: "daifa.sid",

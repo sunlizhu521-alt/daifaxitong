@@ -9,7 +9,7 @@ const nav = [
   { key: "dropShippingRegistration", to: "/drop-shipping", label: "登记代发", icon: ClipboardList },
   { key: "trackingNumbers", to: "/tracking-numbers", label: "快递单号", icon: Truck },
   { key: "shippingSchedule", to: "/shipping-schedule", label: "发货安排", icon: CalendarClock },
-  { key: "returnRegistration", to: "/returns", label: "退货登记", icon: RotateCcw },
+  { key: "returnRegistration", to: "/returns", label: "退货记录", icon: RotateCcw },
   { key: "suppliers", to: "/suppliers", label: "供应商", icon: Boxes },
   { key: "productLibrary", to: "/products", label: "商品库", icon: Package },
   { key: "storeLibrary", to: "/stores", label: "店铺库", icon: Store },

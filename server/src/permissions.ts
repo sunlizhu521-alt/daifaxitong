@@ -6,7 +6,7 @@ export const pageOptions = [
   { key: "dropShippingRegistration", label: "登记代发", path: "/drop-shipping" },
   { key: "trackingNumbers", label: "快递单号", path: "/tracking-numbers" },
   { key: "shippingSchedule", label: "发货安排", path: "/shipping-schedule" },
-  { key: "returnRegistration", label: "退货登记", path: "/returns" },
+  { key: "returnRegistration", label: "退货记录", path: "/returns" },
   { key: "suppliers", label: "供应商", path: "/suppliers" },
   { key: "productLibrary", label: "商品库", path: "/products" },
   { key: "storeLibrary", label: "店铺库", path: "/stores" },

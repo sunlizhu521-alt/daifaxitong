@@ -46,6 +46,24 @@ export type OrderListRow = {
   createdAt: string;
 };
 
+export type ReturnRecord = {
+  id: number;
+  storeName: string;
+  operator?: string;
+  orderNo: string;
+  model: string;
+  customerName: string;
+  customerPhone?: string;
+  address: string;
+  status: string;
+  action: "拦截" | "召回" | "寄回";
+  trackingNo?: string;
+  reason: "七天无理由" | "质量问题";
+  note?: string;
+  attachments: string[];
+  createdAt: string;
+};
+
 export type PageOption = {
   key:
     | "dashboard"

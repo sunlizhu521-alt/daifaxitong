@@ -65,6 +65,32 @@ test("auth, supplier, product, order and shipment flow", async () => {
   const detail = await agent.get(`/api/orders/${order.body.id}`).expect(200);
   assert.equal(detail.body.status, "shipped");
   assert.equal(detail.body.shipments[0].trackingNo, "SF123");
+  const returnRecord = await agent
+    .post("/api/returns")
+    .field("storeName", "测试店铺")
+    .field("operator", "运营A")
+    .field("orderNo", "DF001")
+    .field("model", "默认规格")
+    .field("customerName", "张三")
+    .field("customerPhone", "13800000000")
+    .field("address", "上海市")
+    .field("status", "待处理")
+    .field("action", "拦截")
+    .field("reason", "七天无理由")
+    .field("note", "测试退货")
+    .expect(201);
+  assert.equal(returnRecord.body.trackingNo, "SF123");
+  await agent
+    .post("/api/returns")
+    .field("storeName", "测试店铺")
+    .field("orderNo", "DF001")
+    .field("model", "默认规格")
+    .field("customerName", "张三")
+    .field("address", "上海市")
+    .field("status", "待处理")
+    .field("action", "寄回")
+    .field("reason", "质量问题")
+    .expect(400);
   await agent.delete(`/api/products/${product.body.id}`).expect(409);
 });
 

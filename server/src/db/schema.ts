@@ -90,6 +90,25 @@ CREATE TABLE IF NOT EXISTS shipments (
   FOREIGN KEY (supplierId) REFERENCES suppliers(id)
 );
 
+CREATE TABLE IF NOT EXISTS returns (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  storeName TEXT NOT NULL,
+  operator TEXT,
+  orderNo TEXT NOT NULL,
+  model TEXT NOT NULL,
+  customerName TEXT NOT NULL,
+  customerPhone TEXT,
+  address TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT '待处理',
+  action TEXT NOT NULL,
+  trackingNo TEXT,
+  reason TEXT NOT NULL,
+  note TEXT,
+  attachmentJson TEXT NOT NULL DEFAULT '[]',
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS import_jobs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   type TEXT NOT NULL,
