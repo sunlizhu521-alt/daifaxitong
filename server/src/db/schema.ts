@@ -71,13 +71,16 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_stores_name_platform ON stores(name, platf
 CREATE TABLE IF NOT EXISTS orders (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   orderNo TEXT NOT NULL UNIQUE,
+  supplierId INTEGER,
+  registrarName TEXT,
   customerName TEXT NOT NULL,
   customerPhone TEXT,
   address TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending',
   note TEXT,
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
-  updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (supplierId) REFERENCES suppliers(id)
 );
 
 CREATE TABLE IF NOT EXISTS order_items (

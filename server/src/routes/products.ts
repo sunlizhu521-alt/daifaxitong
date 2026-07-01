@@ -97,46 +97,38 @@ productsRouter.post("/import", upload.single("file"), (req, res) => {
   try {
     const workbook = XLSX.readFile(req.file.path);
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+    const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+    const rows = rawRows
+      .map((row, index) => ({ row, rowNumber: index + 2 }))
+      .filter(({ row }) => Object.values(row).some((value) => String(value).trim() !== ""));
     const errors: Array<{ row: number; message: string }> = [];
-    const seen = new Set<string>();
-    const parsedRows = rows.map((row, index) => {
-      const supplierName = cell(row, ["供应商", "供应商名称", "supplierName"]);
+    const parsedMap = new Map<string, z.infer<typeof productSchema>>();
+    for (const { row, rowNumber } of rows) {
+      const supplierName = cell(row, ["供应商", "供应商名称", "供应商简称", "supplierName"]);
       const supplier = supplierName
-        ? (db.prepare("SELECT id FROM suppliers WHERE name = ?").get(supplierName) as { id: number } | undefined)
+        ? (db.prepare("SELECT id FROM suppliers WHERE name = ? OR shortName = ?").get(supplierName, supplierName) as { id: number } | undefined)
         : undefined;
-      if (supplierName && !supplier) {
-        errors.push({ row: index + 2, message: `未找到供应商：${supplierName}` });
-        return null;
-      }
+      const sku = cell(row, ["SKU", "sSKU", "SSKU", "sku", "规格", "型号", "商品型号"]);
+      const supplierModel = cell(row, ["供应商型号", "供应商货号", "供方型号", "supplierModel"]);
       const payload = {
-        materialCode: cell(row, ["物料编码", "materialCode"]),
-        productLine: cell(row, ["产品线", "productLine"]),
+        materialCode: cell(row, ["物料编码", "物料编号", "商品编码", "编码", "materialCode"]) || sku || supplierModel,
+        productLine: cell(row, ["产品线", "品线", "productLine"]),
         series: cell(row, ["系列", "series"]),
-        ssku: cell(row, ["SKU", "sSKU", "SSKU", "sku"]),
-        name: cell(row, ["名称", "商品名称", "name"]),
-        supplierModel: cell(row, ["供应商型号", "supplierModel"]),
+        ssku: sku || supplierModel,
+        name: cell(row, ["名称", "商品名称", "产品名称", "品名", "name"]),
+        supplierModel,
         supplierId: supplier?.id ?? null,
         note: cell(row, ["备注", "note"])
       };
       const parsed = productSchema.safeParse(payload);
       if (!parsed.success) {
-        errors.push({ row: index + 2, message: parsed.error.issues[0]?.message ?? "参数错误" });
-        return null;
+        errors.push({ row: rowNumber, message: parsed.error.issues[0]?.message ?? "参数错误" });
+        continue;
       }
       const uniqueKey = `${parsed.data.name}__${parsed.data.ssku}`;
-      if (seen.has(uniqueKey)) {
-        errors.push({ row: index + 2, message: `商品重复：${parsed.data.name}/${parsed.data.ssku}` });
-        return null;
-      }
-      seen.add(uniqueKey);
-      const exists = db.prepare("SELECT id FROM products WHERE name = ? AND sku = ?").get(parsed.data.name, parsed.data.ssku);
-      if (exists) {
-        errors.push({ row: index + 2, message: `商品已存在：${parsed.data.name}/${parsed.data.ssku}` });
-        return null;
-      }
-      return parsed.data;
-    });
+      parsedMap.set(uniqueKey, parsed.data);
+    }
+    const parsedRows = [...parsedMap.values()];
 
     if (!rows.length) errors.push({ row: 1, message: "导入文件没有数据" });
     if (errors.length) {
@@ -149,9 +141,31 @@ productsRouter.post("/import", upload.single("file"), (req, res) => {
        (materialCode, productLine, series, ssku, name, sku, supplierModel, costPrice, salePrice, supplierId, status, note, updatedAt)
        VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?, 'active', ?, ?)`
     );
+    const update = db.prepare(
+      `UPDATE products
+       SET materialCode = ?, productLine = ?, series = ?, ssku = ?, name = ?, sku = ?, supplierModel = ?, supplierId = ?, note = ?, updatedAt = ?
+       WHERE id = ?`
+    );
+    const findByNameSku = db.prepare("SELECT id FROM products WHERE name = ? AND sku = ?");
+    const findByMaterialCode = db.prepare("SELECT id FROM products WHERE materialCode = ?");
     const tx = db.transaction(() => {
       for (const row of parsedRows) {
-        if (row) {
+        const existing = (findByNameSku.get(row.name, row.ssku) || findByMaterialCode.get(row.materialCode)) as { id: number } | undefined;
+        if (existing) {
+          update.run(
+            row.materialCode,
+            row.productLine,
+            row.series,
+            row.ssku,
+            row.name,
+            row.ssku,
+            row.supplierModel,
+            row.supplierId ?? null,
+            row.note,
+            nowIso(),
+            existing.id
+          );
+        } else {
           insert.run(
             row.materialCode,
             row.productLine,
@@ -168,10 +182,10 @@ productsRouter.post("/import", upload.single("file"), (req, res) => {
       }
       db.prepare(
         "INSERT INTO import_jobs (type, filename, totalRows, successRows, failedRows, errorJson) VALUES (?, ?, ?, ?, ?, ?)"
-      ).run("products", req.file!.originalname, rows.length, rows.length, 0, "[]");
+      ).run("products", req.file!.originalname, rows.length, parsedRows.length, 0, "[]");
     });
     tx();
-    res.json({ totalRows: rows.length, successRows: rows.length, failedRows: 0 });
+    res.json({ totalRows: rows.length, successRows: parsedRows.length, failedRows: 0 });
   } catch {
     if (!res.headersSent) {
       res.status(400).json({ message: "Excel 解析失败，请确认文件是 .xlsx/.xls 格式且第一行是表头" });

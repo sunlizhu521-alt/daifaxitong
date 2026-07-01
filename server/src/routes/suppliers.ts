@@ -182,9 +182,10 @@ suppliersRouter.delete("/:id", (req, res) => {
   const id = Number(req.params.id);
   const db = getDb();
   const usedByProducts = db.prepare("SELECT COUNT(*) AS count FROM products WHERE supplierId = ?").get(id) as { count: number };
+  const usedByOrders = db.prepare("SELECT COUNT(*) AS count FROM orders WHERE supplierId = ?").get(id) as { count: number };
   const usedByShipments = db.prepare("SELECT COUNT(*) AS count FROM shipments WHERE supplierId = ?").get(id) as { count: number };
-  if (usedByProducts.count > 0 || usedByShipments.count > 0) {
-    res.status(409).json({ message: "供应商已被商品或发货记录引用，不能删除" });
+  if (usedByProducts.count > 0 || usedByOrders.count > 0 || usedByShipments.count > 0) {
+    res.status(409).json({ message: "供应商已被商品、订单或发货记录引用，不能删除" });
     return;
   }
   const result = db.prepare("DELETE FROM suppliers WHERE id = ?").run(id);

@@ -27,6 +27,8 @@ function migrateDb(database: Database.Database) {
   ensureColumn(database, "products", "supplierModel", "TEXT");
   ensureColumn(database, "stores", "shortName", "TEXT");
   ensureColumn(database, "stores", "operator", "TEXT");
+  ensureColumn(database, "orders", "supplierId", "INTEGER");
+  ensureColumn(database, "orders", "registrarName", "TEXT");
   database.exec(`
     UPDATE suppliers SET storeAddress = COALESCE(storeAddress, address);
     UPDATE products SET ssku = COALESCE(ssku, sku);

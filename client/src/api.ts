@@ -40,11 +40,14 @@ export type OrderListRow = {
   customerName: string;
   customerPhone?: string;
   address: string;
+  supplierId?: number | null;
+  supplierName?: string | null;
+  registrationSupplierName?: string | null;
+  registrarName?: string | null;
   status: "pending" | "shipped" | "exception" | "cancelled";
   note?: string;
   itemCount: number;
   totalQuantity: number;
-  supplierName?: string | null;
   carrier?: string | null;
   trackingNo?: string | null;
   shippedAt?: string | null;

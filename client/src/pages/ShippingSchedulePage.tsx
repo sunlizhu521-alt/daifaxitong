@@ -89,10 +89,10 @@ export function ShippingSchedulePage() {
         <div className="modal-backdrop" onClick={() => setActiveOrder(null)}>
           <form className="modal" onSubmit={submitShipment} onClick={(event) => event.stopPropagation()}>
             <h2>确认已发货：{activeOrder.orderNo}</h2>
-            <select name="supplierId">
+            <select name="supplierId" defaultValue={activeOrder.supplierId ?? ""}>
               <option value="">选择发货供应商</option>
               {suppliers.map((supplier) => (
-                <option value={supplier.id} key={supplier.id}>{supplier.name}</option>
+                <option value={supplier.id} key={supplier.id}>{supplier.shortName || supplier.name}</option>
               ))}
             </select>
             <input name="carrier" placeholder="快递公司" required />

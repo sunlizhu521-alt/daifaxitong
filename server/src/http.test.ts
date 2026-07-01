@@ -40,6 +40,8 @@ test("auth, supplier, product, order and shipment flow", async () => {
     .post("/api/orders")
     .send({
       orderNo: "DF001",
+      supplierId: supplier.body.id,
+      registrarName: "admin",
       customerName: "张三",
       customerPhone: "13800000000",
       address: "上海市",
@@ -64,6 +66,8 @@ test("auth, supplier, product, order and shipment flow", async () => {
 
   const detail = await agent.get(`/api/orders/${order.body.id}`).expect(200);
   assert.equal(detail.body.status, "shipped");
+  assert.equal(detail.body.supplierId, supplier.body.id);
+  assert.equal(detail.body.registrarName, "admin");
   assert.equal(detail.body.shipments[0].trackingNo, "SF123");
   const returnRecord = await agent
     .post("/api/returns")
@@ -189,6 +193,17 @@ test("imports suppliers, products and stores from Excel", async () => {
   await agent.post("/api/products/import").attach("file", productsFile).expect(200);
   const products = await agent.get("/api/products").expect(200);
   assert.ok(products.body.some((product: { name: string; ssku: string }) => product.name === "导入商品A" && product.ssku === "红色"));
+
+  const minimalProductsFile = writeWorkbook("products-minimal.xlsx", [
+    { SKU: "蓝色", 产品名称: "导入商品B", 供应商型号: "GYS-B" },
+    { SKU: "蓝色", 产品名称: "导入商品B", 备注: "重复导入更新" }
+  ]);
+  await agent.post("/api/products/import").attach("file", minimalProductsFile).expect(200);
+  await agent.post("/api/products/import").attach("file", minimalProductsFile).expect(200);
+  const updatedProducts = await agent.get("/api/products").expect(200);
+  const importedProduct = updatedProducts.body.find((product: { name: string; ssku: string }) => product.name === "导入商品B" && product.ssku === "蓝色");
+  assert.equal(importedProduct.materialCode, "蓝色");
+  assert.equal(importedProduct.note, "重复导入更新");
 
   const storesFile = writeWorkbook("stores.xlsx", [{ 店铺名称: "导入店铺A", 店铺简称: "店A", 平台: "淘宝", 运营: "赵六", 备注: "测试" }]);
   await agent.post("/api/stores/import").attach("file", storesFile).expect(200);

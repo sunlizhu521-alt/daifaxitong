@@ -86,6 +86,8 @@ export function OrdersPage() {
     if (!product) return;
     createOrder.mutate({
       orderNo: form.get("orderNo"),
+      supplierId: form.get("supplierId"),
+      registrarName: form.get("registrarName"),
       customerName: form.get("customerName"),
       customerPhone: form.get("customerPhone"),
       address: form.get("address"),
@@ -143,6 +145,15 @@ export function OrdersPage() {
             />
             <button type="button" className="ghost-button" onClick={recognizeReceiver}>识别姓名/电话/地址</button>
             <input name="orderNo" placeholder="代发单号/订单号" required />
+            <select name="supplierId">
+              <option value="">选择供应商</option>
+              {suppliers.map((supplier) => (
+                <option value={supplier.id} key={supplier.id}>
+                  {supplier.shortName || supplier.name}
+                </option>
+              ))}
+            </select>
+            <input key={me?.user?.username ?? "registrar"} name="registrarName" placeholder="登记人姓名" defaultValue={me?.user?.username ?? ""} required />
             <input
               name="customerName"
               placeholder="收货人姓名"
@@ -201,6 +212,8 @@ export function OrdersPage() {
           <thead>
             <tr>
               <th>代发单号</th>
+              <th>供应商</th>
+              <th>登记人</th>
               <th>客户</th>
               <th>数量</th>
               <th>状态</th>
@@ -212,6 +225,8 @@ export function OrdersPage() {
             {orders.map((order) => (
               <tr key={order.id}>
                 <td>{order.orderNo}</td>
+                <td>{order.registrationSupplierName ?? order.supplierName ?? "-"}</td>
+                <td>{order.registrarName || "-"}</td>
                 <td>{order.customerName}</td>
                 <td>{order.totalQuantity ?? 0}</td>
                 <td><span className={`status ${order.status}`}>{statusText[order.status]}</span></td>
@@ -233,7 +248,7 @@ export function OrdersPage() {
             <select name="supplierId">
               <option value="">选择发货供应商</option>
               {suppliers.map((supplier) => (
-                <option value={supplier.id} key={supplier.id}>{supplier.name}</option>
+                <option value={supplier.id} key={supplier.id}>{supplier.shortName || supplier.name}</option>
               ))}
             </select>
             <input name="carrier" placeholder="快递公司" required />
