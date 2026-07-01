@@ -11,6 +11,8 @@ import { OrdersPage } from "./pages/OrdersPage";
 import { PermissionsPage } from "./pages/PermissionsPage";
 import { TrackingNumbersPage } from "./pages/TrackingNumbersPage";
 import { ShippingSchedulePage } from "./pages/ShippingSchedulePage";
+import { PurchaseOrdersPage } from "./pages/PurchaseOrdersPage";
+import { DropshipSummaryPage } from "./pages/DropshipSummaryPage";
 import { ReturnRegistrationPage } from "./pages/ReturnRegistrationPage";
 import { StoreLibraryPage } from "./pages/StoreLibraryPage";
 import { CarrierLibraryPage } from "./pages/CarrierLibraryPage";
@@ -29,6 +31,8 @@ const router = createBrowserRouter([
       { path: "tracking-numbers", element: <TrackingNumbersPage /> },
       { path: "carriers", element: <CarrierLibraryPage /> },
       { path: "shipping-schedule", element: <ShippingSchedulePage /> },
+      { path: "purchase-orders", element: <PurchaseOrdersPage /> },
+      { path: "dropship-summary", element: <DropshipSummaryPage /> },
       { path: "returns", element: <ReturnRegistrationPage /> },
       { path: "suppliers", element: <SuppliersPage /> },
       { path: "products", element: <ProductsPage /> },

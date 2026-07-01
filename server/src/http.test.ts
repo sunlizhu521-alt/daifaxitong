@@ -62,6 +62,10 @@ test("auth, supplier, product, order and shipment flow", async () => {
     .expect(201);
   await agent.post("/api/orders").send(order.body).expect(409);
 
+  await agent.patch(`/api/orders/${order.body.id}/purchase-order`).send({ purchaseOrderNo: "CG20260701001" }).expect(200);
+  const purchaseRows = await agent.get("/api/orders?keyword=CG20260701001").expect(200);
+  assert.equal(purchaseRows.body[0].purchaseOrderNo, "CG20260701001");
+
   await agent
     .post(`/api/orders/${order.body.id}/ship`)
     .send({ supplierId: supplier.body.id, carrierId: carrier.body.id, carrier: "顺丰", trackingNo: "SF123", shippedAt: "2026-07-01T09:00" })

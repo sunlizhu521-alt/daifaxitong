@@ -45,6 +45,7 @@ export type Carrier = {
 export type OrderListRow = {
   id: number;
   orderNo: string;
+  purchaseOrderNo?: string | null;
   customerName: string;
   customerPhone?: string;
   address: string;
@@ -57,6 +58,7 @@ export type OrderListRow = {
   note?: string;
   itemCount: number;
   totalQuantity: number;
+  productName?: string | null;
   productSeries?: string | null;
   productSku?: string | null;
   carrierId?: number | null;
@@ -95,6 +97,8 @@ export type PageOption = {
     | "trackingNumbers"
     | "carrierLibrary"
     | "shippingSchedule"
+    | "purchaseOrders"
+    | "dropshipSummary"
     | "returnRegistration"
     | "suppliers"
     | "productLibrary"

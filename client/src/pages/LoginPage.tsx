@@ -8,6 +8,8 @@ const orderedPaths = [
   { key: "trackingNumbers", path: "/tracking-numbers" },
   { key: "carrierLibrary", path: "/carriers" },
   { key: "shippingSchedule", path: "/shipping-schedule" },
+  { key: "purchaseOrders", path: "/purchase-orders" },
+  { key: "dropshipSummary", path: "/dropship-summary" },
   { key: "returnRegistration", path: "/returns" },
   { key: "suppliers", path: "/suppliers" },
   { key: "productLibrary", path: "/products" },
