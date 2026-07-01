@@ -63,7 +63,14 @@ button { cursor: pointer; }
 
 .form-grid { display: grid; gap: 9px; }
 .order-form { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
-.order-form textarea:first-child, .order-form .error, .order-form .success, .order-form button:last-child { grid-column: 1 / -1; }
+.order-form .error, .order-form .success, .order-form button:last-child { grid-column: 1 / -1; }
+.receiver-action, .receiver-result-grid, .order-meta-grid { grid-column: 1 / -1; display: grid; gap: 9px; }
+.receiver-action { grid-template-columns: minmax(0, 1fr); }
+.receiver-action textarea { min-height: 74px; }
+.receiver-action button { min-height: 42px; }
+.receiver-result-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.receiver-result-grid input[name="address"] { grid-column: 1 / -1; }
+.order-meta-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .order-form textarea[name="note"] { min-height: 58px; }
 input, select, textarea { width: 100%; border: 1px solid #cfd6e2; border-radius: 6px; padding: 8px 10px; background: #fff; color: #17202a; min-height: 36px; }
 textarea { min-height: 68px; resize: vertical; }
@@ -127,6 +134,7 @@ tr:hover td { background: #fafcff; }
   .sidebar { position: static; }
   .nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .two-column, .dashboard-grid, .metric-grid { grid-template-columns: 1fr; }
+  .receiver-action, .receiver-result-grid, .order-meta-grid { grid-template-columns: 1fr; }
   .page-header { flex-direction: column; }
   .main { padding: 16px; }
   table { min-width: 720px; }

@@ -10,16 +10,24 @@ const statusText: Record<string, string> = {
   cancelled: "已取消"
 };
 
+const addressStartPattern =
+  /(北京市|上海市|天津市|重庆市|河北省|山西省|辽宁省|吉林省|黑龙江省|江苏省|浙江省|安徽省|福建省|江西省|山东省|河南省|湖北省|湖南省|广东省|海南省|四川省|贵州省|云南省|陕西省|甘肃省|青海省|台湾省|内蒙古自治区|广西壮族自治区|西藏自治区|宁夏回族自治区|新疆维吾尔自治区|香港特别行政区|澳门特别行政区|[\u4e00-\u9fa5]{2,}(?:市|区|县|镇|乡|街道|路|号|小区|村))/;
+
 function parseReceiverInfo(raw: string) {
   const text = raw.replace(/\r/g, "\n").replace(/[，,]/g, " ").replace(/\s+/g, " ").trim();
   const phoneMatch = text.match(/(?:\+?86[-\s]?)?1[3-9]\d{9}/);
   const phone = phoneMatch?.[0].replace(/\D/g, "").replace(/^86/, "") ?? "";
-  const withoutPhone = phone ? text.replace(phoneMatch?.[0] ?? "", " ").replace(/\s+/g, " ").trim() : text;
-  const addressStart = withoutPhone.search(/(省|市|区|县|镇|乡|街道|路|号|栋|单元|室|小区|村)/);
-  const name = (addressStart > 0 ? withoutPhone.slice(0, addressStart) : withoutPhone.split(" ")[0] ?? "")
-    .replace(/(收件人|收货人|姓名|电话|手机|地址)[:：]/g, "")
+  const withoutPhone = (phone ? text.replace(phoneMatch?.[0] ?? "", " ") : text)
+    .replace(/(收件人|收货人|姓名|电话|手机|地址)[:：]/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
-  const address = (addressStart >= 0 ? withoutPhone.slice(addressStart - 2).trim() : withoutPhone.replace(name, "").trim())
+  const parts = withoutPhone.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return { name: parts[0], phone, address: parts.slice(1).join(" ") };
+  }
+  const addressStart = withoutPhone.search(addressStartPattern);
+  const name = (addressStart > 0 ? withoutPhone.slice(0, addressStart) : withoutPhone).trim();
+  const address = (addressStart >= 0 ? withoutPhone.slice(addressStart).trim() : withoutPhone.replace(name, "").trim())
     .replace(/^(地址|收货地址)[:：]/, "")
     .trim();
   return { name, phone, address };
@@ -125,59 +133,67 @@ export function OrdersPage() {
       <div className="two-column order-entry-layout">
         <Panel title="新增代发">
           <form className="form-grid order-form" onSubmit={submitOrder}>
-            <textarea
-              placeholder="粘贴收货信息，例如：张三 13800000000 上海市浦东新区示例路1号"
-              value={receiverRaw}
-              onChange={(event) => setReceiverRaw(event.target.value)}
-            />
-            <button type="button" className="ghost-button" onClick={recognizeReceiver}>识别姓名/电话/地址</button>
-            <input name="orderNo" placeholder="代发单号/订单号" required />
-            <select name="supplierId">
-              <option value="">选择供应商</option>
-              {suppliers.map((supplier) => (
-                <option value={supplier.id} key={supplier.id}>
-                  {supplier.shortName || supplier.name}
-                </option>
-              ))}
-            </select>
-            <select name="storeName">
-              <option value="">选择店铺</option>
-              {stores.map((store) => (
-                <option value={store.name} key={store.id}>
-                  {store.shortName || store.name}
-                </option>
-              ))}
-            </select>
-            <input key={me?.user?.username ?? "registrar"} name="registrarName" placeholder="登记人姓名" defaultValue={me?.user?.username ?? ""} required />
-            <input
-              name="customerName"
-              placeholder="收货人姓名"
-              value={receiver.customerName}
-              onChange={(event) => setReceiver((current) => ({ ...current, customerName: event.target.value }))}
-              required
-            />
-            <input
-              name="customerPhone"
-              placeholder="收货人电话"
-              value={receiver.customerPhone}
-              onChange={(event) => setReceiver((current) => ({ ...current, customerPhone: event.target.value }))}
-            />
-            <input
-              name="address"
-              placeholder="收货地址"
-              value={receiver.address}
-              onChange={(event) => setReceiver((current) => ({ ...current, address: event.target.value }))}
-              required
-            />
-            <select name="productId" required>
-              <option value="">选择商品/SKU</option>
-              {products.map((product) => (
-                <option value={product.id} key={product.id}>
-                  {product.name} / {product.ssku ?? product.sku}
-                </option>
-              ))}
-            </select>
-            <input name="quantity" type="number" min="1" defaultValue="1" placeholder="数量" />
+            <div className="receiver-action">
+              <textarea
+                placeholder="粘贴收货信息，例如：张三 13800000000 上海市浦东新区示例路1号"
+                value={receiverRaw}
+                onChange={(event) => setReceiverRaw(event.target.value)}
+                required
+              />
+              <button type="button" className="ghost-button" onClick={recognizeReceiver}>识别姓名/电话/地址</button>
+            </div>
+            <div className="receiver-result-grid">
+              <input
+                name="customerName"
+                placeholder="收货人姓名"
+                value={receiver.customerName}
+                onChange={(event) => setReceiver((current) => ({ ...current, customerName: event.target.value }))}
+                required
+              />
+              <input
+                name="customerPhone"
+                placeholder="收货人电话"
+                value={receiver.customerPhone}
+                onChange={(event) => setReceiver((current) => ({ ...current, customerPhone: event.target.value }))}
+                required
+              />
+              <input
+                name="address"
+                placeholder="收货地址"
+                value={receiver.address}
+                onChange={(event) => setReceiver((current) => ({ ...current, address: event.target.value }))}
+                required
+              />
+            </div>
+            <div className="order-meta-grid">
+              <input name="orderNo" placeholder="代发单号/订单号" required />
+              <input key={me?.user?.username ?? "registrar"} name="registrarName" placeholder="登记人姓名" defaultValue={me?.user?.username ?? ""} required />
+              <select name="supplierId" required>
+                <option value="">选择供应商</option>
+                {suppliers.map((supplier) => (
+                  <option value={supplier.id} key={supplier.id}>
+                    {supplier.shortName || supplier.name}
+                  </option>
+                ))}
+              </select>
+              <select name="storeName" required>
+                <option value="">选择店铺</option>
+                {stores.map((store) => (
+                  <option value={store.name} key={store.id}>
+                    {store.shortName || store.name}
+                  </option>
+                ))}
+              </select>
+              <select name="productId" required>
+                <option value="">选择商品/SKU</option>
+                {products.map((product) => (
+                  <option value={product.id} key={product.id}>
+                    {product.name} / {product.ssku ?? product.sku}
+                  </option>
+                ))}
+              </select>
+              <input name="quantity" type="number" min="1" placeholder="数量" required />
+            </div>
             <textarea name="note" placeholder="备注" />
             {createOrder.error ? <div className="error">{createOrder.error.message}</div> : null}
             <button className="primary-button">登记代发</button>
