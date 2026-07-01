@@ -8,7 +8,6 @@ const nav = [
   { key: "dashboard", to: "/", label: "仪表盘", icon: BarChart3 },
   { key: "dropShippingRegistration", to: "/drop-shipping", label: "登记代发", icon: ClipboardList },
   { key: "trackingNumbers", to: "/tracking-numbers", label: "快递单号", icon: Truck },
-  { key: "carrierLibrary", to: "/carriers", label: "快递库", icon: Warehouse },
   { key: "shippingSchedule", to: "/shipping-schedule", label: "发货安排", icon: CalendarClock },
   { key: "purchaseOrders", to: "/purchase-orders", label: "采购订单", icon: ClipboardCheck },
   { key: "dropshipSummary", to: "/dropship-summary", label: "代发汇总", icon: FileText },
@@ -16,6 +15,7 @@ const nav = [
   { key: "suppliers", to: "/suppliers", label: "供应商", icon: Boxes },
   { key: "productLibrary", to: "/products", label: "商品库", icon: Package },
   { key: "storeLibrary", to: "/stores", label: "店铺库", icon: Store },
+  { key: "carrierLibrary", to: "/carriers", label: "快递库", icon: Warehouse },
   { key: "permissionManagement", to: "/permissions", label: "权限管理", icon: ShieldCheck }
 ] as const;
 
