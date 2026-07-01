@@ -122,9 +122,9 @@ export function OrdersPage() {
           </>
         }
       />
-      <div className="two-column">
+      <div className="two-column order-entry-layout">
         <Panel title="新增代发">
-          <form className="form-grid" onSubmit={submitOrder}>
+          <form className="form-grid order-form" onSubmit={submitOrder}>
             <textarea
               placeholder="粘贴收货信息，例如：张三 13800000000 上海市浦东新区示例路1号"
               value={receiverRaw}

@@ -42,7 +42,7 @@ export function ProductsPage() {
   return (
     <>
       <PageHeader title="商品库" description="维护物料编码、产品线、系列、SKU、名称、供应商型号和备注。" />
-      <div className="two-column catalog-layout">
+      <div className="two-column catalog-layout library-layout">
         <Panel title={editing ? "编辑商品" : "新增商品"}>
           <form className="form-grid" onSubmit={submit}>
             <input name="materialCode" placeholder="物料编码" defaultValue={editing?.materialCode} required />

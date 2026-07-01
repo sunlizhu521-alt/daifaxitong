@@ -41,7 +41,7 @@ export function StoreLibraryPage() {
   return (
     <>
       <PageHeader title="店铺库" description="维护店铺名称、店铺简称、平台、运营和备注。" />
-      <div className="two-column catalog-layout">
+      <div className="two-column catalog-layout library-layout">
         <Panel title={editing ? "编辑店铺" : "新增店铺"}>
           <form className="form-grid" onSubmit={submit}>
             <input name="name" placeholder="店铺名称" defaultValue={editing?.name} required />

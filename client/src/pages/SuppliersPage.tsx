@@ -41,7 +41,7 @@ export function SuppliersPage() {
   return (
     <>
       <PageHeader title="供应商" description="维护供应商名称、简称、联系人、电话、店址和备注。" />
-      <div className="two-column catalog-layout">
+      <div className="two-column catalog-layout library-layout">
         <Panel title={editing ? "编辑供应商" : "新增供应商"}>
           <form className="form-grid" onSubmit={submit}>
             <input name="name" placeholder="供应商名称" defaultValue={editing?.name} required />
