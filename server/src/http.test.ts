@@ -178,6 +178,7 @@ test("sessions persist and require the same IP", async () => {
     .set("X-Forwarded-For", "10.0.0.1")
     .expect(200);
   assert.equal(me.body.user.username, "admin");
+  assert.ok(me.body.user.pageAccess.includes("carrierLibrary"));
 
   await request(restartedApp)
     .get("/api/auth/me")

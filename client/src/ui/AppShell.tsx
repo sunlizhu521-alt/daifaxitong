@@ -19,13 +19,19 @@ const nav = [
   { key: "permissionManagement", to: "/permissions", label: "权限管理", icon: ShieldCheck }
 ] as const;
 
+type NavKey = (typeof nav)[number]["key"];
+
 function pathKey(pathname: string) {
   const item = nav.find((entry) => entry.to === pathname);
   return item?.key ?? "dashboard";
 }
 
+function hasNavAccess(user: User, key: NavKey) {
+  return user.role === "管理员" || user.pageAccess.includes(key);
+}
+
 function firstAllowedPath(user: User) {
-  return nav.find((item) => user.pageAccess.includes(item.key))?.to ?? "/";
+  return nav.find((item) => hasNavAccess(user, item.key))?.to ?? "/";
 }
 
 export function AppShell() {
@@ -44,7 +50,7 @@ export function AppShell() {
       return;
     }
     const current = pathKey(location.pathname);
-    if (!user.pageAccess.includes(current)) {
+    if (!hasNavAccess(user, current)) {
       navigate(firstAllowedPath(user), { replace: true });
     }
   }, [isLoading, location.pathname, navigate, user]);
@@ -58,7 +64,7 @@ export function AppShell() {
     return <div className="loading-screen">加载中...</div>;
   }
 
-  const visibleNav = nav.filter((item) => user.pageAccess.includes(item.key));
+  const visibleNav = nav.filter((item) => hasNavAccess(user, item.key));
 
   return (
     <div className="app-shell">

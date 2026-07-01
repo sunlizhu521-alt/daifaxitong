@@ -108,7 +108,24 @@ authRouter.post("/logout", (req, res) => {
 });
 
 authRouter.get("/me", (req, res) => {
-  res.json({ user: req.session.user ?? null });
+  if (!req.session.user) {
+    res.json({ user: null });
+    return;
+  }
+  const dbUser = getUserById(req.session.user.id);
+  if (!dbUser) {
+    delete req.session.user;
+    res.json({ user: null });
+    return;
+  }
+  const publicUser = toPublicUser(dbUser);
+  req.session.user = {
+    id: publicUser.id,
+    username: publicUser.username,
+    role: publicUser.role,
+    pageAccess: publicUser.pageAccess
+  };
+  res.json({ user: publicUser });
 });
 
 authRouter.get("/pages", (_req, res) => {
