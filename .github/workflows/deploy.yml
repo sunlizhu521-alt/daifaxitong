@@ -1,0 +1,94 @@
+name: Deploy to 129.211.9.242:4005
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-daifaxitong
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test and build
+        run: npm run deploy:check
+
+  deploy:
+    name: Deploy server
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Check deployment secrets
+        id: secrets
+        env:
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+        run: |
+          missing=()
+          [ -n "$SERVER_USER" ] || missing+=(SERVER_USER)
+          [ -n "$SERVER_SSH_KEY" ] || missing+=(SERVER_SSH_KEY)
+          [ -n "$ADMIN_PASSWORD" ] || missing+=(ADMIN_PASSWORD)
+          [ -n "$SESSION_SECRET" ] || missing+=(SESSION_SECRET)
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::warning::Missing GitHub Secrets: ${missing[*]}. Deployment skipped."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy over SSH
+        if: steps.secrets.outputs.ready == 'true'
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_BRANCH: ${{ github.ref_name }}
+          REPO_URL: https://github.com/${{ github.repository }}.git
+          DEPLOY_PORT: "4005"
+          ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+        with:
+          host: 129.211.9.242
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_SSH_PORT || 22 }}
+          envs: DEPLOY_PATH,DEPLOY_BRANCH,REPO_URL,DEPLOY_PORT,ADMIN_USERNAME,ADMIN_PASSWORD,SESSION_SECRET
+          script: |
+            set -eu
+
+            APP_DIR="${DEPLOY_PATH:-/www/wwwroot/daifaxitong}"
+            BRANCH="${DEPLOY_BRANCH:-master}"
+            REPO="${REPO_URL:?REPO_URL is required}"
+
+            if [ ! -d "$APP_DIR/.git" ]; then
+              mkdir -p "$APP_DIR"
+              git clone "$REPO" "$APP_DIR"
+            fi
+
+            cd "$APP_DIR"
+            git fetch origin "$BRANCH"
+            git checkout "$BRANCH" || git checkout -B "$BRANCH" "origin/$BRANCH"
+            git pull --ff-only origin "$BRANCH"
+            bash scripts/server-deploy.sh

@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+*.tsbuildinfo
+server/data/
+server/uploads/
+server/logs/
+server/dist/
+client/dist/
+.vite/
+coverage/
