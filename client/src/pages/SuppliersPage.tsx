@@ -28,8 +28,7 @@ export function SuppliersPage() {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    save.mutate(Object.fromEntries(form));
+    save.mutate(Object.fromEntries(new FormData(event.currentTarget)));
     event.currentTarget.reset();
   }
 
@@ -41,15 +40,15 @@ export function SuppliersPage() {
 
   return (
     <>
-      <PageHeader title="供应商" description="维护供货方资料、联系方式、结算方式和备注。" />
+      <PageHeader title="供应商" description="维护供应商名称、简称、联系人、电话、店址和备注。" />
       <div className="two-column">
         <Panel title={editing ? "编辑供应商" : "新增供应商"}>
           <form className="form-grid" onSubmit={submit}>
             <input name="name" placeholder="供应商名称" defaultValue={editing?.name} required />
+            <input name="shortName" placeholder="供应商简称" defaultValue={editing?.shortName} />
             <input name="contact" placeholder="联系人" defaultValue={editing?.contact} />
             <input name="phone" placeholder="电话" defaultValue={editing?.phone} />
-            <input name="settlementType" placeholder="结算方式" defaultValue={editing?.settlementType} />
-            <input name="address" placeholder="地址" defaultValue={editing?.address} />
+            <input name="storeAddress" placeholder="店址" defaultValue={editing?.storeAddress} />
             <textarea name="note" placeholder="备注" defaultValue={editing?.note} />
             {save.error ? <div className="error">{save.error.message}</div> : null}
             <button className="primary-button">{editing ? "保存修改" : "新增供应商"}</button>
@@ -60,7 +59,7 @@ export function SuppliersPage() {
             <input name="file" type="file" accept=".xlsx,.xls" required />
             <button className="primary-button">批量导入</button>
           </form>
-          <small>支持列：供应商名称、联系人、电话、地址、结算方式、备注。</small>
+          <small>支持列：供应商名称、供应商简称、联系人、电话、店址、备注。</small>
           {importSuppliers.error ? <div className="error">{importSuppliers.error.message}</div> : null}
           {importSuppliers.isSuccess ? <div className="success">导入成功</div> : null}
         </Panel>
@@ -68,9 +67,12 @@ export function SuppliersPage() {
           <table>
             <thead>
               <tr>
-                <th>名称</th>
+                <th>供应商名称</th>
+                <th>供应商简称</th>
                 <th>联系人</th>
                 <th>电话</th>
+                <th>店址</th>
+                <th>备注</th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -78,8 +80,11 @@ export function SuppliersPage() {
               {data.map((supplier) => (
                 <tr key={supplier.id}>
                   <td>{supplier.name}</td>
-                  <td>{supplier.contact}</td>
-                  <td>{supplier.phone}</td>
+                  <td>{supplier.shortName || "-"}</td>
+                  <td>{supplier.contact || "-"}</td>
+                  <td>{supplier.phone || "-"}</td>
+                  <td>{supplier.storeAddress || "-"}</td>
+                  <td>{supplier.note || "-"}</td>
                   <td className="row-actions">
                     <button onClick={() => setEditing(supplier)}>编辑</button>
                     {isAdmin ? <button onClick={() => remove.mutate(supplier.id)}>删除</button> : null}

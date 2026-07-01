@@ -261,7 +261,7 @@ ordersRouter.post("/import", upload.single("file"), (req, res) => {
   const parsedOrders = rows.map((row, index) => {
     const productName = String(row["商品名称"] ?? "").trim();
     const productSku = String(row["SKU规格"] ?? row["SKU"] ?? "").trim();
-    const product = db.prepare("SELECT * FROM products WHERE name = ? AND sku = ?").get(productName, productSku) as
+    const product = db.prepare("SELECT * FROM products WHERE name = ? AND (sku = ? OR ssku = ?)").get(productName, productSku, productSku) as
       | { id: number; costPrice: number; salePrice: number }
       | undefined;
     const payload = {

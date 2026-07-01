@@ -13,12 +13,13 @@ const upload = multer({ dest: config.uploadDir });
 const optionalId = z.preprocess((value) => (value === "" || value === undefined ? null : value), z.coerce.number().int().positive().nullable());
 
 const productSchema = z.object({
-  name: z.string().trim().min(1, "商品名称不能为空"),
-  sku: z.string().trim().min(1, "SKU/规格不能为空"),
-  costPrice: z.coerce.number().min(0).default(0),
-  salePrice: z.coerce.number().min(0).default(0),
+  materialCode: z.string().trim().min(1, "物料编码不能为空"),
+  productLine: z.string().optional().default(""),
+  series: z.string().optional().default(""),
+  ssku: z.string().trim().min(1, "sSKU不能为空"),
+  name: z.string().trim().min(1, "名称不能为空"),
+  supplierModel: z.string().optional().default(""),
   supplierId: optionalId,
-  status: z.enum(["active", "inactive"]).default("active"),
   note: z.string().optional().default("")
 });
 
@@ -30,29 +31,19 @@ function cell(row: Record<string, unknown>, names: string[]) {
   return "";
 }
 
-function parseStatus(value: string) {
-  if (["停用", "下架", "inactive"].includes(value)) return "inactive";
-  return "active";
-}
-
 const baseSelect = `
-  SELECT p.*, s.name AS supplierName
+  SELECT p.*, COALESCE(p.ssku, p.sku) AS ssku, s.name AS supplierName
   FROM products p
   LEFT JOIN suppliers s ON s.id = p.supplierId
 `;
 
 productsRouter.get("/", (req, res) => {
   const keyword = String(req.query.keyword ?? "").trim();
-  const status = String(req.query.status ?? "").trim();
   const filters: string[] = [];
   const params: unknown[] = [];
   if (keyword) {
-    filters.push("(p.name LIKE ? OR p.sku LIKE ? OR s.name LIKE ?)");
-    params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
-  }
-  if (status) {
-    filters.push("p.status = ?");
-    params.push(status);
+    filters.push("(p.materialCode LIKE ? OR p.productLine LIKE ? OR p.series LIKE ? OR p.ssku LIKE ? OR p.sku LIKE ? OR p.name LIKE ? OR p.supplierModel LIKE ? OR s.name LIKE ?)");
+    params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
   }
   const sql = `${baseSelect}${filters.length ? ` WHERE ${filters.join(" AND ")}` : ""} ORDER BY p.id DESC`;
   res.json(getDb().prepare(sql).all(...params));
@@ -68,21 +59,25 @@ productsRouter.post("/", (req, res) => {
   try {
     const result = db
       .prepare(
-        "INSERT INTO products (name, sku, costPrice, salePrice, supplierId, status, note, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        `INSERT INTO products
+         (materialCode, productLine, series, ssku, name, sku, supplierModel, costPrice, salePrice, supplierId, status, note, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?, 'active', ?, ?)`
       )
       .run(
+        parsed.data.materialCode,
+        parsed.data.productLine,
+        parsed.data.series,
+        parsed.data.ssku,
         parsed.data.name,
-        parsed.data.sku,
-        parsed.data.costPrice,
-        parsed.data.salePrice,
+        parsed.data.ssku,
+        parsed.data.supplierModel,
         parsed.data.supplierId ?? null,
-        parsed.data.status,
         parsed.data.note,
         nowIso()
       );
     res.status(201).json(db.prepare(`${baseSelect} WHERE p.id = ?`).get(result.lastInsertRowid));
   } catch {
-    res.status(409).json({ message: "商品名称和 SKU 已存在" });
+    res.status(409).json({ message: "商品名称和 sSKU 已存在" });
   }
 });
 
@@ -108,12 +103,13 @@ productsRouter.post("/import", upload.single("file"), (req, res) => {
         return null;
       }
       const payload = {
-        name: cell(row, ["商品名称", "商品", "名称", "name"]),
-        sku: cell(row, ["SKU规格", "SKU/规格", "SKU", "规格", "sku"]),
-        costPrice: cell(row, ["成本价", "成本", "costPrice"]) || 0,
-        salePrice: cell(row, ["建议售价", "售价", "salePrice"]) || 0,
+        materialCode: cell(row, ["物料编码", "materialCode"]),
+        productLine: cell(row, ["产品线", "productLine"]),
+        series: cell(row, ["系列", "series"]),
+        ssku: cell(row, ["sSKU", "SSKU", "SKU", "sku"]),
+        name: cell(row, ["名称", "商品名称", "name"]),
+        supplierModel: cell(row, ["供应商型号", "supplierModel"]),
         supplierId: supplier?.id ?? null,
-        status: parseStatus(cell(row, ["状态", "status"])),
         note: cell(row, ["备注", "note"])
       };
       const parsed = productSchema.safeParse(payload);
@@ -121,15 +117,15 @@ productsRouter.post("/import", upload.single("file"), (req, res) => {
         errors.push({ row: index + 2, message: parsed.error.issues[0]?.message ?? "参数错误" });
         return null;
       }
-      const uniqueKey = `${parsed.data.name}__${parsed.data.sku}`;
+      const uniqueKey = `${parsed.data.name}__${parsed.data.ssku}`;
       if (seen.has(uniqueKey)) {
-        errors.push({ row: index + 2, message: `商品重复：${parsed.data.name}/${parsed.data.sku}` });
+        errors.push({ row: index + 2, message: `商品重复：${parsed.data.name}/${parsed.data.ssku}` });
         return null;
       }
       seen.add(uniqueKey);
-      const exists = db.prepare("SELECT id FROM products WHERE name = ? AND sku = ?").get(parsed.data.name, parsed.data.sku);
+      const exists = db.prepare("SELECT id FROM products WHERE name = ? AND sku = ?").get(parsed.data.name, parsed.data.ssku);
       if (exists) {
-        errors.push({ row: index + 2, message: `商品已存在：${parsed.data.name}/${parsed.data.sku}` });
+        errors.push({ row: index + 2, message: `商品已存在：${parsed.data.name}/${parsed.data.ssku}` });
         return null;
       }
       return parsed.data;
@@ -142,12 +138,25 @@ productsRouter.post("/import", upload.single("file"), (req, res) => {
     }
 
     const insert = db.prepare(
-      "INSERT INTO products (name, sku, costPrice, salePrice, supplierId, status, note, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+      `INSERT INTO products
+       (materialCode, productLine, series, ssku, name, sku, supplierModel, costPrice, salePrice, supplierId, status, note, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?, 'active', ?, ?)`
     );
     const tx = db.transaction(() => {
       for (const row of parsedRows) {
         if (row) {
-          insert.run(row.name, row.sku, row.costPrice, row.salePrice, row.supplierId ?? null, row.status, row.note, nowIso());
+          insert.run(
+            row.materialCode,
+            row.productLine,
+            row.series,
+            row.ssku,
+            row.name,
+            row.ssku,
+            row.supplierModel,
+            row.supplierId ?? null,
+            row.note,
+            nowIso()
+          );
         }
       }
       db.prepare(
@@ -172,15 +181,19 @@ productsRouter.put("/:id", (req, res) => {
   try {
     const result = db
       .prepare(
-        "UPDATE products SET name = ?, sku = ?, costPrice = ?, salePrice = ?, supplierId = ?, status = ?, note = ?, updatedAt = ? WHERE id = ?"
+        `UPDATE products
+         SET materialCode = ?, productLine = ?, series = ?, ssku = ?, name = ?, sku = ?, supplierModel = ?, supplierId = ?, note = ?, updatedAt = ?
+         WHERE id = ?`
       )
       .run(
+        parsed.data.materialCode,
+        parsed.data.productLine,
+        parsed.data.series,
+        parsed.data.ssku,
         parsed.data.name,
-        parsed.data.sku,
-        parsed.data.costPrice,
-        parsed.data.salePrice,
+        parsed.data.ssku,
+        parsed.data.supplierModel,
         parsed.data.supplierId ?? null,
-        parsed.data.status,
         parsed.data.note,
         nowIso(),
         id
@@ -191,7 +204,7 @@ productsRouter.put("/:id", (req, res) => {
     }
     res.json(db.prepare(`${baseSelect} WHERE p.id = ?`).get(id));
   } catch {
-    res.status(409).json({ message: "商品名称和 SKU 已存在" });
+    res.status(409).json({ message: "商品名称和 sSKU 已存在" });
   }
 });
 

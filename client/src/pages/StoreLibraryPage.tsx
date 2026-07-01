@@ -28,8 +28,7 @@ export function StoreLibraryPage() {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    save.mutate(Object.fromEntries(form));
+    save.mutate(Object.fromEntries(new FormData(event.currentTarget)));
     event.currentTarget.reset();
   }
 
@@ -41,13 +40,14 @@ export function StoreLibraryPage() {
 
   return (
     <>
-      <PageHeader title="店铺库" description="维护代发业务涉及的店铺、平台和负责人信息。" />
+      <PageHeader title="店铺库" description="维护店铺名称、店铺简称、平台、运营和备注。" />
       <div className="two-column">
         <Panel title={editing ? "编辑店铺" : "新增店铺"}>
           <form className="form-grid" onSubmit={submit}>
             <input name="name" placeholder="店铺名称" defaultValue={editing?.name} required />
-            <input name="platform" placeholder="平台，如淘宝/拼多多/抖店" defaultValue={editing?.platform} required />
-            <input name="owner" placeholder="负责人" defaultValue={editing?.owner} />
+            <input name="shortName" placeholder="店铺简称" defaultValue={editing?.shortName} />
+            <input name="platform" placeholder="平台" defaultValue={editing?.platform} required />
+            <input name="operator" placeholder="运营" defaultValue={editing?.operator} />
             <textarea name="note" placeholder="备注" defaultValue={editing?.note} />
             {save.error ? <div className="error">{save.error.message}</div> : null}
             <button className="primary-button">{editing ? "保存修改" : "新增店铺"}</button>
@@ -58,7 +58,7 @@ export function StoreLibraryPage() {
             <input name="file" type="file" accept=".xlsx,.xls" required />
             <button className="primary-button">批量导入</button>
           </form>
-          <small>支持列：店铺名称、平台、负责人、备注。</small>
+          <small>支持列：店铺名称、店铺简称、平台、运营、备注。</small>
           {importStores.error ? <div className="error">{importStores.error.message}</div> : null}
           {importStores.isSuccess ? <div className="success">导入成功</div> : null}
         </Panel>
@@ -66,9 +66,10 @@ export function StoreLibraryPage() {
           <table>
             <thead>
               <tr>
-                <th>店铺</th>
+                <th>店铺名称</th>
+                <th>店铺简称</th>
                 <th>平台</th>
-                <th>负责人</th>
+                <th>运营</th>
                 <th>备注</th>
                 <th>操作</th>
               </tr>
@@ -77,9 +78,10 @@ export function StoreLibraryPage() {
               {stores.map((store) => (
                 <tr key={store.id}>
                   <td>{store.name}</td>
+                  <td>{store.shortName || "-"}</td>
                   <td>{store.platform}</td>
-                  <td>{store.owner}</td>
-                  <td>{store.note}</td>
+                  <td>{store.operator || "-"}</td>
+                  <td>{store.note || "-"}</td>
                   <td className="row-actions">
                     <button onClick={() => setEditing(store)}>编辑</button>
                     {isAdmin ? <button onClick={() => remove.mutate(store.id)}>删除</button> : null}

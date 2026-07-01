@@ -29,8 +29,7 @@ export function ProductsPage() {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    save.mutate(Object.fromEntries(form));
+    save.mutate(Object.fromEntries(new FormData(event.currentTarget)));
     event.currentTarget.reset();
   }
 
@@ -42,14 +41,16 @@ export function ProductsPage() {
 
   return (
     <>
-      <PageHeader title="商品/SKU" description="维护商品规格、成本价、建议售价、供应商和上下架状态。" />
+      <PageHeader title="商品库" description="维护物料编码、产品线、系列、sSKU、名称、供应商型号和备注。" />
       <div className="two-column">
         <Panel title={editing ? "编辑商品" : "新增商品"}>
           <form className="form-grid" onSubmit={submit}>
-            <input name="name" placeholder="商品名称" defaultValue={editing?.name} required />
-            <input name="sku" placeholder="SKU/规格" defaultValue={editing?.sku} required />
-            <input name="costPrice" placeholder="成本价" type="number" step="0.01" defaultValue={editing?.costPrice ?? 0} />
-            <input name="salePrice" placeholder="建议售价" type="number" step="0.01" defaultValue={editing?.salePrice ?? 0} />
+            <input name="materialCode" placeholder="物料编码" defaultValue={editing?.materialCode} required />
+            <input name="productLine" placeholder="产品线" defaultValue={editing?.productLine} />
+            <input name="series" placeholder="系列" defaultValue={editing?.series} />
+            <input name="ssku" placeholder="sSKU" defaultValue={editing?.ssku ?? editing?.sku} required />
+            <input name="name" placeholder="名称" defaultValue={editing?.name} required />
+            <input name="supplierModel" placeholder="供应商型号" defaultValue={editing?.supplierModel} />
             <select name="supplierId" defaultValue={editing?.supplierId ?? ""}>
               <option value="">未选择供应商</option>
               {suppliers.map((supplier) => (
@@ -57,10 +58,6 @@ export function ProductsPage() {
                   {supplier.name}
                 </option>
               ))}
-            </select>
-            <select name="status" defaultValue={editing?.status ?? "active"}>
-              <option value="active">上架</option>
-              <option value="inactive">停用</option>
             </select>
             <textarea name="note" placeholder="备注" defaultValue={editing?.note} />
             {save.error ? <div className="error">{save.error.message}</div> : null}
@@ -72,7 +69,7 @@ export function ProductsPage() {
             <input name="file" type="file" accept=".xlsx,.xls" required />
             <button className="primary-button">批量导入</button>
           </form>
-          <small>支持列：商品名称、SKU、成本价、建议售价、供应商、状态、备注。</small>
+          <small>支持列：物料编码、产品线、系列、sSKU、名称、供应商型号、供应商、备注。</small>
           {importProducts.error ? <div className="error">{importProducts.error.message}</div> : null}
           {importProducts.isSuccess ? <div className="success">导入成功</div> : null}
         </Panel>
@@ -80,22 +77,26 @@ export function ProductsPage() {
           <table>
             <thead>
               <tr>
-                <th>商品</th>
-                <th>SKU</th>
-                <th>供应商</th>
-                <th>成本/售价</th>
-                <th>状态</th>
+                <th>物料编码</th>
+                <th>产品线</th>
+                <th>系列</th>
+                <th>sSKU</th>
+                <th>名称</th>
+                <th>供应商型号</th>
+                <th>备注</th>
                 <th>操作</th>
               </tr>
             </thead>
             <tbody>
               {data.map((product) => (
                 <tr key={product.id}>
+                  <td>{product.materialCode || "-"}</td>
+                  <td>{product.productLine || "-"}</td>
+                  <td>{product.series || "-"}</td>
+                  <td>{product.ssku ?? product.sku}</td>
                   <td>{product.name}</td>
-                  <td>{product.sku}</td>
-                  <td>{product.supplierName ?? "-"}</td>
-                  <td>{product.costPrice} / {product.salePrice}</td>
-                  <td>{product.status === "active" ? "上架" : "停用"}</td>
+                  <td>{product.supplierModel || "-"}</td>
+                  <td>{product.note || "-"}</td>
                   <td className="row-actions">
                     <button onClick={() => setEditing(product)}>编辑</button>
                     {isAdmin ? <button onClick={() => remove.mutate(product.id)}>删除</button> : null}

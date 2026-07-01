@@ -61,7 +61,7 @@ export function PermissionsPage() {
 
   return (
     <>
-      <PageHeader title="权限管理" description="注册用户默认不能进入系统，管理员需要在这里勾选可访问页面。" />
+      <PageHeader title="权限管理" description="用户只能由管理员创建，并在这里勾选可访问页面。" />
       <Panel title="创建用户">
         <form className="toolbar permission-create" onSubmit={submitCreate}>
           <input name="username" placeholder="账号" />
@@ -70,7 +70,7 @@ export function PermissionsPage() {
         </form>
         {create.error ? <div className="error">{create.error.message}</div> : null}
       </Panel>
-      <Panel title={`注册用户 ${users.length} 个`}>
+      <Panel title={`系统用户 ${users.length} 个`}>
         <table>
           <thead>
             <tr>

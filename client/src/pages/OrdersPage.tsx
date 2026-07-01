@@ -94,10 +94,10 @@ export function OrdersPage() {
         {
           productId: product.id,
           productName: product.name,
-          productSku: product.sku,
+          productSku: product.ssku ?? product.sku,
           quantity: form.get("quantity"),
-          unitCost: product.costPrice,
-          unitSalePrice: product.salePrice
+          unitCost: product.costPrice ?? 0,
+          unitSalePrice: product.salePrice ?? 0
         }
       ]
     });
@@ -167,7 +167,7 @@ export function OrdersPage() {
               <option value="">选择商品/SKU</option>
               {products.map((product) => (
                 <option value={product.id} key={product.id}>
-                  {product.name} / {product.sku}
+                  {product.name} / {product.ssku ?? product.sku}
                 </option>
               ))}
             </select>

@@ -12,10 +12,10 @@ const upload = multer({ dest: config.uploadDir });
 
 const supplierSchema = z.object({
   name: z.string().trim().min(1, "供应商名称不能为空"),
+  shortName: z.string().optional().default(""),
   contact: z.string().optional().default(""),
   phone: z.string().optional().default(""),
-  address: z.string().optional().default(""),
-  settlementType: z.string().optional().default(""),
+  storeAddress: z.string().optional().default(""),
   note: z.string().optional().default("")
 });
 
@@ -32,8 +32,10 @@ suppliersRouter.get("/", (req, res) => {
   const db = getDb();
   const rows = keyword
     ? db
-        .prepare("SELECT * FROM suppliers WHERE name LIKE ? OR contact LIKE ? OR phone LIKE ? ORDER BY id DESC")
-        .all(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`)
+        .prepare(
+          "SELECT * FROM suppliers WHERE name LIKE ? OR shortName LIKE ? OR contact LIKE ? OR phone LIKE ? OR storeAddress LIKE ? OR note LIKE ? ORDER BY id DESC"
+        )
+        .all(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`)
     : db.prepare("SELECT * FROM suppliers ORDER BY id DESC").all();
   res.json(rows);
 });
@@ -48,14 +50,15 @@ suppliersRouter.post("/", (req, res) => {
   try {
     const result = db
       .prepare(
-        "INSERT INTO suppliers (name, contact, phone, address, settlementType, note, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO suppliers (name, shortName, contact, phone, address, storeAddress, note, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
       )
       .run(
         parsed.data.name,
+        parsed.data.shortName,
         parsed.data.contact,
         parsed.data.phone,
-        parsed.data.address,
-        parsed.data.settlementType,
+        parsed.data.storeAddress,
+        parsed.data.storeAddress,
         parsed.data.note,
         nowIso()
       );
@@ -80,10 +83,10 @@ suppliersRouter.post("/import", upload.single("file"), (req, res) => {
     const parsedRows = rows.map((row, index) => {
       const payload = {
         name: cell(row, ["供应商名称", "供应商", "名称", "name"]),
+        shortName: cell(row, ["供应商简称", "简称", "shortName"]),
         contact: cell(row, ["联系人", "contact"]),
         phone: cell(row, ["电话", "手机", "联系电话", "phone"]),
-        address: cell(row, ["地址", "address"]),
-        settlementType: cell(row, ["结算方式", "settlementType"]),
+        storeAddress: cell(row, ["店址", "地址", "storeAddress", "address"]),
         note: cell(row, ["备注", "note"])
       };
       const parsed = supplierSchema.safeParse(payload);
@@ -111,11 +114,11 @@ suppliersRouter.post("/import", upload.single("file"), (req, res) => {
     }
 
     const insert = db.prepare(
-      "INSERT INTO suppliers (name, contact, phone, address, settlementType, note, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO suppliers (name, shortName, contact, phone, address, storeAddress, note, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     );
     const tx = db.transaction(() => {
       for (const row of parsedRows) {
-        if (row) insert.run(row.name, row.contact, row.phone, row.address, row.settlementType, row.note, nowIso());
+        if (row) insert.run(row.name, row.shortName, row.contact, row.phone, row.storeAddress, row.storeAddress, row.note, nowIso());
       }
       db.prepare(
         "INSERT INTO import_jobs (type, filename, totalRows, successRows, failedRows, errorJson) VALUES (?, ?, ?, ?, ?, ?)"
@@ -138,15 +141,14 @@ suppliersRouter.put("/:id", (req, res) => {
   const db = getDb();
   try {
     const result = db
-      .prepare(
-        "UPDATE suppliers SET name = ?, contact = ?, phone = ?, address = ?, settlementType = ?, note = ?, updatedAt = ? WHERE id = ?"
-      )
+      .prepare("UPDATE suppliers SET name = ?, shortName = ?, contact = ?, phone = ?, address = ?, storeAddress = ?, note = ?, updatedAt = ? WHERE id = ?")
       .run(
         parsed.data.name,
+        parsed.data.shortName,
         parsed.data.contact,
         parsed.data.phone,
-        parsed.data.address,
-        parsed.data.settlementType,
+        parsed.data.storeAddress,
+        parsed.data.storeAddress,
         parsed.data.note,
         nowIso(),
         id

@@ -30,10 +30,10 @@ test("auth, supplier, product, order and shipment flow", async () => {
   await agent.post("/api/auth/login").send({ username: "admin", password: "bad" }).expect(401);
   await agent.post("/api/auth/login").send({ username: "admin", password: "secret" }).expect(200);
 
-  const supplier = await agent.post("/api/suppliers").send({ name: "上海供应商", contact: "李四" }).expect(201);
+  const supplier = await agent.post("/api/suppliers").send({ name: "上海供应商", shortName: "上海供", contact: "李四", storeAddress: "上海" }).expect(201);
   const product = await agent
     .post("/api/products")
-    .send({ name: "示例商品", sku: "默认规格", supplierId: supplier.body.id, costPrice: 10, salePrice: 18 })
+    .send({ materialCode: "MAT001", productLine: "家居", series: "基础", ssku: "默认规格", name: "示例商品", supplierModel: "GYS-001", supplierId: supplier.body.id })
     .expect(201);
 
   const order = await agent
@@ -99,10 +99,11 @@ test("registered users must be authorized before accessing pages", async () => {
   const admin = request.agent(app);
   const member = request.agent(app);
 
-  await member.post("/api/auth/register").send({ username: "member", password: "secret123" }).expect(201);
-  await member.post("/api/auth/login").send({ username: "member", password: "secret123" }).expect(403);
+  await member.post("/api/auth/register").send({ username: "member", password: "secret123" }).expect(403);
+  await member.post("/api/auth/login").send({ username: "member", password: "secret123" }).expect(401);
 
   await admin.post("/api/auth/login").send({ username: "admin", password: "secret" }).expect(200);
+  await admin.post("/api/auth/users").send({ username: "member", password: "secret123" }).expect(201);
   const users = await admin.get("/api/auth/users").expect(200);
   const target = users.body.users.find((user: { username: string }) => user.username === "member");
   assert.ok(target);
@@ -118,7 +119,7 @@ test("registered users must be authorized before accessing pages", async () => {
   const supplier = await admin.post("/api/suppliers").send({ name: "权限测试供应商" }).expect(201);
   const product = await admin
     .post("/api/products")
-    .send({ name: "权限测试商品", sku: "默认规格", supplierId: supplier.body.id, costPrice: 8, salePrice: 16 })
+    .send({ materialCode: "AUTH-MAT", productLine: "测试", series: "默认", ssku: "默认规格", name: "权限测试商品", supplierModel: "AUTH-001", supplierId: supplier.body.id })
     .expect(201);
   const order = await admin
     .post("/api/orders")
@@ -151,20 +152,20 @@ test("imports suppliers, products and stores from Excel", async () => {
   await agent.post("/api/auth/login").send({ username: "admin", password: "secret" }).expect(200);
 
   const suppliersFile = writeWorkbook("suppliers.xlsx", [
-    { 供应商名称: "导入供应商A", 联系人: "王五", 电话: "13900000000", 地址: "杭州", 结算方式: "月结", 备注: "测试" }
+    { 供应商名称: "导入供应商A", 供应商简称: "导入A", 联系人: "王五", 电话: "13900000000", 店址: "杭州", 备注: "测试" }
   ]);
   await agent.post("/api/suppliers/import").attach("file", suppliersFile).expect(200);
   const suppliers = await agent.get("/api/suppliers").expect(200);
   assert.ok(suppliers.body.some((supplier: { name: string }) => supplier.name === "导入供应商A"));
 
   const productsFile = writeWorkbook("products.xlsx", [
-    { 商品名称: "导入商品A", SKU: "红色", 成本价: 12, 建议售价: 29, 供应商: "导入供应商A", 状态: "上架", 备注: "测试" }
+    { 物料编码: "IMP-MAT-A", 产品线: "家居", 系列: "基础", sSKU: "红色", 名称: "导入商品A", 供应商型号: "GYS-A", 供应商: "导入供应商A", 备注: "测试" }
   ]);
   await agent.post("/api/products/import").attach("file", productsFile).expect(200);
   const products = await agent.get("/api/products").expect(200);
-  assert.ok(products.body.some((product: { name: string; sku: string }) => product.name === "导入商品A" && product.sku === "红色"));
+  assert.ok(products.body.some((product: { name: string; ssku: string }) => product.name === "导入商品A" && product.ssku === "红色"));
 
-  const storesFile = writeWorkbook("stores.xlsx", [{ 店铺名称: "导入店铺A", 平台: "淘宝", 负责人: "赵六", 备注: "测试" }]);
+  const storesFile = writeWorkbook("stores.xlsx", [{ 店铺名称: "导入店铺A", 店铺简称: "店A", 平台: "淘宝", 运营: "赵六", 备注: "测试" }]);
   await agent.post("/api/stores/import").attach("file", storesFile).expect(200);
   const stores = await agent.get("/api/stores").expect(200);
   assert.ok(stores.body.some((store: { name: string; platform: string }) => store.name === "导入店铺A" && store.platform === "淘宝"));

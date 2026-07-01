@@ -12,8 +12,9 @@ const upload = multer({ dest: config.uploadDir });
 
 const storeSchema = z.object({
   name: z.string().trim().min(1, "店铺名称不能为空"),
+  shortName: z.string().optional().default(""),
   platform: z.string().trim().min(1, "平台不能为空"),
-  owner: z.string().optional().default(""),
+  operator: z.string().optional().default(""),
   note: z.string().optional().default("")
 });
 
@@ -30,8 +31,8 @@ storesRouter.get("/", (req, res) => {
   const db = getDb();
   const rows = keyword
     ? db
-        .prepare("SELECT * FROM stores WHERE name LIKE ? OR platform LIKE ? OR owner LIKE ? ORDER BY id DESC")
-        .all(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`)
+        .prepare("SELECT * FROM stores WHERE name LIKE ? OR shortName LIKE ? OR platform LIKE ? OR operator LIKE ? OR note LIKE ? ORDER BY id DESC")
+        .all(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`)
     : db.prepare("SELECT * FROM stores ORDER BY id DESC").all();
   res.json(rows);
 });
@@ -45,8 +46,8 @@ storesRouter.post("/", (req, res) => {
   const db = getDb();
   try {
     const result = db
-      .prepare("INSERT INTO stores (name, platform, owner, note, updatedAt) VALUES (?, ?, ?, ?, ?)")
-      .run(parsed.data.name, parsed.data.platform, parsed.data.owner, parsed.data.note, nowIso());
+      .prepare("INSERT INTO stores (name, shortName, platform, owner, operator, note, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)")
+      .run(parsed.data.name, parsed.data.shortName, parsed.data.platform, parsed.data.operator, parsed.data.operator, parsed.data.note, nowIso());
     res.status(201).json(db.prepare("SELECT * FROM stores WHERE id = ?").get(result.lastInsertRowid));
   } catch {
     res.status(409).json({ message: "店铺和平台已存在" });
@@ -68,8 +69,9 @@ storesRouter.post("/import", upload.single("file"), (req, res) => {
     const parsedRows = rows.map((row, index) => {
       const payload = {
         name: cell(row, ["店铺名称", "店铺", "名称", "name"]),
+        shortName: cell(row, ["店铺简称", "简称", "shortName"]),
         platform: cell(row, ["平台", "platform"]),
-        owner: cell(row, ["负责人", "owner"]),
+        operator: cell(row, ["运营", "operator"]),
         note: cell(row, ["备注", "note"])
       };
       const parsed = storeSchema.safeParse(payload);
@@ -97,10 +99,10 @@ storesRouter.post("/import", upload.single("file"), (req, res) => {
       return;
     }
 
-    const insert = db.prepare("INSERT INTO stores (name, platform, owner, note, updatedAt) VALUES (?, ?, ?, ?, ?)");
+    const insert = db.prepare("INSERT INTO stores (name, shortName, platform, owner, operator, note, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)");
     const tx = db.transaction(() => {
       for (const row of parsedRows) {
-        if (row) insert.run(row.name, row.platform, row.owner, row.note, nowIso());
+        if (row) insert.run(row.name, row.shortName, row.platform, row.operator, row.operator, row.note, nowIso());
       }
       db.prepare(
         "INSERT INTO import_jobs (type, filename, totalRows, successRows, failedRows, errorJson) VALUES (?, ?, ?, ?, ?, ?)"
@@ -123,8 +125,8 @@ storesRouter.put("/:id", (req, res) => {
   const db = getDb();
   try {
     const result = db
-      .prepare("UPDATE stores SET name = ?, platform = ?, owner = ?, note = ?, updatedAt = ? WHERE id = ?")
-      .run(parsed.data.name, parsed.data.platform, parsed.data.owner, parsed.data.note, nowIso(), id);
+      .prepare("UPDATE stores SET name = ?, shortName = ?, platform = ?, owner = ?, operator = ?, note = ?, updatedAt = ? WHERE id = ?")
+      .run(parsed.data.name, parsed.data.shortName, parsed.data.platform, parsed.data.operator, parsed.data.operator, parsed.data.note, nowIso(), id);
     if (result.changes === 0) {
       res.status(404).json({ message: "店铺不存在" });
       return;

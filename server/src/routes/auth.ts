@@ -95,18 +95,7 @@ authRouter.post("/login", (req, res) => {
 });
 
 authRouter.post("/register", (req, res) => {
-  ensureAdminUser();
-  const parsed = registerSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ message: parsed.error.issues[0]?.message ?? "注册参数错误" });
-    return;
-  }
-  try {
-    const user = createUser(parsed.data.username, parsed.data.password);
-    res.status(201).json({ ...user, message: "注册成功，请等待管理员授权后登录" });
-  } catch {
-    res.status(409).json({ message: "账号已存在" });
-  }
+  res.status(403).json({ message: "新用户只能由管理员创建" });
 });
 
 authRouter.post("/logout", (req, res) => {

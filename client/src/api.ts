@@ -1,30 +1,36 @@
 export type Supplier = {
   id: number;
   name: string;
+  shortName?: string;
   contact?: string;
   phone?: string;
-  address?: string;
-  settlementType?: string;
+  storeAddress?: string;
   note?: string;
 };
 
 export type Product = {
   id: number;
+  materialCode?: string;
+  productLine?: string;
+  series?: string;
+  ssku: string;
   name: string;
   sku: string;
-  costPrice: number;
-  salePrice: number;
+  supplierModel?: string;
+  costPrice?: number;
+  salePrice?: number;
   supplierId?: number | null;
   supplierName?: string;
-  status: "active" | "inactive";
+  status?: "active" | "inactive";
   note?: string;
 };
 
 export type Store = {
   id: number;
   name: string;
+  shortName?: string;
   platform: string;
-  owner?: string;
+  operator?: string;
   note?: string;
 };
 

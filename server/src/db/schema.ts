@@ -14,9 +14,11 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS suppliers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL UNIQUE,
+  shortName TEXT,
   contact TEXT,
   phone TEXT,
   address TEXT,
+  storeAddress TEXT,
   settlementType TEXT,
   note TEXT,
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
@@ -25,8 +27,13 @@ CREATE TABLE IF NOT EXISTS suppliers (
 
 CREATE TABLE IF NOT EXISTS products (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  materialCode TEXT,
+  productLine TEXT,
+  series TEXT,
+  ssku TEXT,
   name TEXT NOT NULL,
   sku TEXT NOT NULL,
+  supplierModel TEXT,
   costPrice REAL NOT NULL DEFAULT 0,
   salePrice REAL NOT NULL DEFAULT 0,
   supplierId INTEGER,
@@ -42,8 +49,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_products_name_sku ON products(name, sku);
 CREATE TABLE IF NOT EXISTS stores (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
+  shortName TEXT,
   platform TEXT NOT NULL,
   owner TEXT,
+  operator TEXT,
   note TEXT,
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
