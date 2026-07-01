@@ -8,16 +8,21 @@ export function ReturnRegistrationPage() {
   const qc = useQueryClient();
   const [searchParams] = useSearchParams();
   const [keyword, setKeyword] = useState(() => searchParams.get("keyword") ?? "");
+  const [appliedKeyword, setAppliedKeyword] = useState(() => searchParams.get("keyword") ?? "");
   const [storeName, setStoreName] = useState("");
+  const [appliedStoreName, setAppliedStoreName] = useState("");
   const [supplierId, setSupplierId] = useState("");
+  const [appliedSupplierId, setAppliedSupplierId] = useState("");
   const [series, setSeries] = useState("");
+  const [appliedSeries, setAppliedSeries] = useState("");
   const [sku, setSku] = useState("");
+  const [appliedSku, setAppliedSku] = useState("");
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
   const { data: records = [] } = useQuery({
-    queryKey: ["returns", keyword, storeName, supplierId, series, sku],
+    queryKey: ["returns", appliedKeyword, appliedStoreName, appliedSupplierId, appliedSeries, appliedSku],
     queryFn: () =>
       api<ReturnRecord[]>(
-        `/returns?keyword=${encodeURIComponent(keyword)}&storeName=${encodeURIComponent(storeName)}&supplierId=${encodeURIComponent(supplierId)}&series=${encodeURIComponent(series)}&sku=${encodeURIComponent(sku)}`
+        `/returns?keyword=${encodeURIComponent(appliedKeyword)}&storeName=${encodeURIComponent(appliedStoreName)}&supplierId=${encodeURIComponent(appliedSupplierId)}&series=${encodeURIComponent(appliedSeries)}&sku=${encodeURIComponent(appliedSku)}`
       )
   });
   const { data: stores = [] } = useQuery({ queryKey: ["stores"], queryFn: () => api<Store[]>("/stores") });
@@ -34,6 +39,14 @@ export function ReturnRegistrationPage() {
   function deleteRecord(record: ReturnRecord) {
     if (!window.confirm(`确定删除退货记录 ${record.orderNo} 吗？`)) return;
     remove.mutate(record.id);
+  }
+
+  function searchRecords() {
+    setAppliedKeyword(keyword);
+    setAppliedStoreName(storeName);
+    setAppliedSupplierId(supplierId);
+    setAppliedSeries(series);
+    setAppliedSku(sku);
   }
 
   return (
@@ -70,6 +83,7 @@ export function ReturnRegistrationPage() {
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
           />
+          <button type="button" className="primary-button" onClick={searchRecords}>搜索</button>
         </div>
         <table>
           <thead>

@@ -6,6 +6,7 @@ import { PageHeader, Panel } from "../ui/Section";
 const statusText: Record<string, string> = {
   pending: "待发货",
   filled: "已填单号",
+  purchased: "已下采购单",
   shipped: "已发货",
   exception: "异常",
   cancelled: "已取消"
@@ -54,6 +55,7 @@ export function DropshipSummaryPage() {
             <option value="">全部状态</option>
             <option value="pending">待发货</option>
             <option value="filled">已填单号</option>
+            <option value="purchased">已下采购单</option>
             <option value="shipped">已发货</option>
             <option value="exception">异常</option>
             <option value="cancelled">已取消</option>
@@ -63,13 +65,13 @@ export function DropshipSummaryPage() {
         </div>
       </Panel>
       <Panel title="代发汇总">
-        <table>
+        <table className="nowrap-table">
           <thead>
             <tr>
-              <th>订单编号</th>
-              <th>供应商</th>
-              <th>店铺</th>
+              <th>创建时间</th>
               <th>登记人</th>
+              <th>店铺</th>
+              <th>订单编号</th>
               <th>客户姓名</th>
               <th>电话</th>
               <th>地址</th>
@@ -77,23 +79,23 @@ export function DropshipSummaryPage() {
               <th>系列</th>
               <th>SKU</th>
               <th>数量</th>
-              <th>状态</th>
+              <th>发货时间</th>
               <th>快递公司</th>
               <th>快递单号</th>
-              <th>采购订单号</th>
+              <th>供应商</th>
               <th>采购订单号填写人</th>
-              <th>发货时间</th>
+              <th>采购订单号</th>
+              <th>状态</th>
               <th>备注</th>
-              <th>创建时间</th>
             </tr>
           </thead>
           <tbody>
             {orders.map((order) => (
               <tr key={order.id}>
-                <td>{order.orderNo}</td>
-                <td>{order.supplierName ?? "-"}</td>
-                <td>{order.storeName || "-"}</td>
+                <td>{order.createdAt?.slice(0, 10)}</td>
                 <td>{order.registrarName || "-"}</td>
+                <td>{order.storeName || "-"}</td>
+                <td>{order.orderNo}</td>
                 <td>{order.customerName}</td>
                 <td>{order.customerPhone ?? "-"}</td>
                 <td>{order.address}</td>
@@ -101,14 +103,14 @@ export function DropshipSummaryPage() {
                 <td>{order.productSeries || "-"}</td>
                 <td>{order.productSku || "-"}</td>
                 <td>{order.totalQuantity ?? 0}</td>
-                <td><span className={`status ${order.status}`}>{statusText[order.status]}</span></td>
+                <td>{order.shippedAt ? order.shippedAt.slice(0, 16).replace("T", " ") : "-"}</td>
                 <td>{order.carrier || "-"}</td>
                 <td>{order.trackingNo || "-"}</td>
-                <td>{order.purchaseOrderNo || "-"}</td>
+                <td>{order.supplierName ?? "-"}</td>
                 <td>{order.purchaseOrderUser || "-"}</td>
-                <td>{order.shippedAt ? order.shippedAt.slice(0, 16).replace("T", " ") : "-"}</td>
+                <td>{order.purchaseOrderNo || "-"}</td>
+                <td><span className={`status ${order.status}`}>{statusText[order.status]}</span></td>
                 <td>{mergeNotes(order)}</td>
-                <td>{order.createdAt?.slice(0, 10)}</td>
               </tr>
             ))}
           </tbody>

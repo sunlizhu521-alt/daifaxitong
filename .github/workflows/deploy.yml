@@ -88,6 +88,13 @@ jobs:
             fi
 
             cd "$APP_DIR"
+            if [ -d server/data ]; then
+              backup_dir="${HOME}/backups/daifaxitong"
+              mkdir -p "$backup_dir"
+              backup_file="${backup_dir}/data-before-update-$(date +%Y%m%d-%H%M%S).tar.gz"
+              tar -czf "$backup_file" server/data
+              ls -lh "$backup_file"
+            fi
             for attempt in 1 2 3 4 5; do
               if timeout 90s git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=30 fetch origin "$BRANCH"; then
                 break

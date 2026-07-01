@@ -69,9 +69,10 @@ returnsRouter.get("/", (req, res) => {
   const params: unknown[] = [];
   if (keyword) {
     filters.push(
-      "(r.storeName LIKE ? OR r.operator LIKE ? OR r.orderNo LIKE ? OR r.model LIKE ? OR r.customerName LIKE ? OR r.customerPhone LIKE ? OR r.address LIKE ? OR r.trackingNo LIKE ? OR r.reason LIKE ? OR r.note LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ? OR s.name LIKE ? OR s.shortName LIKE ?)"
+      "(r.storeName LIKE ? OR r.operator LIKE ? OR r.orderNo LIKE ? OR r.model LIKE ? OR r.customerName LIKE ? OR r.customerPhone LIKE ? OR r.address LIKE ? OR r.trackingNo LIKE ? OR r.reason LIKE ? OR r.note LIKE ? OR o.status LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ? OR s.name LIKE ? OR s.shortName LIKE ?)"
     );
     params.push(
+      `%${keyword}%`,
       `%${keyword}%`,
       `%${keyword}%`,
       `%${keyword}%`,

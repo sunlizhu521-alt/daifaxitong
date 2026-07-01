@@ -6,6 +6,7 @@ import { PageHeader, Panel } from "../ui/Section";
 const statusText: Record<string, string> = {
   pending: "待发货",
   filled: "已填单号",
+  purchased: "已下采购单",
   shipped: "已发货",
   exception: "异常",
   cancelled: "已取消"
@@ -65,6 +66,7 @@ export function PurchaseOrdersPage() {
             <option value="">全部状态</option>
             <option value="pending">待发货</option>
             <option value="filled">已填单号</option>
+            <option value="purchased">已下采购单</option>
             <option value="shipped">已发货</option>
           </select>
         </div>

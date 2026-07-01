@@ -30,7 +30,7 @@ const orderSchema = z.object({
   customerName: z.string().trim().min(1, "客户姓名不能为空"),
   customerPhone: z.string().optional().default(""),
   address: z.string().trim().min(1, "收货地址不能为空"),
-  status: z.enum(["pending", "filled", "shipped", "exception", "cancelled"]).default("pending"),
+  status: z.enum(["pending", "filled", "purchased", "shipped", "exception", "cancelled"]).default("pending"),
   note: z.string().optional().default(""),
   items: z.array(orderItemSchema).min(1, "至少需要一个商品明细")
 });
@@ -51,7 +51,7 @@ const purchaseOrderSchema = z.object({
 });
 
 const statusSchema = z.object({
-  status: z.enum(["pending", "filled", "shipped", "exception", "cancelled"])
+  status: z.enum(["pending", "filled", "purchased", "shipped", "exception", "cancelled"])
 });
 
 function readOrder(id: number) {
@@ -221,6 +221,52 @@ ordersRouter.get("/export", (req, res) => {
   res.send(buffer);
 });
 
+ordersRouter.get("/shipping-export", (req, res) => {
+  const status = String(req.query.status ?? "").trim();
+  const filters: string[] = [];
+  const params: unknown[] = [];
+  if (status) {
+    filters.push("o.status = ?");
+    params.push(status);
+  }
+  const rows = getDb()
+    .prepare(
+      `SELECT COALESCE(shipSupplier.shortName, shipSupplier.name, orderSupplier.shortName, orderSupplier.name) AS 供应商,
+        o.storeName AS 店铺, o.orderNo AS 订单编号, o.customerName AS 客户姓名, o.customerPhone AS 电话,
+        o.address AS 地址, GROUP_CONCAT(DISTINCT p.series) AS 系列, GROUP_CONCAT(DISTINCT oi.productSku) AS SKU,
+        SUM(oi.quantity) AS 数量,
+        CASE o.status
+          WHEN 'pending' THEN '待发货'
+          WHEN 'filled' THEN '已填单号'
+          WHEN 'purchased' THEN '已下采购单'
+          WHEN 'shipped' THEN '已发货'
+          WHEN 'exception' THEN '异常'
+          WHEN 'cancelled' THEN '已取消'
+          ELSE o.status
+        END AS 状态,
+        latest.carrier AS 快递公司, latest.trackingNo AS 快递单号, latest.shippedAt AS 发货时间,
+        o.note AS 备注
+       FROM orders o
+       LEFT JOIN order_items oi ON oi.orderId = o.id
+       LEFT JOIN products p ON p.id = oi.productId
+       LEFT JOIN shipments latest ON latest.id = (
+         SELECT sh.id FROM shipments sh WHERE sh.orderId = o.id ORDER BY sh.id DESC LIMIT 1
+       )
+       LEFT JOIN suppliers shipSupplier ON shipSupplier.id = latest.supplierId
+       LEFT JOIN suppliers orderSupplier ON orderSupplier.id = o.supplierId
+       ${filters.length ? `WHERE ${filters.join(" AND ")}` : ""}
+       GROUP BY o.id
+       ORDER BY o.id DESC`
+    )
+    .all(...params);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(rows), "发货安排");
+  const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition", "attachment; filename*=UTF-8''" + encodeURIComponent("发货安排导出.xlsx"));
+  res.send(buffer);
+});
+
 ordersRouter.get("/:id", (req, res) => {
   const order = readOrder(Number(req.params.id));
   if (!order) {
@@ -277,7 +323,7 @@ ordersRouter.patch("/:id/purchase-order", (req, res) => {
     return;
   }
   const result = getDb()
-    .prepare("UPDATE orders SET purchaseOrderNo = ?, purchaseOrderUser = ?, updatedAt = ? WHERE id = ?")
+    .prepare("UPDATE orders SET purchaseOrderNo = ?, purchaseOrderUser = ?, status = 'purchased', updatedAt = ? WHERE id = ?")
     .run(parsed.data.purchaseOrderNo, parsed.data.purchaseOrderUser || req.session.user?.username || "", nowIso(), Number(req.params.id));
   if (result.changes === 0) {
     res.status(404).json({ message: "订单不存在" });
@@ -288,7 +334,7 @@ ordersRouter.patch("/:id/purchase-order", (req, res) => {
 
 ordersRouter.delete("/:id/purchase-order", (req, res) => {
   const result = getDb()
-    .prepare("UPDATE orders SET purchaseOrderNo = '', purchaseOrderUser = '', updatedAt = ? WHERE id = ?")
+    .prepare("UPDATE orders SET purchaseOrderNo = '', purchaseOrderUser = '', status = CASE WHEN status = 'purchased' THEN 'pending' ELSE status END, updatedAt = ? WHERE id = ?")
     .run(nowIso(), Number(req.params.id));
   if (result.changes === 0) {
     res.status(404).json({ message: "订单不存在" });
