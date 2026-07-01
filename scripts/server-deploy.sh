@@ -6,7 +6,7 @@ set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEPLOY_PORT="${DEPLOY_PORT:-4006}"
-ADMIN_USERNAME="${ADMIN_USERNAME:-孙立柱}"
+ADMIN_USERNAME="${ADMIN_USERNAME:-admin}"
 
 cd "$APP_DIR"
 
@@ -33,5 +33,14 @@ fi
 "${PM2[@]}" startOrReload ecosystem.config.cjs --env production
 "${PM2[@]}" save || true
 
-curl -fsS "http://127.0.0.1:${DEPLOY_PORT}/api/health" >/dev/null
-echo "Deployment complete: http://127.0.0.1:${DEPLOY_PORT}"
+for attempt in {1..15}; do
+  if curl -fsS "http://127.0.0.1:${DEPLOY_PORT}/api/health" >/dev/null; then
+    echo "Deployment complete: http://127.0.0.1:${DEPLOY_PORT}"
+    exit 0
+  fi
+  echo "Waiting for service on port ${DEPLOY_PORT} (${attempt}/15)..."
+  sleep 2
+done
+
+echo "Deployment failed: service did not respond on port ${DEPLOY_PORT}" >&2
+exit 1
