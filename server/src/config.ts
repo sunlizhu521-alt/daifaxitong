@@ -10,8 +10,8 @@ export const config = {
   port: Number(process.env.PORT ?? 3000),
   databasePath: path.resolve(rootDir, process.env.DATABASE_PATH ?? "server/data/daifa.sqlite"),
   uploadDir: path.resolve(rootDir, "server/uploads"),
-  adminUsername: process.env.ADMIN_USERNAME ?? "admin",
-  adminPassword: process.env.ADMIN_PASSWORD ?? "change-me",
+  adminUsername: process.env.ADMIN_USERNAME ?? "孙立柱",
+  adminPassword: process.env.ADMIN_PASSWORD ?? "521sunlizhu",
   sessionSecret: process.env.SESSION_SECRET ?? "change-me",
   clientDist: path.resolve(rootDir, "server/dist/public")
 };

@@ -33,6 +33,21 @@ export type OrderListRow = {
   createdAt: string;
 };
 
+export type PageOption = {
+  key: "dashboard" | "orders" | "products" | "suppliers" | "permissionManagement";
+  label: string;
+  path: string;
+};
+
+export type User = {
+  id: string;
+  username: string;
+  role: string;
+  pageAccess: PageOption["key"][];
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`/api${path}`, {
     credentials: "include",

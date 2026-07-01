@@ -6,7 +6,7 @@ set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEPLOY_PORT="${DEPLOY_PORT:-4006}"
-ADMIN_USERNAME="${ADMIN_USERNAME:-admin}"
+ADMIN_USERNAME="${ADMIN_USERNAME:-孙立柱}"
 
 cd "$APP_DIR"
 

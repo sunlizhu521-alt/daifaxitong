@@ -59,6 +59,27 @@ test("auth, supplier, product, order and shipment flow", async () => {
   await agent.delete(`/api/products/${product.body.id}`).expect(409);
 });
 
+test("registered users must be authorized before accessing pages", async () => {
+  const app = createApp();
+  const admin = request.agent(app);
+  const member = request.agent(app);
+
+  await member.post("/api/auth/register").send({ username: "member", password: "secret123" }).expect(201);
+  await member.post("/api/auth/login").send({ username: "member", password: "secret123" }).expect(403);
+
+  await admin.post("/api/auth/login").send({ username: "admin", password: "secret" }).expect(200);
+  const users = await admin.get("/api/auth/users").expect(200);
+  const target = users.body.users.find((user: { username: string }) => user.username === "member");
+  assert.ok(target);
+
+  await admin.patch(`/api/auth/users/${target.id}/access`).send({ pageAccess: ["orders"] }).expect(200);
+  const login = await member.post("/api/auth/login").send({ username: "member", password: "secret123" }).expect(200);
+  assert.deepEqual(login.body.pageAccess, ["orders"]);
+
+  await member.get("/api/orders").expect(200);
+  await member.get("/api/products").expect(403);
+});
+
 test.after(() => {
   closeDb();
   fs.rmSync(tempDir, { recursive: true, force: true });

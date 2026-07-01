@@ -3,7 +3,10 @@ export type OrderStatus = "pending" | "shipped" | "exception" | "cancelled";
 export type ProductStatus = "active" | "inactive";
 
 export interface SessionUser {
+  id: string;
   username: string;
+  role: string;
+  pageAccess: string[];
 }
 
 declare module "express-session" {

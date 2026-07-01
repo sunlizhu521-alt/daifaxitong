@@ -31,6 +31,9 @@ button { cursor: pointer; }
 .nav a { color: #cbd5e1; text-decoration: none; display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 8px; }
 .nav a.active, .nav a:hover { background: #273244; color: #fff; }
 .logout { margin-top: auto; color: #dbe3ef; border-color: #3c4658; }
+.user-box { border: 1px solid #3c4658; border-radius: 8px; padding: 10px 12px; color: #e5edf7; }
+.user-box strong { display: block; font-size: 14px; }
+.user-box span { display: block; margin-top: 3px; color: #a7b0bf; font-size: 12px; }
 
 .main { padding: 26px; overflow-x: auto; }
 .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 18px; gap: 16px; }
@@ -86,15 +89,21 @@ tr:hover td { background: #fafcff; }
 .login-page { min-height: 100vh; display: grid; place-items: center; background: linear-gradient(135deg, #eef6f3 0%, #f7f7fb 45%, #eef2ff 100%); }
 .login-card { width: 360px; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 24px; box-shadow: var(--shadow); display: grid; gap: 14px; }
 .login-card label { display: grid; gap: 6px; color: #344054; font-size: 14px; }
+.auth-note { margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
 .error, .success { padding: 10px 12px; border-radius: 7px; font-size: 13px; }
 .error { color: #991b1b; background: #fee2e2; }
 .success { color: #065f46; background: #d1fae5; }
+.loading-screen { min-height: 100vh; display: grid; place-items: center; color: var(--text-muted); }
 
 .upload-box { display: grid; gap: 12px; }
 .modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.36); display: grid; place-items: center; padding: 24px; z-index: 10; }
 .modal { width: 440px; background: #fff; border-radius: 10px; padding: 20px; display: grid; gap: 10px; box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24); }
 .modal h2 { margin: 0 0 6px; font-size: 18px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.permission-create input { max-width: 220px; }
+.permission-checkbox-grid { display: grid; grid-template-columns: repeat(2, minmax(120px, 1fr)); gap: 8px 12px; text-align: left; }
+.permission-checkbox { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.permission-checkbox input { width: 16px; min-height: 16px; accent-color: var(--accent); }
 
 @media (max-width: 900px) {
   body { min-width: 0; }
@@ -106,4 +115,5 @@ tr:hover td { background: #fafcff; }
   .main { padding: 16px; }
   table { min-width: 720px; }
   .panel { overflow-x: auto; }
+  .permission-checkbox-grid { grid-template-columns: 1fr; }
 }

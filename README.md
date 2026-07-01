@@ -35,10 +35,12 @@ npm start
 复制 `.env.example` 为 `.env` 后修改：
 
 ```env
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=change-me
+ADMIN_USERNAME=孙立柱
+ADMIN_PASSWORD=521sunlizhu
 SESSION_SECRET=change-me
 ```
+
+系统支持用户注册和页面级权限管理。新用户注册后默认没有页面权限，需要管理员登录后进入“权限管理”为该用户勾选可访问页面。
 
 ## 数据备份
 
@@ -57,7 +59,7 @@ SERVER_USER=服务器 SSH 用户名
 SERVER_SSH_KEY=服务器 SSH 私钥
 SERVER_SSH_PORT=22
 DEPLOY_PATH=/www/wwwroot/daifaxitong
-ADMIN_USERNAME=admin
+ADMIN_USERNAME=孙立柱
 ADMIN_PASSWORD=请改成强密码
 SESSION_SECRET=请改成随机长字符串
 ```

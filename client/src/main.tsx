@@ -8,6 +8,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { SuppliersPage } from "./pages/SuppliersPage";
 import { ProductsPage } from "./pages/ProductsPage";
 import { OrdersPage } from "./pages/OrdersPage";
+import { PermissionsPage } from "./pages/PermissionsPage";
 import "./styles.css";
 
 const queryClient = new QueryClient();
@@ -21,7 +22,8 @@ const router = createBrowserRouter([
       { index: true, element: <DashboardPage /> },
       { path: "suppliers", element: <SuppliersPage /> },
       { path: "products", element: <ProductsPage /> },
-      { path: "orders", element: <OrdersPage /> }
+      { path: "orders", element: <OrdersPage /> },
+      { path: "permissions", element: <PermissionsPage /> }
     ]
   },
   { path: "*", element: <Navigate to="/" replace /> }
