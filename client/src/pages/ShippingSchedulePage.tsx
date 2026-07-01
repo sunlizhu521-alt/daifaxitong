@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { api, type OrderListRow } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
@@ -13,11 +13,21 @@ const statusText: Record<string, string> = {
 };
 
 export function ShippingSchedulePage() {
+  const qc = useQueryClient();
   const navigate = useNavigate();
   const [status, setStatus] = useState("");
   const { data: orders = [] } = useQuery({
     queryKey: ["shipping-schedule", status],
     queryFn: () => api<OrderListRow[]>(`/orders?status=${encodeURIComponent(status)}`)
+  });
+  const markShipped = useMutation({
+    mutationFn: (id: number) => api(`/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "shipped" }) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
+      qc.invalidateQueries({ queryKey: ["dropship-summary"] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["summary"] });
+    }
   });
 
   return (
@@ -63,7 +73,7 @@ export function ShippingSchedulePage() {
                 <td>{order.totalQuantity ?? 0}</td>
                 <td><span className={`status ${order.status}`}>{statusText[order.status]}</span></td>
                 <td className="row-actions">
-                  <button type="button" onClick={() => navigate(`/tracking-numbers?keyword=${encodeURIComponent(order.orderNo)}`)}>提交</button>
+                  <button type="button" onClick={() => markShipped.mutate(order.id)}>提交</button>
                   <button type="button" onClick={() => navigate(`/returns?keyword=${encodeURIComponent(order.orderNo)}`)}>退货</button>
                 </td>
                 <td>{order.note || order.shipmentNote || "-"}</td>
@@ -71,6 +81,7 @@ export function ShippingSchedulePage() {
             ))}
           </tbody>
         </table>
+        {markShipped.error ? <div className="error">{markShipped.error.message}</div> : null}
       </Panel>
     </>
   );

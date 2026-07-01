@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type OrderListRow } from "../api";
+import { api, type OrderListRow, type User } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
 const statusText: Record<string, string> = {
@@ -15,13 +15,23 @@ export function PurchaseOrdersPage() {
   const qc = useQueryClient();
   const [keyword, setKeyword] = useState("");
   const [status, setStatus] = useState("");
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
   const { data: orders = [] } = useQuery({
     queryKey: ["purchase-orders", keyword, status],
     queryFn: () => api<OrderListRow[]>(`/orders?keyword=${encodeURIComponent(keyword)}&status=${encodeURIComponent(status)}`)
   });
   const savePurchaseOrder = useMutation({
-    mutationFn: ({ id, purchaseOrderNo }: { id: number; purchaseOrderNo: string }) =>
-      api(`/orders/${id}/purchase-order`, { method: "PATCH", body: JSON.stringify({ purchaseOrderNo }) }),
+    mutationFn: ({ id, purchaseOrderNo, purchaseOrderUser }: { id: number; purchaseOrderNo: string; purchaseOrderUser: string }) =>
+      api(`/orders/${id}/purchase-order`, { method: "PATCH", body: JSON.stringify({ purchaseOrderNo, purchaseOrderUser }) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["purchase-orders"] });
+      qc.invalidateQueries({ queryKey: ["dropship-summary"] });
+      qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
+    }
+  });
+  const deletePurchaseOrder = useMutation({
+    mutationFn: (id: number) => api(`/orders/${id}/purchase-order`, { method: "DELETE" }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["purchase-orders"] });
       qc.invalidateQueries({ queryKey: ["dropship-summary"] });
@@ -33,7 +43,16 @@ export function PurchaseOrdersPage() {
   function submitPurchaseOrder(order: OrderListRow, event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    savePurchaseOrder.mutate({ id: order.id, purchaseOrderNo: String(form.get("purchaseOrderNo") ?? "").trim() });
+    savePurchaseOrder.mutate({
+      id: order.id,
+      purchaseOrderNo: String(form.get("purchaseOrderNo") ?? "").trim(),
+      purchaseOrderUser: String(form.get("purchaseOrderUser") ?? me?.user?.username ?? "").trim()
+    });
+  }
+
+  function removePurchaseOrder(order: OrderListRow) {
+    if (!window.confirm(`确定删除订单 ${order.orderNo} 的采购订单号吗？`)) return;
+    deletePurchaseOrder.mutate(order.id);
   }
 
   return (
@@ -52,6 +71,7 @@ export function PurchaseOrdersPage() {
         <table>
           <thead>
             <tr>
+              <th>采购下单人</th>
               <th>供应商</th>
               <th>店铺</th>
               <th>订单编号</th>
@@ -70,13 +90,16 @@ export function PurchaseOrdersPage() {
           <tbody>
             {orders.map((order) => (
               <tr key={order.id}>
+                <td>
+                  <form id={`purchase-order-${order.id}`} onSubmit={(event) => submitPurchaseOrder(order, event)}>
+                    <input name="purchaseOrderUser" placeholder="采购下单人" defaultValue={order.purchaseOrderUser || me?.user?.username || ""} required />
+                  </form>
+                </td>
                 <td>{order.supplierName ?? "-"}</td>
                 <td>{order.storeName || "-"}</td>
                 <td>{order.orderNo}</td>
                 <td>
-                  <form id={`purchase-order-${order.id}`} onSubmit={(event) => submitPurchaseOrder(order, event)}>
-                    <input name="purchaseOrderNo" placeholder="填写采购订单号" defaultValue={order.purchaseOrderNo ?? ""} required />
-                  </form>
+                  <input form={`purchase-order-${order.id}`} name="purchaseOrderNo" placeholder="填写采购订单号" defaultValue={order.purchaseOrderNo ?? ""} required />
                 </td>
                 <td>{order.customerName}</td>
                 <td>{order.customerPhone ?? "-"}</td>
@@ -87,13 +110,15 @@ export function PurchaseOrdersPage() {
                 <td><span className={`status ${order.status}`}>{statusText[order.status]}</span></td>
                 <td>{order.note || order.shipmentNote || "-"}</td>
                 <td className="row-actions">
-                  <button form={`purchase-order-${order.id}`} className="primary-button">{order.purchaseOrderNo ? "编辑" : "提交"}</button>
+                  <button type="submit" form={`purchase-order-${order.id}`} className="primary-button">{order.purchaseOrderNo ? "编辑" : "提交"}</button>
+                  <button type="button" onClick={() => removePurchaseOrder(order)}>删除</button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
         {savePurchaseOrder.error ? <div className="error">{savePurchaseOrder.error.message}</div> : null}
+        {deletePurchaseOrder.error ? <div className="error">{deletePurchaseOrder.error.message}</div> : null}
       </Panel>
     </>
   );

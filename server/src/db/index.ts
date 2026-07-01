@@ -29,6 +29,7 @@ function migrateDb(database: Database.Database) {
   ensureColumn(database, "stores", "operator", "TEXT");
   ensureColumn(database, "orders", "supplierId", "INTEGER");
   ensureColumn(database, "orders", "purchaseOrderNo", "TEXT");
+  ensureColumn(database, "orders", "purchaseOrderUser", "TEXT");
   ensureColumn(database, "orders", "storeName", "TEXT");
   ensureColumn(database, "orders", "registrarName", "TEXT");
   ensureColumn(database, "shipments", "carrierId", "INTEGER");

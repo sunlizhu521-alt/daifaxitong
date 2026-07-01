@@ -62,9 +62,16 @@ test("auth, supplier, product, order and shipment flow", async () => {
     .expect(201);
   await agent.post("/api/orders").send(order.body).expect(409);
 
-  await agent.patch(`/api/orders/${order.body.id}/purchase-order`).send({ purchaseOrderNo: "CG20260701001" }).expect(200);
+  await agent.patch(`/api/orders/${order.body.id}/purchase-order`).send({ purchaseOrderNo: "CG20260701001", purchaseOrderUser: "采购A" }).expect(200);
   const purchaseRows = await agent.get("/api/orders?keyword=CG20260701001").expect(200);
   assert.equal(purchaseRows.body[0].purchaseOrderNo, "CG20260701001");
+  assert.equal(purchaseRows.body[0].purchaseOrderUser, "采购A");
+  const purchaseUserRows = await agent.get("/api/orders?keyword=采购A").expect(200);
+  assert.equal(purchaseUserRows.body[0].orderNo, "DF001");
+  await agent.patch(`/api/orders/${order.body.id}/status`).send({ status: "shipped" }).expect(200);
+  const shippedDetail = await agent.get(`/api/orders/${order.body.id}`).expect(200);
+  assert.equal(shippedDetail.body.status, "shipped");
+  await agent.patch(`/api/orders/${order.body.id}/status`).send({ status: "pending" }).expect(200);
   const filteredRows = await agent.get("/api/orders?series=基础&sku=默认规格").expect(200);
   assert.equal(filteredRows.body[0].orderNo, "DF001");
 
@@ -111,6 +118,10 @@ test("auth, supplier, product, order and shipment flow", async () => {
   const afterDeleteShipment = await agent.get(`/api/orders/${order.body.id}`).expect(200);
   assert.equal(afterDeleteShipment.body.status, "pending");
   assert.equal(afterDeleteShipment.body.shipments.length, 0);
+  await agent.delete(`/api/orders/${order.body.id}/purchase-order`).expect(200);
+  const afterDeletePurchaseOrder = await agent.get(`/api/orders/${order.body.id}`).expect(200);
+  assert.equal(afterDeletePurchaseOrder.body.purchaseOrderNo, "");
+  assert.equal(afterDeletePurchaseOrder.body.purchaseOrderUser, "");
   await agent.delete(`/api/products/${product.body.id}`).expect(409);
 });
 

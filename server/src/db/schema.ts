@@ -82,6 +82,7 @@ CREATE TABLE IF NOT EXISTS orders (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   orderNo TEXT NOT NULL UNIQUE,
   purchaseOrderNo TEXT,
+  purchaseOrderUser TEXT,
   supplierId INTEGER,
   storeName TEXT,
   registrarName TEXT,

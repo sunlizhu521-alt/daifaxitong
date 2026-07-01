@@ -46,6 +46,7 @@ export type OrderListRow = {
   id: number;
   orderNo: string;
   purchaseOrderNo?: string | null;
+  purchaseOrderUser?: string | null;
   customerName: string;
   customerPhone?: string;
   address: string;

@@ -66,7 +66,6 @@ export function DropshipSummaryPage() {
         <table>
           <thead>
             <tr>
-              <th>采购订单号</th>
               <th>订单编号</th>
               <th>供应商</th>
               <th>店铺</th>
@@ -81,6 +80,8 @@ export function DropshipSummaryPage() {
               <th>状态</th>
               <th>快递公司</th>
               <th>快递单号</th>
+              <th>采购订单号</th>
+              <th>采购订单号填写人</th>
               <th>发货时间</th>
               <th>备注</th>
               <th>创建时间</th>
@@ -89,7 +90,6 @@ export function DropshipSummaryPage() {
           <tbody>
             {orders.map((order) => (
               <tr key={order.id}>
-                <td>{order.purchaseOrderNo || "-"}</td>
                 <td>{order.orderNo}</td>
                 <td>{order.supplierName ?? "-"}</td>
                 <td>{order.storeName || "-"}</td>
@@ -104,6 +104,8 @@ export function DropshipSummaryPage() {
                 <td><span className={`status ${order.status}`}>{statusText[order.status]}</span></td>
                 <td>{order.carrier || "-"}</td>
                 <td>{order.trackingNo || "-"}</td>
+                <td>{order.purchaseOrderNo || "-"}</td>
+                <td>{order.purchaseOrderUser || "-"}</td>
                 <td>{order.shippedAt ? order.shippedAt.slice(0, 16).replace("T", " ") : "-"}</td>
                 <td>{mergeNotes(order)}</td>
                 <td>{order.createdAt?.slice(0, 10)}</td>

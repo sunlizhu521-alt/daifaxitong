@@ -11,6 +11,13 @@ ADMIN_USERNAME="${ADMIN_USERNAME:-admin}"
 cd "$APP_DIR"
 
 mkdir -p server/data server/uploads server/logs
+if [ -d server/data ]; then
+  backup_dir="${HOME}/backups/daifaxitong"
+  mkdir -p "$backup_dir"
+  backup_file="${backup_dir}/data-$(date +%Y%m%d-%H%M%S).tar.gz"
+  tar -czf "$backup_file" server/data
+  ls -lh "$backup_file"
+fi
 
 cat > .env <<ENV
 PORT=${DEPLOY_PORT}

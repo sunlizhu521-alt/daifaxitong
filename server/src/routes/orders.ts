@@ -23,6 +23,7 @@ const orderItemSchema = z.object({
 const orderSchema = z.object({
   orderNo: z.string().trim().min(1, "订单号不能为空"),
   purchaseOrderNo: z.string().optional(),
+  purchaseOrderUser: z.string().optional().default(""),
   supplierId: optionalId,
   storeName: z.string().optional().default(""),
   registrarName: z.string().optional().default(""),
@@ -45,7 +46,12 @@ const shipSchema = z.object({
 });
 
 const purchaseOrderSchema = z.object({
-  purchaseOrderNo: z.string().trim().min(1, "采购订单号不能为空")
+  purchaseOrderNo: z.string().trim().min(1, "采购订单号不能为空"),
+  purchaseOrderUser: z.string().optional().default("")
+});
+
+const statusSchema = z.object({
+  status: z.enum(["pending", "filled", "shipped", "exception", "cancelled"])
 });
 
 function readOrder(id: number) {
@@ -73,17 +79,17 @@ function saveOrder(data: z.infer<typeof orderSchema>, id?: number) {
     if (orderId) {
       const result = db
         .prepare(
-          "UPDATE orders SET orderNo = ?, purchaseOrderNo = COALESCE(?, purchaseOrderNo), supplierId = ?, storeName = ?, registrarName = ?, customerName = ?, customerPhone = ?, address = ?, status = ?, note = ?, updatedAt = ? WHERE id = ?"
+          "UPDATE orders SET orderNo = ?, purchaseOrderNo = COALESCE(?, purchaseOrderNo), purchaseOrderUser = COALESCE(?, purchaseOrderUser), supplierId = ?, storeName = ?, registrarName = ?, customerName = ?, customerPhone = ?, address = ?, status = ?, note = ?, updatedAt = ? WHERE id = ?"
         )
-        .run(data.orderNo, data.purchaseOrderNo ?? null, data.supplierId ?? null, data.storeName, data.registrarName, data.customerName, data.customerPhone, data.address, data.status, data.note, nowIso(), orderId);
+        .run(data.orderNo, data.purchaseOrderNo ?? null, data.purchaseOrderUser || null, data.supplierId ?? null, data.storeName, data.registrarName, data.customerName, data.customerPhone, data.address, data.status, data.note, nowIso(), orderId);
       if (result.changes === 0) throw new Error("NOT_FOUND");
       db.prepare("DELETE FROM order_items WHERE orderId = ?").run(orderId);
     } else {
       const result = db
         .prepare(
-          "INSERT INTO orders (orderNo, purchaseOrderNo, supplierId, storeName, registrarName, customerName, customerPhone, address, status, note, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          "INSERT INTO orders (orderNo, purchaseOrderNo, purchaseOrderUser, supplierId, storeName, registrarName, customerName, customerPhone, address, status, note, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
-        .run(data.orderNo, data.purchaseOrderNo ?? "", data.supplierId ?? null, data.storeName, data.registrarName, data.customerName, data.customerPhone, data.address, data.status, data.note, nowIso());
+        .run(data.orderNo, data.purchaseOrderNo ?? "", data.purchaseOrderUser, data.supplierId ?? null, data.storeName, data.registrarName, data.customerName, data.customerPhone, data.address, data.status, data.note, nowIso());
       orderId = Number(result.lastInsertRowid);
     }
     const insertItem = db.prepare(
@@ -110,8 +116,8 @@ ordersRouter.get("/", (req, res) => {
   const filters: string[] = [];
   const params: unknown[] = [];
   if (keyword) {
-    filters.push("(o.orderNo LIKE ? OR o.purchaseOrderNo LIKE ? OR o.storeName LIKE ? OR o.customerName LIKE ? OR o.customerPhone LIKE ? OR o.address LIKE ? OR oi.productName LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ?)");
-    params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
+    filters.push("(o.orderNo LIKE ? OR o.purchaseOrderNo LIKE ? OR o.purchaseOrderUser LIKE ? OR o.storeName LIKE ? OR o.customerName LIKE ? OR o.customerPhone LIKE ? OR o.address LIKE ? OR oi.productName LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ?)");
+    params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
   }
   if (status) {
     filters.push("o.status = ?");
@@ -196,7 +202,7 @@ ordersRouter.get("/export", (req, res) => {
   const rows = getDb()
     .prepare(
       `SELECT o.orderNo AS 订单号, o.storeName AS 店铺, COALESCE(orderSupplier.shortName, orderSupplier.name) AS 供应商, o.registrarName AS 登记人,
-        o.purchaseOrderNo AS 采购订单号,
+        o.purchaseOrderNo AS 采购订单号, o.purchaseOrderUser AS 采购订单号填写人,
         o.customerName AS 客户姓名, o.customerPhone AS 客户电话, o.address AS 收货地址,
         o.status AS 订单状态, oi.productName AS 商品名称, oi.productSku AS SKU规格, oi.quantity AS 数量,
         sh.carrier AS 快递公司, sh.trackingNo AS 物流单号, sh.shippedAt AS 发货时间, o.note AS 备注
@@ -271,8 +277,35 @@ ordersRouter.patch("/:id/purchase-order", (req, res) => {
     return;
   }
   const result = getDb()
-    .prepare("UPDATE orders SET purchaseOrderNo = ?, updatedAt = ? WHERE id = ?")
-    .run(parsed.data.purchaseOrderNo, nowIso(), Number(req.params.id));
+    .prepare("UPDATE orders SET purchaseOrderNo = ?, purchaseOrderUser = ?, updatedAt = ? WHERE id = ?")
+    .run(parsed.data.purchaseOrderNo, parsed.data.purchaseOrderUser || req.session.user?.username || "", nowIso(), Number(req.params.id));
+  if (result.changes === 0) {
+    res.status(404).json({ message: "订单不存在" });
+    return;
+  }
+  res.json(readOrder(Number(req.params.id)));
+});
+
+ordersRouter.delete("/:id/purchase-order", (req, res) => {
+  const result = getDb()
+    .prepare("UPDATE orders SET purchaseOrderNo = '', purchaseOrderUser = '', updatedAt = ? WHERE id = ?")
+    .run(nowIso(), Number(req.params.id));
+  if (result.changes === 0) {
+    res.status(404).json({ message: "订单不存在" });
+    return;
+  }
+  res.json(readOrder(Number(req.params.id)));
+});
+
+ordersRouter.patch("/:id/status", (req, res) => {
+  const parsed = statusSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ message: parsed.error.issues[0]?.message ?? "参数错误" });
+    return;
+  }
+  const result = getDb()
+    .prepare("UPDATE orders SET status = ?, updatedAt = ? WHERE id = ?")
+    .run(parsed.data.status, nowIso(), Number(req.params.id));
   if (result.changes === 0) {
     res.status(404).json({ message: "订单不存在" });
     return;
