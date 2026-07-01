@@ -39,6 +39,7 @@ export type Carrier = {
   name: string;
   contact?: string;
   address?: string;
+  note?: string;
 };
 
 export type OrderListRow = {

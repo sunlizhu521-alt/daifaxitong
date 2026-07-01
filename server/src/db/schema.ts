@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS carriers (
   name TEXT NOT NULL UNIQUE,
   contact TEXT,
   address TEXT,
+  note TEXT,
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
 );

@@ -8,7 +8,8 @@ export const carriersRouter = Router();
 const carrierSchema = z.object({
   name: z.string().trim().min(1, "快递名称不能为空"),
   contact: z.string().optional().default(""),
-  address: z.string().optional().default("")
+  address: z.string().optional().default(""),
+  note: z.string().optional().default("")
 });
 
 carriersRouter.get("/", (req, res) => {
@@ -16,8 +17,8 @@ carriersRouter.get("/", (req, res) => {
   const db = getDb();
   const rows = keyword
     ? db
-        .prepare("SELECT * FROM carriers WHERE name LIKE ? OR contact LIKE ? OR address LIKE ? ORDER BY id DESC")
-        .all(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`)
+        .prepare("SELECT * FROM carriers WHERE name LIKE ? OR contact LIKE ? OR address LIKE ? OR note LIKE ? ORDER BY id DESC")
+        .all(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`)
     : db.prepare("SELECT * FROM carriers ORDER BY id DESC").all();
   res.json(rows);
 });
@@ -31,8 +32,8 @@ carriersRouter.post("/", (req, res) => {
   const db = getDb();
   try {
     const result = db
-      .prepare("INSERT INTO carriers (name, contact, address, updatedAt) VALUES (?, ?, ?, ?)")
-      .run(parsed.data.name, parsed.data.contact, parsed.data.address, nowIso());
+      .prepare("INSERT INTO carriers (name, contact, address, note, updatedAt) VALUES (?, ?, ?, ?, ?)")
+      .run(parsed.data.name, parsed.data.contact, parsed.data.address, parsed.data.note, nowIso());
     res.status(201).json(db.prepare("SELECT * FROM carriers WHERE id = ?").get(result.lastInsertRowid));
   } catch {
     res.status(409).json({ message: "快递名称已存在" });
@@ -48,8 +49,8 @@ carriersRouter.put("/:id", (req, res) => {
   const id = Number(req.params.id);
   try {
     const result = getDb()
-      .prepare("UPDATE carriers SET name = ?, contact = ?, address = ?, updatedAt = ? WHERE id = ?")
-      .run(parsed.data.name, parsed.data.contact, parsed.data.address, nowIso(), id);
+      .prepare("UPDATE carriers SET name = ?, contact = ?, address = ?, note = ?, updatedAt = ? WHERE id = ?")
+      .run(parsed.data.name, parsed.data.contact, parsed.data.address, parsed.data.note, nowIso(), id);
     if (result.changes === 0) {
       res.status(404).json({ message: "快递公司不存在" });
       return;

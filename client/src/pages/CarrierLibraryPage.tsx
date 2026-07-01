@@ -34,20 +34,21 @@ export function CarrierLibraryPage() {
 
   return (
     <>
-      <PageHeader title="快递库" description="维护快递公司名称、联系人和地址。" />
-      <div className="two-column catalog-layout">
+      <PageHeader title="快递库" description="维护快递公司名称、联系人、地址和备注。" />
+      <div className="two-column catalog-layout library-layout">
         <Panel title={editing ? "编辑快递公司" : "新增快递公司"}>
           <form className="form-grid" onSubmit={submit}>
             <input name="name" placeholder="快递名称" defaultValue={editing?.name} required />
             <input name="contact" placeholder="联系人" defaultValue={editing?.contact} />
             <input name="address" placeholder="地址" defaultValue={editing?.address} />
+            <textarea name="note" placeholder="备注" defaultValue={editing?.note} />
             {save.error ? <div className="error">{save.error.message}</div> : null}
             <button className="primary-button">{editing ? "保存修改" : "新增快递"}</button>
           </form>
         </Panel>
         <Panel title="快递公司列表">
           <div className="toolbar">
-            <input placeholder="搜索快递名称/联系人/地址" value={keyword} onChange={(event) => setKeyword(event.target.value)} />
+            <input placeholder="搜索快递名称/联系人/地址/备注" value={keyword} onChange={(event) => setKeyword(event.target.value)} />
           </div>
           <table>
             <thead>
@@ -55,6 +56,7 @@ export function CarrierLibraryPage() {
                 <th>快递名称</th>
                 <th>联系人</th>
                 <th>地址</th>
+                <th>备注</th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -64,6 +66,7 @@ export function CarrierLibraryPage() {
                   <td>{carrier.name}</td>
                   <td>{carrier.contact || "-"}</td>
                   <td>{carrier.address || "-"}</td>
+                  <td>{carrier.note || "-"}</td>
                   <td className="row-actions">
                     <button onClick={() => setEditing(carrier)}>编辑</button>
                     {isAdmin ? <button onClick={() => remove.mutate(carrier.id)}>删除</button> : null}

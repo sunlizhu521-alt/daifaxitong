@@ -31,7 +31,8 @@ test("auth, supplier, product, order and shipment flow", async () => {
   await agent.post("/api/auth/login").send({ username: "admin", password: "secret" }).expect(200);
 
   const supplier = await agent.post("/api/suppliers").send({ name: "上海供应商", shortName: "上海供", contact: "李四", storeAddress: "上海" }).expect(201);
-  const carrier = await agent.post("/api/carriers").send({ name: "顺丰速运", contact: "客服", address: "深圳" }).expect(201);
+  const carrier = await agent.post("/api/carriers").send({ name: "顺丰速运", contact: "客服", address: "深圳", note: "常用快递" }).expect(201);
+  assert.equal(carrier.body.note, "常用快递");
   const product = await agent
     .post("/api/products")
     .send({ materialCode: "MAT001", productLine: "家居", series: "基础", ssku: "默认规格", name: "示例商品", supplierModel: "GYS-001", supplierId: supplier.body.id })
