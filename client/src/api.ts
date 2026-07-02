@@ -47,6 +47,7 @@ export type OrderListRow = {
   orderNo: string;
   purchaseOrderNo?: string | null;
   purchaseOrderUser?: string | null;
+  orderType?: "dropship" | "accessory" | null;
   customerName: string;
   customerPhone?: string;
   address: string;
@@ -129,6 +130,7 @@ export type PageOption = {
     | "dashboard"
     | "dropShippingRegistration"
     | "trackingNumbers"
+    | "accessoryShipping"
     | "carrierLibrary"
     | "shippingSchedule"
     | "purchaseOrders"

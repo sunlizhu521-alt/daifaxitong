@@ -35,6 +35,7 @@ type OrderEntryPageProps = {
   receiverNameLabel?: string;
   receiverPhoneLabel?: string;
   addressLabel?: string;
+  orderType?: "dropship" | "accessory";
 };
 
 export function OrderEntryPage({
@@ -45,7 +46,8 @@ export function OrderEntryPage({
   itemInputMode = "select",
   receiverNameLabel = "收货人姓名",
   receiverPhoneLabel = "收货人电话",
-  addressLabel = "收货地址"
+  addressLabel = "收货地址",
+  orderType = "dropship"
 }: OrderEntryPageProps) {
   const qc = useQueryClient();
   const [receiverRaw, setReceiverRaw] = useState("");
@@ -87,6 +89,7 @@ export function OrderEntryPage({
     const manualProductName = String(form.get("productName") ?? "").trim();
     createOrder.mutate({
       orderNo: form.get("orderNo"),
+      orderType,
       supplierId: form.get("supplierId"),
       storeName: form.get("storeName"),
       registrarName: form.get("registrarName"),

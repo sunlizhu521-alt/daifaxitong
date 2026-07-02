@@ -23,6 +23,7 @@ const orderSchema = z.object({
   orderNo: z.string().trim().min(1, "订单号不能为空"),
   purchaseOrderNo: z.string().optional(),
   purchaseOrderUser: z.string().optional().default(""),
+  orderType: z.enum(["dropship", "accessory"]).optional(),
   supplierId: optionalId,
   storeName: z.string().optional().default(""),
   registrarName: z.string().optional().default(""),
@@ -102,17 +103,17 @@ function saveOrder(data: z.infer<typeof orderSchema>, id?: number) {
     if (orderId) {
       const result = db
         .prepare(
-          "UPDATE orders SET orderNo = ?, purchaseOrderNo = COALESCE(?, purchaseOrderNo), purchaseOrderUser = COALESCE(?, purchaseOrderUser), supplierId = ?, storeName = ?, registrarName = ?, customerName = ?, customerPhone = ?, address = ?, status = ?, note = ?, updatedAt = ? WHERE id = ?"
+          "UPDATE orders SET orderNo = ?, purchaseOrderNo = COALESCE(?, purchaseOrderNo), purchaseOrderUser = COALESCE(?, purchaseOrderUser), orderType = COALESCE(?, orderType), supplierId = ?, storeName = ?, registrarName = ?, customerName = ?, customerPhone = ?, address = ?, status = ?, note = ?, updatedAt = ? WHERE id = ?"
         )
-        .run(data.orderNo, data.purchaseOrderNo ?? null, data.purchaseOrderUser || null, data.supplierId ?? null, data.storeName, data.registrarName, data.customerName, data.customerPhone, data.address, data.status, data.note, nowIso(), orderId);
+        .run(data.orderNo, data.purchaseOrderNo ?? null, data.purchaseOrderUser || null, data.orderType ?? null, data.supplierId ?? null, data.storeName, data.registrarName, data.customerName, data.customerPhone, data.address, data.status, data.note, nowIso(), orderId);
       if (result.changes === 0) throw new Error("NOT_FOUND");
       db.prepare("DELETE FROM order_items WHERE orderId = ?").run(orderId);
     } else {
       const result = db
         .prepare(
-          "INSERT INTO orders (orderNo, purchaseOrderNo, purchaseOrderUser, supplierId, storeName, registrarName, customerName, customerPhone, address, status, note, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          "INSERT INTO orders (orderNo, purchaseOrderNo, purchaseOrderUser, orderType, supplierId, storeName, registrarName, customerName, customerPhone, address, status, note, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
-        .run(data.orderNo, data.purchaseOrderNo ?? "", data.purchaseOrderUser, data.supplierId ?? null, data.storeName, data.registrarName, data.customerName, data.customerPhone, data.address, data.status, data.note, nowIso());
+        .run(data.orderNo, data.purchaseOrderNo ?? "", data.purchaseOrderUser, data.orderType ?? "dropship", data.supplierId ?? null, data.storeName, data.registrarName, data.customerName, data.customerPhone, data.address, data.status, data.note, nowIso());
       orderId = Number(result.lastInsertRowid);
     }
     const insertItem = db.prepare(
@@ -135,7 +136,7 @@ function saveOrder(data: z.infer<typeof orderSchema>, id?: number) {
 }
 
 ordersRouter.get("/", (req, res) => {
-  const { keyword = "", status = "", supplierId = "", storeName = "", series = "", sku = "", startDate = "", endDate = "", hasTracking = "", page = "1", pageSize = "50" } = req.query;
+  const { keyword = "", status = "", supplierId = "", storeName = "", series = "", sku = "", startDate = "", endDate = "", hasTracking = "", orderType = "", page = "1", pageSize = "50" } = req.query;
   const pageNum = Math.max(1, Number(page) || 1);
   const pageSizeNum = Math.min(200, Math.max(1, Number(pageSize) || 50));
   const offset = (pageNum - 1) * pageSizeNum;
@@ -148,6 +149,10 @@ ordersRouter.get("/", (req, res) => {
   if (status) {
     filters.push("o.status = ?");
     params.push(status);
+  }
+  if (orderType) {
+    filters.push("o.orderType = ?");
+    params.push(orderType);
   }
   if (supplierId) {
     filters.push("(o.supplierId = ? OR EXISTS (SELECT 1 FROM shipments sh WHERE sh.orderId = o.id AND sh.supplierId = ?))");

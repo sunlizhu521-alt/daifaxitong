@@ -11,6 +11,7 @@ export function AccessoryRegistrationPage() {
       receiverNameLabel="售后姓名"
       receiverPhoneLabel="售后电话"
       addressLabel="收货地址"
+      orderType="accessory"
     />
   );
 }

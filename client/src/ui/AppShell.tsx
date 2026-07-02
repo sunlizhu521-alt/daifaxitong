@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { BarChart3, Boxes, CalendarClock, CheckCircle2, ClipboardCheck, ClipboardList, FileText, LogOut, Package, PackagePlus, RotateCcw, ShieldCheck, Store, Truck, Undo2, Warehouse } from "lucide-react";
+import { BarChart3, Boxes, CalendarClock, CheckCircle2, ClipboardCheck, ClipboardList, FileText, LogOut, Package, PackageCheck, PackagePlus, RotateCcw, ShieldCheck, Store, Truck, Undo2, Warehouse } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api, type User } from "../api";
 
@@ -8,6 +8,7 @@ const nav = [
   { key: "dashboard", to: "/", label: "仪表盘", icon: BarChart3 },
   { key: "dropShippingRegistration", to: "/drop-shipping", label: "登记代发", icon: ClipboardList },
   { key: "accessoryRegistration", to: "/accessories", label: "配件登记", icon: PackagePlus },
+  { key: "accessoryShipping", to: "/accessory-shipping", label: "配件发货", icon: PackageCheck },
   { key: "trackingNumbers", to: "/tracking-numbers", label: "快递单号", icon: Truck },
   { key: "shippingSchedule", to: "/shipping-schedule", label: "发货安排", icon: CalendarClock },
   { key: "purchaseOrders", to: "/purchase-orders", label: "采购订单", icon: ClipboardCheck },

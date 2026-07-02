@@ -14,6 +14,7 @@ const OrdersPage = lazy(() => import("./pages/OrdersPage").then((module) => ({ d
 const AccessoryRegistrationPage = lazy(() =>
   import("./pages/AccessoryRegistrationPage").then((module) => ({ default: module.AccessoryRegistrationPage }))
 );
+const AccessoryShippingPage = lazy(() => import("./pages/AccessoryShippingPage").then((module) => ({ default: module.AccessoryShippingPage })));
 const TrackingNumbersPage = lazy(() => import("./pages/TrackingNumbersPage").then((module) => ({ default: module.TrackingNumbersPage })));
 const CarrierLibraryPage = lazy(() => import("./pages/CarrierLibraryPage").then((module) => ({ default: module.CarrierLibraryPage })));
 const ShippingSchedulePage = lazy(() => import("./pages/ShippingSchedulePage").then((module) => ({ default: module.ShippingSchedulePage })));
@@ -39,6 +40,7 @@ const router = createBrowserRouter([
       { index: true, element: lazyElement(<DashboardPage />) },
       { path: "drop-shipping", element: lazyElement(<OrdersPage />) },
       { path: "accessories", element: lazyElement(<AccessoryRegistrationPage />) },
+      { path: "accessory-shipping", element: lazyElement(<AccessoryShippingPage />) },
       { path: "tracking-numbers", element: lazyElement(<TrackingNumbersPage />) },
       { path: "carriers", element: lazyElement(<CarrierLibraryPage />) },
       { path: "shipping-schedule", element: lazyElement(<ShippingSchedulePage />) },

@@ -83,6 +83,7 @@ CREATE TABLE IF NOT EXISTS orders (
   orderNo TEXT NOT NULL UNIQUE,
   purchaseOrderNo TEXT,
   purchaseOrderUser TEXT,
+  orderType TEXT NOT NULL DEFAULT 'dropship',
   supplierId INTEGER,
   storeName TEXT,
   registrarName TEXT,

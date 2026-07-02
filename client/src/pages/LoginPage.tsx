@@ -6,6 +6,7 @@ const orderedPaths = [
   { key: "dashboard", path: "/" },
   { key: "dropShippingRegistration", path: "/drop-shipping" },
   { key: "accessoryRegistration", path: "/accessories" },
+  { key: "accessoryShipping", path: "/accessory-shipping" },
   { key: "trackingNumbers", path: "/tracking-numbers" },
   { key: "carrierLibrary", path: "/carriers" },
   { key: "shippingSchedule", path: "/shipping-schedule" },
