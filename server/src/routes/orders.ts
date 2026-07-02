@@ -112,7 +112,10 @@ function saveOrder(data: z.infer<typeof orderSchema>, id?: number) {
 }
 
 ordersRouter.get("/", (req, res) => {
-  const { keyword = "", status = "", supplierId = "", storeName = "", series = "", sku = "", startDate = "", endDate = "", hasTracking = "" } = req.query;
+  const { keyword = "", status = "", supplierId = "", storeName = "", series = "", sku = "", startDate = "", endDate = "", hasTracking = "", page = "1", pageSize = "50" } = req.query;
+  const pageNum = Math.max(1, Number(page) || 1);
+  const pageSizeNum = Math.min(200, Math.max(1, Number(pageSize) || 50));
+  const offset = (pageNum - 1) * pageSizeNum;
   const filters: string[] = [];
   const params: unknown[] = [];
   if (keyword) {
@@ -153,6 +156,16 @@ ordersRouter.get("/", (req, res) => {
   if (hasTracking === "no") {
     filters.push("COALESCE(latest.trackingNo, '') = ''");
   }
+  const countSql = `SELECT COUNT(DISTINCT o.id) AS total FROM orders o
+    LEFT JOIN order_items oi ON oi.orderId = o.id
+    LEFT JOIN products p ON p.id = oi.productId
+    LEFT JOIN shipments latest ON latest.id = (
+      SELECT sh.id FROM shipments sh WHERE sh.orderId = o.id ORDER BY sh.id DESC LIMIT 1
+    )
+    LEFT JOIN suppliers shipSupplier ON shipSupplier.id = latest.supplierId
+    LEFT JOIN suppliers orderSupplier ON orderSupplier.id = o.supplierId
+    ${filters.length ? `WHERE ${filters.join(" AND ")}` : ""}`;
+  const { total } = getDb().prepare(countSql).get(...params) as { total: number };
   const rows = getDb()
     .prepare(
       `SELECT o.*, COUNT(oi.id) AS itemCount, SUM(oi.quantity) AS totalQuantity,
@@ -174,10 +187,11 @@ ordersRouter.get("/", (req, res) => {
        LEFT JOIN suppliers orderSupplier ON orderSupplier.id = o.supplierId
        ${filters.length ? `WHERE ${filters.join(" AND ")}` : ""}
        GROUP BY o.id
-       ORDER BY o.id DESC`
+       ORDER BY o.id DESC
+       LIMIT ? OFFSET ?`
     )
-    .all(...params);
-  res.json(rows);
+    .all(...params, pageSizeNum, offset);
+  res.json({ rows, total, page: pageNum, pageSize: pageSizeNum });
 });
 
 ordersRouter.get("/template", (_req, res) => {

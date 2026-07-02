@@ -64,22 +64,25 @@ test("auth, supplier, product, order and shipment flow", async () => {
 
   await agent.patch(`/api/orders/${order.body.id}/purchase-order`).send({ purchaseOrderNo: "CG20260701001", purchaseOrderUser: "采购A" }).expect(200);
   const purchaseRows = await agent.get("/api/orders?keyword=CG20260701001").expect(200);
-  assert.equal(purchaseRows.body[0].purchaseOrderNo, "CG20260701001");
-  assert.equal(purchaseRows.body[0].purchaseOrderUser, "采购A");
-  assert.equal(purchaseRows.body[0].status, "purchased");
+  assert.equal(purchaseRows.body.total, 1);
+  assert.equal(purchaseRows.body.page, 1);
+  assert.equal(purchaseRows.body.pageSize, 50);
+  assert.equal(purchaseRows.body.rows[0].purchaseOrderNo, "CG20260701001");
+  assert.equal(purchaseRows.body.rows[0].purchaseOrderUser, "采购A");
+  assert.equal(purchaseRows.body.rows[0].status, "purchased");
   await agent.patch(`/api/orders/${order.body.id}/purchase-order`).send({ purchaseOrderNo: "CG20260701002", purchaseOrderUser: "采购B" }).expect(200);
   const modifiedPurchaseRows = await agent.get("/api/orders?keyword=CG20260701002").expect(200);
-  assert.equal(modifiedPurchaseRows.body[0].purchaseOrderNo, "CG20260701002");
-  assert.equal(modifiedPurchaseRows.body[0].purchaseOrderUser, "采购A");
-  assert.equal(modifiedPurchaseRows.body[0].status, "purchased");
+  assert.equal(modifiedPurchaseRows.body.rows[0].purchaseOrderNo, "CG20260701002");
+  assert.equal(modifiedPurchaseRows.body.rows[0].purchaseOrderUser, "采购A");
+  assert.equal(modifiedPurchaseRows.body.rows[0].status, "purchased");
   const purchaseUserRows = await agent.get("/api/orders?keyword=采购A").expect(200);
-  assert.equal(purchaseUserRows.body[0].orderNo, "DF001");
+  assert.equal(purchaseUserRows.body.rows[0].orderNo, "DF001");
   await agent.patch(`/api/orders/${order.body.id}/status`).send({ status: "shipped" }).expect(200);
   const shippedDetail = await agent.get(`/api/orders/${order.body.id}`).expect(200);
   assert.equal(shippedDetail.body.status, "shipped");
   await agent.patch(`/api/orders/${order.body.id}/status`).send({ status: "pending" }).expect(200);
   const filteredRows = await agent.get("/api/orders?series=基础&sku=默认规格").expect(200);
-  assert.equal(filteredRows.body[0].orderNo, "DF001");
+  assert.equal(filteredRows.body.rows[0].orderNo, "DF001");
 
   await agent
     .post(`/api/orders/${order.body.id}/ship`)
