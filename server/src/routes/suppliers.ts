@@ -5,6 +5,7 @@ import { z } from "zod";
 import { config } from "../config.js";
 import { getDb, nowIso } from "../db/index.js";
 import { ROLE_ADMIN } from "../permissions.js";
+import { cell, normalizeHeader } from "../utils.js";
 
 export const suppliersRouter = Router();
 const upload = multer({ dest: config.uploadDir });
@@ -17,21 +18,6 @@ const supplierSchema = z.object({
   storeAddress: z.string().optional().default(""),
   note: z.string().optional().default("")
 });
-
-function cell(row: Record<string, unknown>, names: string[]) {
-  const normalized = new Map(
-    Object.entries(row).map(([key, value]) => [normalizeHeader(key), value])
-  );
-  for (const name of names) {
-    const value = row[name] ?? normalized.get(normalizeHeader(name));
-    if (value !== undefined && value !== null && String(value).trim() !== "") return String(value).trim();
-  }
-  return "";
-}
-
-function normalizeHeader(value: string) {
-  return value.replace(/^\uFEFF/, "").replace(/[\s/_\-（）()：:]/g, "").toLowerCase();
-}
 
 suppliersRouter.get("/", (req, res) => {
   const keyword = String(req.query.keyword ?? "").trim();
