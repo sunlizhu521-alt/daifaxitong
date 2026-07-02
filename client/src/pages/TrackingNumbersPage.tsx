@@ -28,6 +28,7 @@ export function TrackingNumbersPage() {
   const [supplierId, setSupplierId] = useState("");
   const [series, setSeries] = useState("");
   const [sku, setSku] = useState("");
+  const [hasTracking, setHasTracking] = useState("no");
   const { data: carriers = [] } = useQuery({ queryKey: ["carriers"], queryFn: () => api<Carrier[]>("/carriers") });
   const { data: stores = [] } = useQuery({ queryKey: ["stores"], queryFn: () => api<Store[]>("/stores") });
   const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers"], queryFn: () => api<Supplier[]>("/suppliers") });
@@ -35,10 +36,10 @@ export function TrackingNumbersPage() {
   const seriesOptions = useMemo(() => [...new Set(products.map((product) => product.series).filter(Boolean))], [products]);
   const skuOptions = useMemo(() => [...new Set(products.map((product) => product.ssku ?? product.sku).filter(Boolean))], [products]);
   const { data: orders = [] } = useQuery({
-    queryKey: ["tracking-orders", keyword, storeName, supplierId, series, sku],
+    queryKey: ["tracking-orders", keyword, storeName, supplierId, series, sku, hasTracking],
     queryFn: () =>
       api<OrderListRow[]>(
-        `/orders?keyword=${encodeURIComponent(keyword)}&storeName=${encodeURIComponent(storeName)}&supplierId=${encodeURIComponent(supplierId)}&series=${encodeURIComponent(series)}&sku=${encodeURIComponent(sku)}`
+        `/orders?keyword=${encodeURIComponent(keyword)}&storeName=${encodeURIComponent(storeName)}&supplierId=${encodeURIComponent(supplierId)}&series=${encodeURIComponent(series)}&sku=${encodeURIComponent(sku)}&hasTracking=${encodeURIComponent(hasTracking)}`
       )
   });
   const ship = useMutation({
@@ -112,6 +113,11 @@ export function TrackingNumbersPage() {
             {skuOptions.map((item) => (
               <option value={item} key={item}>{item}</option>
             ))}
+          </select>
+          <select value={hasTracking} onChange={(event) => setHasTracking(event.target.value)}>
+            <option value="no">未填快递号</option>
+            <option value="yes">已填快递号</option>
+            <option value="">全部</option>
           </select>
           <input placeholder="搜索订单号/客户/电话/地址/商品" value={keyword} onChange={(event) => setKeyword(event.target.value)} />
         </div>

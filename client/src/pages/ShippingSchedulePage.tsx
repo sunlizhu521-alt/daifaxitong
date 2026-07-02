@@ -16,7 +16,7 @@ const statusText: Record<string, string> = {
 export function ShippingSchedulePage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState("filled");
   const { data: orders = [] } = useQuery({
     queryKey: ["shipping-schedule", status],
     queryFn: () => api<OrderListRow[]>(`/orders?status=${encodeURIComponent(status)}`)

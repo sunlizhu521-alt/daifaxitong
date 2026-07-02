@@ -7,7 +7,6 @@ import { PageHeader, Panel } from "../ui/Section";
 export function ReturnRegistrationPage() {
   const qc = useQueryClient();
   const [searchParams] = useSearchParams();
-  const [editingReturn, setEditingReturn] = useState<ReturnOrderRow | null>(null);
   const [keyword, setKeyword] = useState(() => searchParams.get("keyword") ?? "");
   const [appliedKeyword, setAppliedKeyword] = useState(() => searchParams.get("keyword") ?? "");
   const [storeName, setStoreName] = useState("");
@@ -18,12 +17,16 @@ export function ReturnRegistrationPage() {
   const [appliedSeries, setAppliedSeries] = useState("");
   const [sku, setSku] = useState("");
   const [appliedSku, setAppliedSku] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [appliedStartDate, setAppliedStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [appliedEndDate, setAppliedEndDate] = useState("");
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
   const { data: rows = [] } = useQuery({
-    queryKey: ["return-orders", appliedKeyword, appliedStoreName, appliedSupplierId, appliedSeries, appliedSku],
+    queryKey: ["return-orders", appliedKeyword, appliedStoreName, appliedSupplierId, appliedSeries, appliedSku, appliedStartDate, appliedEndDate],
     queryFn: () =>
       api<ReturnOrderRow[]>(
-        `/returns/orders?keyword=${encodeURIComponent(appliedKeyword)}&storeName=${encodeURIComponent(appliedStoreName)}&supplierId=${encodeURIComponent(appliedSupplierId)}&series=${encodeURIComponent(appliedSeries)}&sku=${encodeURIComponent(appliedSku)}`
+        `/returns/orders?keyword=${encodeURIComponent(appliedKeyword)}&storeName=${encodeURIComponent(appliedStoreName)}&supplierId=${encodeURIComponent(appliedSupplierId)}&series=${encodeURIComponent(appliedSeries)}&sku=${encodeURIComponent(appliedSku)}&startDate=${encodeURIComponent(appliedStartDate)}&endDate=${encodeURIComponent(appliedEndDate)}`
       )
   });
   const { data: stores = [] } = useQuery({ queryKey: ["stores"], queryFn: () => api<Store[]>("/stores") });
@@ -39,7 +42,6 @@ export function ReturnRegistrationPage() {
   const saveReturn = useMutation({
     mutationFn: (form: FormData) => api("/returns", { method: "POST", body: form }),
     onSuccess: () => {
-      setEditingReturn(null);
       qc.invalidateQueries({ queryKey: ["return-orders"] });
     }
   });
@@ -56,18 +58,20 @@ export function ReturnRegistrationPage() {
     setAppliedSupplierId(supplierId);
     setAppliedSeries(series);
     setAppliedSku(sku);
+    setAppliedStartDate(startDate);
+    setAppliedEndDate(endDate);
   }
 
-  function submitReturn(event: FormEvent<HTMLFormElement>) {
+  function submitReturn(row: ReturnOrderRow, event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!editingReturn) return;
     const form = new FormData(event.currentTarget);
-    form.set("storeName", editingReturn.storeName || "");
-    form.set("orderNo", editingReturn.orderNo);
-    form.set("model", editingReturn.productSku || editingReturn.productName || "-");
-    form.set("customerName", editingReturn.customerName);
-    form.set("customerPhone", editingReturn.customerPhone || "");
-    form.set("address", editingReturn.address);
+    form.set("storeName", row.storeName || "");
+    form.set("operator", row.operator || "");
+    form.set("orderNo", row.orderNo);
+    form.set("model", row.productSku || row.model || row.productName || "-");
+    form.set("customerName", row.customerName);
+    form.set("customerPhone", row.customerPhone || "");
+    form.set("address", row.address);
     form.set("status", "待处理");
     saveReturn.mutate(form);
   }
@@ -106,6 +110,14 @@ export function ReturnRegistrationPage() {
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
           />
+          <label className="filter-date-field">
+            <span>开始时间</span>
+            <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+          </label>
+          <label className="filter-date-field">
+            <span>结束时间</span>
+            <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+          </label>
           <button type="button" className="primary-button" onClick={searchRecords}>搜索</button>
         </div>
         <table>
@@ -132,7 +144,9 @@ export function ReturnRegistrationPage() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
+            {rows.map((row) => {
+              const formId = `return-form-${row.orderId}`;
+              return (
               <tr key={row.orderId}>
                 <td>{row.storeName || "-"}</td>
                 <td>{row.supplierName || "-"}</td>
@@ -145,10 +159,31 @@ export function ReturnRegistrationPage() {
                 <td>{row.customerPhone || "-"}</td>
                 <td>{row.address}</td>
                 <td>{row.returnStatus || row.orderStatus}</td>
-                <td>{row.action || "-"}</td>
-                <td>{row.returnTrackingNo || row.shipmentTrackingNo || "-"}</td>
-                <td>{row.reason || "-"}</td>
-                <td>{row.note || "-"}</td>
+                <td>
+                  <select form={formId} name="action" defaultValue={row.action || "拦截"} required>
+                    <option value="拦截">拦截</option>
+                    <option value="召回">召回</option>
+                    <option value="寄回">寄回</option>
+                  </select>
+                </td>
+                <td>
+                  <input
+                    form={formId}
+                    name="trackingNo"
+                    placeholder="寄回时填写"
+                    defaultValue={row.returnTrackingNo || ""}
+                  />
+                  {row.shipmentTrackingNo ? <small className="muted-text">原单号：{row.shipmentTrackingNo}</small> : null}
+                </td>
+                <td>
+                  <select form={formId} name="reason" defaultValue={row.reason || "七天无理由"} required>
+                    <option value="七天无理由">七天无理由</option>
+                    <option value="质量问题">质量问题</option>
+                  </select>
+                </td>
+                <td>
+                  <textarea form={formId} name="note" placeholder="填写备注" defaultValue={row.note || ""} />
+                </td>
                 <td>
                   <div className="attachment-list">
                     {row.attachments.map((url) => (
@@ -157,9 +192,14 @@ export function ReturnRegistrationPage() {
                       </a>
                     ))}
                   </div>
+                  <input form={formId} name="attachments" type="file" accept="image/*" multiple />
                 </td>
                 <td className="row-actions">
-                  <button type="button" onClick={() => setEditingReturn(row)}>{row.returnId ? "补充登记" : "登记退货"}</button>
+                  <form id={formId} className="inline-return-form" onSubmit={(event) => submitReturn(row, event)}>
+                    <button className="primary-button" disabled={saveReturn.isPending}>
+                      {row.returnId ? "保存退货" : "登记退货"}
+                    </button>
+                  </form>
                 </td>
                 {isAdmin && row.returnId ? (
                   <td className="row-actions">
@@ -167,48 +207,13 @@ export function ReturnRegistrationPage() {
                   </td>
                 ) : isAdmin ? <td>-</td> : null}
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
         {remove.error ? <div className="error">{remove.error.message}</div> : null}
         {saveReturn.error ? <div className="error">{saveReturn.error.message}</div> : null}
       </Panel>
-      {editingReturn ? (
-        <div className="modal-backdrop">
-          <form className="modal" onSubmit={submitReturn}>
-            <h2>退货登记</h2>
-            <input value={editingReturn.orderNo} readOnly />
-            <input value={editingReturn.customerName} readOnly />
-            <input value={editingReturn.address} readOnly />
-            <input name="operator" placeholder="运营" defaultValue={editingReturn.operator || ""} />
-            <select name="action" defaultValue="拦截" required>
-              <option value="拦截">拦截</option>
-              <option value="召回">召回</option>
-              <option value="寄回">寄回</option>
-            </select>
-            <input name="trackingNo" placeholder="寄回快递单号（寄回时填写）" />
-            <label className="modal-field">
-              <span>退货理由</span>
-              <select name="reason" defaultValue="七天无理由" required>
-                <option value="七天无理由">七天无理由</option>
-                <option value="质量问题">质量问题</option>
-              </select>
-            </label>
-            <label className="modal-field">
-              <span>备注</span>
-              <textarea name="note" placeholder="填写备注" />
-            </label>
-            <label className="modal-field">
-              <span>附件</span>
-              <input name="attachments" type="file" accept="image/*" multiple />
-            </label>
-            <div className="modal-actions">
-              <button type="button" onClick={() => setEditingReturn(null)}>取消</button>
-              <button className="primary-button">保存</button>
-            </div>
-          </form>
-        </div>
-      ) : null}
     </>
   );
 }

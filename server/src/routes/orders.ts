@@ -112,7 +112,7 @@ function saveOrder(data: z.infer<typeof orderSchema>, id?: number) {
 }
 
 ordersRouter.get("/", (req, res) => {
-  const { keyword = "", status = "", supplierId = "", storeName = "", series = "", sku = "", startDate = "", endDate = "" } = req.query;
+  const { keyword = "", status = "", supplierId = "", storeName = "", series = "", sku = "", startDate = "", endDate = "", hasTracking = "" } = req.query;
   const filters: string[] = [];
   const params: unknown[] = [];
   if (keyword) {
@@ -146,6 +146,12 @@ ordersRouter.get("/", (req, res) => {
   if (endDate) {
     filters.push("date(o.createdAt) <= date(?)");
     params.push(endDate);
+  }
+  if (hasTracking === "yes") {
+    filters.push("COALESCE(latest.trackingNo, '') <> ''");
+  }
+  if (hasTracking === "no") {
+    filters.push("COALESCE(latest.trackingNo, '') = ''");
   }
   const rows = getDb()
     .prepare(

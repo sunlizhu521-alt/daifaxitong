@@ -15,7 +15,7 @@ const statusText: Record<string, string> = {
 export function PurchaseOrdersPage() {
   const qc = useQueryClient();
   const [keyword, setKeyword] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState("shipped");
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
   const { data: orders = [] } = useQuery({
     queryKey: ["purchase-orders", keyword, status],

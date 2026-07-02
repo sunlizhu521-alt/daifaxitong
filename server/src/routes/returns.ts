@@ -65,6 +65,8 @@ returnsRouter.get("/", (req, res) => {
   const supplierId = String(req.query.supplierId ?? "").trim();
   const series = String(req.query.series ?? "").trim();
   const sku = String(req.query.sku ?? "").trim();
+  const startDate = String(req.query.startDate ?? "").trim();
+  const endDate = String(req.query.endDate ?? "").trim();
   const filters: string[] = [];
   const params: unknown[] = [];
   if (keyword) {
@@ -105,6 +107,14 @@ returnsRouter.get("/", (req, res) => {
     filters.push("oi.productSku = ?");
     params.push(sku);
   }
+  if (startDate) {
+    filters.push("date(o.createdAt) >= date(?)");
+    params.push(startDate);
+  }
+  if (endDate) {
+    filters.push("date(o.createdAt) <= date(?)");
+    params.push(endDate);
+  }
   const rows = getDb()
     .prepare(
       `SELECT r.*, COALESCE(s.shortName, s.name) AS supplierName,
@@ -132,6 +142,8 @@ returnsRouter.get("/orders", (req, res) => {
   const supplierId = String(req.query.supplierId ?? "").trim();
   const series = String(req.query.series ?? "").trim();
   const sku = String(req.query.sku ?? "").trim();
+  const startDate = String(req.query.startDate ?? "").trim();
+  const endDate = String(req.query.endDate ?? "").trim();
   const filters: string[] = [];
   const params: unknown[] = [];
   if (keyword) {
@@ -171,6 +183,14 @@ returnsRouter.get("/orders", (req, res) => {
   if (sku) {
     filters.push("oi.productSku = ?");
     params.push(sku);
+  }
+  if (startDate) {
+    filters.push("date(o.createdAt) >= date(?)");
+    params.push(startDate);
+  }
+  if (endDate) {
+    filters.push("date(o.createdAt) <= date(?)");
+    params.push(endDate);
   }
   const rows = getDb()
     .prepare(
