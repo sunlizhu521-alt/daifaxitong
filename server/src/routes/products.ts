@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import { Router } from "express";
 import multer from "multer";
-import XLSX from "xlsx";
 import { z } from "zod";
 import { config } from "../config.js";
 import { getDb, nowIso } from "../db/index.js";
@@ -88,11 +87,12 @@ productsRouter.post("/", (req, res) => {
   }
 });
 
-productsRouter.post("/import", upload.single("file"), (req, res) => {
+productsRouter.post("/import", upload.single("file"), async (req, res) => {
   if (!req.file) {
     res.status(400).json({ message: "请上传 Excel 文件" });
     return;
   }
+  const XLSX = (await import("xlsx")).default;
   const db = getDb();
   try {
     const workbook = XLSX.readFile(req.file.path);

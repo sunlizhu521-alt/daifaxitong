@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import { Router } from "express";
 import multer from "multer";
-import XLSX from "xlsx";
 import { z } from "zod";
 import { config } from "../config.js";
 import { getDb, nowIso } from "../db/index.js";
@@ -194,7 +193,8 @@ ordersRouter.get("/", (req, res) => {
   res.json({ rows, total, page: pageNum, pageSize: pageSizeNum });
 });
 
-ordersRouter.get("/template", (_req, res) => {
+ordersRouter.get("/template", async (_req, res) => {
+  const XLSX = (await import("xlsx")).default;
   const rows = [
     {
       订单号: "DF20260701001",
@@ -219,7 +219,8 @@ ordersRouter.get("/template", (_req, res) => {
   res.send(buffer);
 });
 
-ordersRouter.get("/export", (req, res) => {
+ordersRouter.get("/export", async (req, res) => {
+  const XLSX = (await import("xlsx")).default;
   const rows = getDb()
     .prepare(
       `SELECT o.orderNo AS 订单号, o.storeName AS 店铺, COALESCE(orderSupplier.shortName, orderSupplier.name) AS 供应商, o.registrarName AS 登记人,
@@ -242,7 +243,8 @@ ordersRouter.get("/export", (req, res) => {
   res.send(buffer);
 });
 
-ordersRouter.get("/shipping-export", (req, res) => {
+ordersRouter.get("/shipping-export", async (req, res) => {
+  const XLSX = (await import("xlsx")).default;
   const status = String(req.query.status ?? "").trim();
   const filters: string[] = [];
   const params: unknown[] = [];
@@ -451,11 +453,12 @@ ordersRouter.delete("/:id/shipment", (req, res) => {
   res.json(readOrder(id));
 });
 
-ordersRouter.post("/import", upload.single("file"), (req, res) => {
+ordersRouter.post("/import", upload.single("file"), async (req, res) => {
   if (!req.file) {
     res.status(400).json({ message: "请上传 Excel 文件" });
     return;
   }
+  const XLSX = (await import("xlsx")).default;
   const db = getDb();
   const workbook = XLSX.readFile(req.file.path);
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
