@@ -68,6 +68,7 @@ export type OrderListRow = {
   trackingNo?: string | null;
   shippedAt?: string | null;
   shipmentNote?: string | null;
+  operationLogs?: string | null;
   createdAt: string;
 };
 

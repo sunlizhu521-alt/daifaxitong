@@ -27,6 +27,13 @@ type OrderDetail = OrderListRow & {
   }>;
 };
 
+type OrderListResponse = OrderListRow[] | { rows: OrderListRow[] };
+
+function rowsFromResponse(data: OrderListResponse | undefined) {
+  if (!data) return [];
+  return Array.isArray(data) ? data : data.rows;
+}
+
 export function DropshipSummaryPage() {
   const qc = useQueryClient();
   const [keyword, setKeyword] = useState("");
@@ -39,13 +46,14 @@ export function DropshipSummaryPage() {
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
   const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers"], queryFn: () => api<Supplier[]>("/suppliers") });
   const { data: stores = [] } = useQuery({ queryKey: ["stores"], queryFn: () => api<Store[]>("/stores") });
-  const { data: orders = [] } = useQuery({
+  const { data: orderResponse } = useQuery({
     queryKey: ["dropship-summary", keyword, status, supplierId, storeName, startDate, endDate],
     queryFn: () =>
-      api<OrderListRow[]>(
+      api<OrderListResponse>(
         `/orders?keyword=${encodeURIComponent(keyword)}&status=${encodeURIComponent(status)}&supplierId=${encodeURIComponent(supplierId)}&storeName=${encodeURIComponent(storeName)}&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`
       )
   });
+  const orders = rowsFromResponse(orderResponse);
   const canManage = me?.user?.username === "孙立柱";
   const deleteOrder = useMutation({
     mutationFn: (id: number) => api(`/orders/${id}`, { method: "DELETE" }),
@@ -157,6 +165,7 @@ export function DropshipSummaryPage() {
               <th>采购订单号填写人</th>
               <th>采购订单号</th>
               <th>状态</th>
+              <th>操作记录</th>
               <th>备注</th>
               {canManage ? <th>操作</th> : null}
             </tr>
@@ -182,6 +191,7 @@ export function DropshipSummaryPage() {
                 <td>{order.purchaseOrderUser || "-"}</td>
                 <td>{order.purchaseOrderNo || "-"}</td>
                 <td><span className={`status ${order.status}`}>{statusText[order.status]}</span></td>
+                <td title={order.operationLogs || ""}>{order.operationLogs || "-"}</td>
                 <td>{mergeNotes(order)}</td>
                 {canManage ? (
                   <td className="row-actions">

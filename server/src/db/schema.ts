@@ -125,6 +125,18 @@ CREATE TABLE IF NOT EXISTS shipments (
   FOREIGN KEY (carrierId) REFERENCES carriers(id)
 );
 
+CREATE TABLE IF NOT EXISTS order_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  orderId INTEGER NOT NULL,
+  action TEXT NOT NULL,
+  detail TEXT,
+  operator TEXT,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (orderId) REFERENCES orders(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_order_events_order_id ON order_events(orderId, id);
+
 CREATE TABLE IF NOT EXISTS returns (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   storeName TEXT NOT NULL,

@@ -53,6 +53,30 @@ const statusSchema = z.object({
   status: z.enum(["pending", "filled", "purchased", "shipped", "exception", "cancelled"])
 });
 
+const shippingEditSchema = z.object({
+  supplierId: optionalId,
+  productId: optionalId,
+  productName: z.string().trim().min(1, "商品名称不能为空"),
+  productSku: z.string().trim().min(1, "SKU不能为空"),
+  quantity: z.coerce.number().int().positive("数量必须大于 0"),
+  note: z.string().optional().default("")
+});
+
+const statusText: Record<string, string> = {
+  pending: "待发货",
+  filled: "已填单号",
+  purchased: "已下采购单",
+  shipped: "已发货",
+  exception: "异常",
+  cancelled: "已取消"
+};
+
+function logOrderEvent(orderId: number, action: string, detail: string, operator?: string) {
+  getDb()
+    .prepare("INSERT INTO order_events (orderId, action, detail, operator) VALUES (?, ?, ?, ?)")
+    .run(orderId, action, detail, operator ?? "");
+}
+
 function readOrder(id: number) {
   const db = getDb();
   const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(id);
@@ -174,6 +198,16 @@ ordersRouter.get("/", (req, res) => {
         GROUP_CONCAT(DISTINCT p.supplierModel) AS supplierModel,
         latest.carrierId AS carrierId, latest.carrier AS carrier, latest.trackingNo AS trackingNo, latest.shippedAt AS shippedAt,
         latest.note AS shipmentNote,
+        (
+          SELECT GROUP_CONCAT(eventText, '；') FROM (
+            SELECT oe.createdAt || ' ' || COALESCE(oe.operator, '') || ' ' || oe.action ||
+              CASE WHEN COALESCE(oe.detail, '') <> '' THEN '：' || oe.detail ELSE '' END AS eventText
+            FROM order_events oe
+            WHERE oe.orderId = o.id
+            ORDER BY oe.id DESC
+            LIMIT 6
+          )
+        ) AS operationLogs,
         COALESCE(shipSupplier.shortName, shipSupplier.name, orderSupplier.shortName, orderSupplier.name) AS supplierName,
         COALESCE(orderSupplier.shortName, orderSupplier.name) AS registrationSupplierName
        FROM orders o
@@ -324,7 +358,10 @@ ordersRouter.put("/:id", (req, res) => {
     return;
   }
   try {
-    res.json(saveOrder(parsed.data, Number(req.params.id)));
+    const orderId = Number(req.params.id);
+    const result = saveOrder(parsed.data, orderId);
+    logOrderEvent(orderId, "修改订单", "修改订单基础信息", req.session.user?.username);
+    res.json(result);
   } catch (error) {
     const isNotFound = error instanceof Error && error.message === "NOT_FOUND";
     res.status(isNotFound ? 404 : 409).json({ message: isNotFound ? "订单不存在" : "订单号已存在" });
@@ -390,14 +427,63 @@ ordersRouter.patch("/:id/status", (req, res) => {
     res.status(400).json({ message: parsed.error.issues[0]?.message ?? "参数错误" });
     return;
   }
+  const orderId = Number(req.params.id);
+  const existing = getDb().prepare("SELECT status FROM orders WHERE id = ?").get(orderId) as { status: string } | undefined;
   const result = getDb()
     .prepare("UPDATE orders SET status = ?, updatedAt = ? WHERE id = ?")
-    .run(parsed.data.status, nowIso(), Number(req.params.id));
+    .run(parsed.data.status, nowIso(), orderId);
   if (result.changes === 0) {
     res.status(404).json({ message: "订单不存在" });
     return;
   }
-  res.json(readOrder(Number(req.params.id)));
+  const action = parsed.data.status === "shipped" ? "已提货" : parsed.data.status === "filled" ? "未发走" : "状态变更";
+  logOrderEvent(orderId, action, `${statusText[existing?.status ?? ""] ?? existing?.status ?? "-"} -> ${statusText[parsed.data.status]}`, req.session.user?.username);
+  res.json(readOrder(orderId));
+});
+
+ordersRouter.patch("/:id/shipping-edit", (req, res) => {
+  const parsed = shippingEditSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ message: parsed.error.issues[0]?.message ?? "参数错误" });
+    return;
+  }
+  const db = getDb();
+  const orderId = Number(req.params.id);
+  const order = db.prepare("SELECT id FROM orders WHERE id = ?").get(orderId);
+  if (!order) {
+    res.status(404).json({ message: "订单不存在" });
+    return;
+  }
+  const currentItem = db.prepare("SELECT * FROM order_items WHERE orderId = ? ORDER BY id LIMIT 1").get(orderId) as
+    | { productName: string; productSku: string; quantity: number }
+    | undefined;
+  const product = parsed.data.productId
+    ? (db.prepare("SELECT * FROM products WHERE id = ?").get(parsed.data.productId) as
+        | { id: number; name: string; ssku?: string | null; sku: string; costPrice?: number; salePrice?: number; supplierId?: number | null }
+        | undefined)
+    : undefined;
+  if (parsed.data.productId && !product) {
+    res.status(400).json({ message: "商品不存在" });
+    return;
+  }
+  const productName = product?.name ?? parsed.data.productName;
+  const productSku = product?.ssku || product?.sku || parsed.data.productSku;
+  const supplierId = parsed.data.supplierId ?? product?.supplierId ?? null;
+  const tx = db.transaction(() => {
+    db.prepare("UPDATE orders SET supplierId = ?, note = ?, updatedAt = ? WHERE id = ?").run(supplierId, parsed.data.note, nowIso(), orderId);
+    db.prepare("DELETE FROM order_items WHERE orderId = ?").run(orderId);
+    db.prepare(
+      "INSERT INTO order_items (orderId, productId, productName, productSku, quantity, unitCost, unitSalePrice) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    ).run(orderId, product?.id ?? parsed.data.productId ?? null, productName, productSku, parsed.data.quantity, product?.costPrice ?? 0, product?.salePrice ?? 0);
+    logOrderEvent(
+      orderId,
+      "发货安排修改",
+      `${currentItem?.productName ?? "-"} / ${currentItem?.productSku ?? "-"} / ${currentItem?.quantity ?? 0} -> ${productName} / ${productSku} / ${parsed.data.quantity}`,
+      req.session.user?.username
+    );
+  });
+  tx();
+  res.json(readOrder(orderId));
 });
 
 ordersRouter.post("/:id/ship", (req, res) => {
@@ -426,6 +512,7 @@ ordersRouter.post("/:id/ship", (req, res) => {
     "INSERT INTO shipments (orderId, supplierId, carrierId, carrier, trackingNo, shippedAt, status, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
   ).run(id, supplierId, parsed.data.carrierId ?? null, carrierName, parsed.data.trackingNo, parsed.data.shippedAt, parsed.data.status, parsed.data.note);
   db.prepare("UPDATE orders SET status = ?, updatedAt = ? WHERE id = ?").run(parsed.data.status, nowIso(), id);
+  logOrderEvent(id, "填写快递单号", `${carrierName} ${parsed.data.trackingNo}`, req.session.user?.username);
   res.json(readOrder(id));
 });
 
