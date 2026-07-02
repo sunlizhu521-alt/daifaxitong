@@ -37,6 +37,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Check deployment secrets
         id: secrets
         env:
@@ -58,13 +61,36 @@ jobs:
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Create deployment package
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          tar \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='server/data' \
+            --exclude='server/uploads' \
+            --exclude='server/logs' \
+            --exclude='.env' \
+            --exclude='deploy-package.tar.gz' \
+            -czf deploy-package.tar.gz .
+
+      - name: Upload deployment package
+        if: steps.secrets.outputs.ready == 'true'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: 129.211.9.242
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_SSH_PORT || 22 }}
+          source: deploy-package.tar.gz
+          target: /tmp/daifaxitong-deploy-${{ github.run_id }}
+
       - name: Deploy over SSH
         if: steps.secrets.outputs.ready == 'true'
         uses: appleboy/ssh-action@v1.2.0
         env:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-          DEPLOY_BRANCH: ${{ github.ref_name }}
-          REPO_URL: https://github.com/${{ github.repository }}.git
+          DEPLOY_PACKAGE_DIR: /tmp/daifaxitong-deploy-${{ github.run_id }}
           DEPLOY_PORT: "4006"
           ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
@@ -74,19 +100,14 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_SSH_PORT || 22 }}
-          envs: DEPLOY_PATH,DEPLOY_BRANCH,REPO_URL,DEPLOY_PORT,ADMIN_USERNAME,ADMIN_PASSWORD,SESSION_SECRET
+          envs: DEPLOY_PATH,DEPLOY_PACKAGE_DIR,DEPLOY_PORT,ADMIN_USERNAME,ADMIN_PASSWORD,SESSION_SECRET
           script: |
             set -eu
 
             APP_DIR="${DEPLOY_PATH:-/www/wwwroot/daifaxitong}"
-            BRANCH="${DEPLOY_BRANCH:-master}"
-            REPO="${REPO_URL:?REPO_URL is required}"
+            PACKAGE="${DEPLOY_PACKAGE_DIR:?DEPLOY_PACKAGE_DIR is required}/deploy-package.tar.gz"
 
-            if [ ! -d "$APP_DIR/.git" ]; then
-              mkdir -p "$APP_DIR"
-              git clone "$REPO" "$APP_DIR"
-            fi
-
+            mkdir -p "$APP_DIR"
             cd "$APP_DIR"
             if [ -d server/data ]; then
               backup_dir="${HOME}/backups/daifaxitong"
@@ -95,16 +116,20 @@ jobs:
               tar -czf "$backup_file" server/data
               ls -lh "$backup_file"
             fi
-            for attempt in 1 2 3 4 5; do
-              if timeout 90s git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=30 fetch origin "$BRANCH"; then
-                break
-              fi
-              if [ "$attempt" = "5" ]; then
-                exit 1
-              fi
-              echo "git fetch failed, retrying (${attempt}/5)..."
-              sleep 10
-            done
-            git checkout -B "$BRANCH" "origin/$BRANCH"
-            git reset --hard "origin/$BRANCH"
+
+            staging_dir="$(mktemp -d)"
+            tar -xzf "$PACKAGE" -C "$staging_dir"
+            if command -v rsync >/dev/null 2>&1; then
+              rsync -a --delete \
+                --exclude='.git' \
+                --exclude='.env' \
+                --exclude='server/data' \
+                --exclude='server/uploads' \
+                --exclude='server/logs' \
+                "$staging_dir"/ "$APP_DIR"/
+            else
+              tar -xzf "$PACKAGE" -C "$APP_DIR"
+            fi
+            rm -rf "$staging_dir" "$DEPLOY_PACKAGE_DIR"
+
             bash scripts/server-deploy.sh
