@@ -72,7 +72,8 @@ jobs:
             --exclude='server/logs' \
             --exclude='.env' \
             --exclude='deploy-package.tar.gz' \
-            -czf deploy-package.tar.gz .
+            -czf "$RUNNER_TEMP/deploy-package.tar.gz" .
+          cp "$RUNNER_TEMP/deploy-package.tar.gz" deploy-package.tar.gz
 
       - name: Upload deployment package
         if: steps.secrets.outputs.ready == 'true'
