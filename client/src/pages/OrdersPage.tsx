@@ -133,7 +133,7 @@ export function OrdersPage() {
         }
       />
       <div className="order-entry-layout">
-        <Panel title="新增代发">
+        <Panel title={`新增代发  登记人：${me?.user?.username ?? ""}`}>
           <form className="form-grid order-form" onSubmit={submitOrder}>
             <div className="receiver-action">
               <textarea
@@ -168,16 +168,7 @@ export function OrdersPage() {
               />
             </div>
             <div className="order-meta-grid">
-              <input name="orderNo" placeholder="代发单号/订单号" required />
-              <input key={me?.user?.username ?? "registrar"} name="registrarName" placeholder="登记人姓名" defaultValue={me?.user?.username ?? ""} required />
-              <select name="supplierId" required>
-                <option value="">选择供应商</option>
-                {suppliers.map((supplier) => (
-                  <option value={supplier.id} key={supplier.id}>
-                    {supplier.shortName || supplier.name}
-                  </option>
-                ))}
-              </select>
+              <input name="orderNo" placeholder="店铺订单编号" required />
               <select name="storeName" required>
                 <option value="">选择店铺</option>
                 {stores.map((store) => (
@@ -186,8 +177,19 @@ export function OrdersPage() {
                   </option>
                 ))}
               </select>
+            </div>
+            <input key={me?.user?.username ?? "registrar"} type="hidden" name="registrarName" value={me?.user?.username ?? ""} />
+            <div className="order-item-grid">
+              <select name="supplierId" required>
+                <option value="">选择供应商</option>
+                {suppliers.map((supplier) => (
+                  <option value={supplier.id} key={supplier.id}>
+                    {supplier.shortName || supplier.name}
+                  </option>
+                ))}
+              </select>
               <select name="productId" required>
-                <option value="">选择商品/SKU</option>
+                <option value="">选择SKU</option>
                 {products.map((product) => (
                   <option value={product.id} key={product.id}>
                     {product.name} / {product.ssku ?? product.sku}

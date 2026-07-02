@@ -187,12 +187,21 @@ export function ReturnRegistrationPage() {
               <option value="寄回">寄回</option>
             </select>
             <input name="trackingNo" placeholder="寄回快递单号（寄回时填写）" />
-            <select name="reason" defaultValue="七天无理由" required>
-              <option value="七天无理由">七天无理由</option>
-              <option value="质量问题">质量问题</option>
-            </select>
-            <textarea name="note" placeholder="备注" />
-            <input name="attachments" type="file" accept="image/*" multiple />
+            <label className="modal-field">
+              <span>退货理由</span>
+              <select name="reason" defaultValue="七天无理由" required>
+                <option value="七天无理由">七天无理由</option>
+                <option value="质量问题">质量问题</option>
+              </select>
+            </label>
+            <label className="modal-field">
+              <span>备注</span>
+              <textarea name="note" placeholder="填写备注" />
+            </label>
+            <label className="modal-field">
+              <span>附件</span>
+              <input name="attachments" type="file" accept="image/*" multiple />
+            </label>
             <div className="modal-actions">
               <button type="button" onClick={() => setEditingReturn(null)}>取消</button>
               <button className="primary-button">保存</button>
