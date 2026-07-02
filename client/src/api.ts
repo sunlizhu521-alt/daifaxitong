@@ -62,6 +62,7 @@ export type OrderListRow = {
   productName?: string | null;
   productSeries?: string | null;
   productSku?: string | null;
+  supplierModel?: string | null;
   carrierId?: number | null;
   carrier?: string | null;
   trackingNo?: string | null;
@@ -87,6 +88,9 @@ export type ReturnRecord = {
   supplierName?: string | null;
   productSeries?: string | null;
   productSku?: string | null;
+  productName?: string | null;
+  totalQuantity?: number | null;
+  shipmentTrackingNo?: string | null;
   attachments: string[];
   createdAt: string;
   updatedAt?: string;
@@ -100,6 +104,7 @@ export type ReturnOrderRow = {
   operator?: string | null;
   productSeries?: string | null;
   productSku?: string | null;
+  supplierModel?: string | null;
   productName?: string | null;
   model?: string | null;
   customerName: string;
@@ -115,6 +120,7 @@ export type ReturnOrderRow = {
   note?: string | null;
   attachments: string[];
   returnCreatedAt?: string | null;
+  totalQuantity?: number | null;
 };
 
 export type PageOption = {
@@ -128,6 +134,8 @@ export type PageOption = {
     | "dropshipSummary"
     | "returnRegistration"
     | "returnOperation"
+    | "returnReceipt"
+    | "accessoryRegistration"
     | "suppliers"
     | "productLibrary"
     | "storeLibrary"

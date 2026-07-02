@@ -31,7 +31,7 @@ const returnSchema = z.object({
   customerName: z.string().trim().min(1, "姓名不能为空"),
   customerPhone: z.string().optional().default(""),
   address: z.string().trim().min(1, "地址不能为空"),
-  status: z.string().trim().min(1, "状态不能为空").default("待处理"),
+  status: z.string().trim().min(1, "状态不能为空").default("已提交退货"),
   action: z.enum(["拦截", "召回", "寄回"]),
   trackingNo: z.string().optional().default(""),
   reason: z.enum(["七天无理由", "质量问题"]),
@@ -124,7 +124,10 @@ returnsRouter.get("/", (req, res) => {
     .prepare(
       `SELECT r.*, COALESCE(s.shortName, s.name) AS supplierName,
         GROUP_CONCAT(DISTINCT p.series) AS productSeries,
-        GROUP_CONCAT(DISTINCT oi.productSku) AS productSku
+        GROUP_CONCAT(DISTINCT oi.productSku) AS productSku,
+        GROUP_CONCAT(DISTINCT oi.productName) AS productName,
+        SUM(oi.quantity) AS totalQuantity,
+        sh.trackingNo AS shipmentTrackingNo
        FROM returns r
        LEFT JOIN orders o ON o.orderNo = r.orderNo
        LEFT JOIN shipments sh ON sh.id = (
@@ -204,6 +207,8 @@ returnsRouter.get("/orders", (req, res) => {
         GROUP_CONCAT(DISTINCT p.series) AS productSeries,
         GROUP_CONCAT(DISTINCT oi.productSku) AS productSku,
         GROUP_CONCAT(DISTINCT oi.productName) AS productName,
+        GROUP_CONCAT(DISTINCT p.supplierModel) AS supplierModel,
+        SUM(oi.quantity) AS totalQuantity,
         sh.trackingNo AS shipmentTrackingNo,
         latestReturn.id AS returnId, latestReturn.operator, latestReturn.model, latestReturn.status AS returnStatus,
         latestReturn.action, latestReturn.trackingNo AS returnTrackingNo, latestReturn.reason, latestReturn.note,
@@ -238,16 +243,6 @@ returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
     return;
   }
 
-  const trackingNo = parsed.data.action === "寄回" ? parsed.data.trackingNo.trim() : latestTrackingNo(parsed.data.orderNo);
-  if (parsed.data.action === "寄回" && !trackingNo) {
-    res.status(400).json({ message: "寄回需要填写快递单号" });
-    return;
-  }
-  if (parsed.data.action !== "寄回" && !trackingNo) {
-    res.status(400).json({ message: "未找到原订单快递单号，请先在发货信息中登记快递单号" });
-    return;
-  }
-
   const files = (req.files as Express.Multer.File[] | undefined) ?? [];
   const attachments = files.map((file) => `/uploads/${file.filename}`);
   const db = getDb();
@@ -267,7 +262,7 @@ returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
       parsed.data.address,
       parsed.data.status,
       parsed.data.action,
-      trackingNo,
+      "",
       parsed.data.reason,
       parsed.data.note,
       JSON.stringify(attachments),
@@ -278,7 +273,8 @@ returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
 });
 
 const returnStatusSchema = z.object({
-  status: z.enum(["待处理", "已处理"])
+  status: z.enum(["待处理", "已处理", "已提交退货", "已安排退回", "已收货"]),
+  trackingNo: z.string().optional().default("")
 });
 
 returnsRouter.patch("/:id/status", (req, res) => {
@@ -287,14 +283,37 @@ returnsRouter.patch("/:id/status", (req, res) => {
     res.status(400).json({ message: parsed.error.issues[0]?.message ?? "参数错误" });
     return;
   }
+  const id = Number(req.params.id);
+  const current = getDb().prepare("SELECT * FROM returns WHERE id = ?").get(id) as
+    | { id: number; orderNo: string; action: string }
+    | undefined;
+  if (!current) {
+    res.status(404).json({ message: "退货记录不存在" });
+    return;
+  }
+  let trackingNo = parsed.data.trackingNo.trim();
+  if (parsed.data.status === "已安排退回") {
+    if (current.action === "寄回") {
+      if (!trackingNo) {
+        res.status(400).json({ message: "寄回需要填写快递单号" });
+        return;
+      }
+    } else {
+      trackingNo = latestTrackingNo(current.orderNo);
+      if (!trackingNo) {
+        res.status(400).json({ message: "未找到原订单快递单号，请先在发货信息中登记快递单号" });
+        return;
+      }
+    }
+  }
   const result = getDb()
-    .prepare("UPDATE returns SET status = ?, updatedAt = ? WHERE id = ?")
-    .run(parsed.data.status, nowIso(), Number(req.params.id));
+    .prepare("UPDATE returns SET status = ?, trackingNo = CASE WHEN ? <> '' THEN ? ELSE trackingNo END, updatedAt = ? WHERE id = ?")
+    .run(parsed.data.status, trackingNo, trackingNo, nowIso(), id);
   if (result.changes === 0) {
     res.status(404).json({ message: "退货记录不存在" });
     return;
   }
-  const row = getDb().prepare("SELECT * FROM returns WHERE id = ?").get(Number(req.params.id)) as Record<string, unknown>;
+  const row = getDb().prepare("SELECT * FROM returns WHERE id = ?").get(id) as Record<string, unknown>;
   res.json(rowToReturn(row));
 });
 

@@ -5,6 +5,7 @@ import { api, type User } from "../api";
 const orderedPaths = [
   { key: "dashboard", path: "/" },
   { key: "dropShippingRegistration", path: "/drop-shipping" },
+  { key: "accessoryRegistration", path: "/accessories" },
   { key: "trackingNumbers", path: "/tracking-numbers" },
   { key: "carrierLibrary", path: "/carriers" },
   { key: "shippingSchedule", path: "/shipping-schedule" },
@@ -12,6 +13,7 @@ const orderedPaths = [
   { key: "dropshipSummary", path: "/dropship-summary" },
   { key: "returnRegistration", path: "/returns" },
   { key: "returnOperation", path: "/return-operations" },
+  { key: "returnReceipt", path: "/return-receipts" },
   { key: "suppliers", path: "/suppliers" },
   { key: "productLibrary", path: "/products" },
   { key: "storeLibrary", path: "/stores" },

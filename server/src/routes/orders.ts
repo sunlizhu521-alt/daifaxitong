@@ -159,6 +159,7 @@ ordersRouter.get("/", (req, res) => {
         GROUP_CONCAT(DISTINCT oi.productName) AS productName,
         GROUP_CONCAT(DISTINCT p.series) AS productSeries,
         GROUP_CONCAT(DISTINCT oi.productSku) AS productSku,
+        GROUP_CONCAT(DISTINCT p.supplierModel) AS supplierModel,
         latest.carrierId AS carrierId, latest.carrier AS carrier, latest.trackingNo AS trackingNo, latest.shippedAt AS shippedAt,
         latest.note AS shipmentNote,
         COALESCE(shipSupplier.shortName, shipSupplier.name, orderSupplier.shortName, orderSupplier.name) AS supplierName,
@@ -240,6 +241,7 @@ ordersRouter.get("/shipping-export", (req, res) => {
       `SELECT COALESCE(shipSupplier.shortName, shipSupplier.name, orderSupplier.shortName, orderSupplier.name) AS 供应商,
         o.storeName AS 店铺, o.orderNo AS 订单编号, o.customerName AS 客户姓名, o.customerPhone AS 电话,
         o.address AS 地址, GROUP_CONCAT(DISTINCT p.series) AS 系列, GROUP_CONCAT(DISTINCT oi.productSku) AS SKU,
+        GROUP_CONCAT(DISTINCT oi.productName) AS 名称, GROUP_CONCAT(DISTINCT p.supplierModel) AS 供应商型号,
         SUM(oi.quantity) AS 数量,
         CASE o.status
           WHEN 'pending' THEN '待发货'

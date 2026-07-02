@@ -8,6 +8,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { SuppliersPage } from "./pages/SuppliersPage";
 import { ProductsPage } from "./pages/ProductsPage";
 import { OrdersPage } from "./pages/OrdersPage";
+import { AccessoryRegistrationPage } from "./pages/AccessoryRegistrationPage";
 import { PermissionsPage } from "./pages/PermissionsPage";
 import { TrackingNumbersPage } from "./pages/TrackingNumbersPage";
 import { ShippingSchedulePage } from "./pages/ShippingSchedulePage";
@@ -15,6 +16,7 @@ import { PurchaseOrdersPage } from "./pages/PurchaseOrdersPage";
 import { DropshipSummaryPage } from "./pages/DropshipSummaryPage";
 import { ReturnRegistrationPage } from "./pages/ReturnRegistrationPage";
 import { ReturnOperationPage } from "./pages/ReturnOperationPage";
+import { ReturnReceiptPage } from "./pages/ReturnReceiptPage";
 import { StoreLibraryPage } from "./pages/StoreLibraryPage";
 import { CarrierLibraryPage } from "./pages/CarrierLibraryPage";
 import "./styles.css";
@@ -29,6 +31,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       { path: "drop-shipping", element: <OrdersPage /> },
+      { path: "accessories", element: <AccessoryRegistrationPage /> },
       { path: "tracking-numbers", element: <TrackingNumbersPage /> },
       { path: "carriers", element: <CarrierLibraryPage /> },
       { path: "shipping-schedule", element: <ShippingSchedulePage /> },
@@ -36,6 +39,7 @@ const router = createBrowserRouter([
       { path: "dropship-summary", element: <DropshipSummaryPage /> },
       { path: "returns", element: <ReturnRegistrationPage /> },
       { path: "return-operations", element: <ReturnOperationPage /> },
+      { path: "return-receipts", element: <ReturnReceiptPage /> },
       { path: "suppliers", element: <SuppliersPage /> },
       { path: "products", element: <ProductsPage /> },
       { path: "orders", element: <Navigate to="/drop-shipping" replace /> },

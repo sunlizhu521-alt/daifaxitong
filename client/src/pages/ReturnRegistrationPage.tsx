@@ -22,7 +22,6 @@ export function ReturnRegistrationPage() {
   const [endDate, setEndDate] = useState("");
   const [appliedEndDate, setAppliedEndDate] = useState("");
   const [returnActions, setReturnActions] = useState<Record<number, string>>({});
-  const [returnTrackingNos, setReturnTrackingNos] = useState<Record<number, string>>({});
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
   const { data: rows = [] } = useQuery({
     queryKey: ["return-orders", appliedKeyword, appliedStoreName, appliedSupplierId, appliedSeries, appliedSku, appliedStartDate, appliedEndDate],
@@ -70,11 +69,11 @@ export function ReturnRegistrationPage() {
     form.set("storeName", row.storeName || "");
     form.set("operator", row.operator || "");
     form.set("orderNo", row.orderNo);
-    form.set("model", row.productSku || row.model || row.productName || "-");
+    form.set("model", row.supplierModel || row.model || row.productName || row.productSku || "-");
     form.set("customerName", row.customerName);
     form.set("customerPhone", row.customerPhone || "");
     form.set("address", row.address);
-    form.set("status", "待处理");
+    form.set("status", "已提交退货");
     saveReturn.mutate(form);
   }
 
@@ -122,22 +121,15 @@ export function ReturnRegistrationPage() {
           </label>
           <button type="button" className="primary-button" onClick={searchRecords}>搜索</button>
         </div>
-        <table>
+        <table className="nowrap-table">
           <thead>
             <tr>
-              <th>店铺</th>
-              <th>供应商</th>
-              <th>运营</th>
-              <th>订单号</th>
-              <th>系列</th>
-              <th>SKU</th>
-              <th>型号</th>
-              <th>姓名</th>
+              <th>客户</th>
               <th>电话</th>
               <th>地址</th>
+              <th>型号</th>
               <th>状态</th>
               <th>操作</th>
-              <th>快递单号</th>
               <th>退货理由</th>
               <th>备注</th>
               <th>附件</th>
@@ -148,24 +140,12 @@ export function ReturnRegistrationPage() {
             {rows.map((row) => {
               const formId = `return-form-${row.orderId}`;
               const actionValue = returnActions[row.orderId] ?? (row.returnId ? row.action ?? "" : "");
-              const needsReturnTrackingNo = actionValue === "寄回";
-              const trackingNoValue = needsReturnTrackingNo
-                ? returnTrackingNos[row.orderId] ?? row.returnTrackingNo ?? ""
-                : actionValue
-                  ? row.shipmentTrackingNo ?? ""
-                  : "";
               return (
               <tr key={row.orderId}>
-                <td>{row.storeName || "-"}</td>
-                <td>{row.supplierName || "-"}</td>
-                <td>{row.operator || "-"}</td>
-                <td>{row.orderNo}</td>
-                <td>{row.productSeries || "-"}</td>
-                <td>{row.productSku || "-"}</td>
-                <td>{row.model || row.productName || "-"}</td>
                 <td>{row.customerName}</td>
                 <td>{row.customerPhone || "-"}</td>
                 <td>{row.address}</td>
+                <td>{row.supplierModel || row.model || row.productName || row.productSku || "-"}</td>
                 <td>{row.returnStatus || row.orderStatus}</td>
                 <td>
                   <select
@@ -180,18 +160,6 @@ export function ReturnRegistrationPage() {
                     <option value="召回">召回</option>
                     <option value="寄回">寄回</option>
                   </select>
-                </td>
-                <td>
-                  <input
-                    form={formId}
-                    name="trackingNo"
-                    placeholder={needsReturnTrackingNo ? "填写寄回快递单号" : actionValue ? "自动带出原快递单号" : "先选择操作"}
-                    value={trackingNoValue}
-                    onChange={(event) => setReturnTrackingNos((current) => ({ ...current, [row.orderId]: event.target.value }))}
-                    readOnly={!needsReturnTrackingNo}
-                    required={needsReturnTrackingNo}
-                  />
-                  {row.shipmentTrackingNo ? <small className="muted-text">原单号：{row.shipmentTrackingNo}</small> : null}
                 </td>
                 <td>
                   <select form={formId} name="reason" defaultValue={row.returnId ? row.reason || "" : ""} required>

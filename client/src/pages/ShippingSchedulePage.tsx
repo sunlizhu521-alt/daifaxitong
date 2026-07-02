@@ -59,6 +59,8 @@ export function ShippingSchedulePage() {
               <th>收货地址</th>
               <th>系列</th>
               <th>SKU</th>
+              <th>名称</th>
+              <th>供应商型号</th>
               <th>数量</th>
               <th>状态</th>
               <th>快递公司</th>
@@ -78,6 +80,8 @@ export function ShippingSchedulePage() {
                 <td>{order.address}</td>
                 <td>{order.productSeries || "-"}</td>
                 <td>{order.productSku || "-"}</td>
+                <td>{order.productName || "-"}</td>
+                <td>{order.supplierModel || "-"}</td>
                 <td>{order.totalQuantity ?? 0}</td>
                 <td><span className={`status ${order.status}`}>{statusText[order.status]}</span></td>
                 <td>{order.carrier || "-"}</td>

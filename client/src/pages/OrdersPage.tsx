@@ -26,7 +26,19 @@ function parseReceiverInfo(raw: string) {
   return { name, phone, address };
 }
 
-export function OrdersPage() {
+type OrderEntryPageProps = {
+  title?: string;
+  description?: string;
+  panelTitle?: string;
+  submitLabel?: string;
+};
+
+export function OrderEntryPage({
+  title = "登记代发",
+  description = "手工登记代发订单、识别收货信息、Excel 批量导入并维护发货物流。",
+  panelTitle = "新增代发",
+  submitLabel = "登记代发"
+}: OrderEntryPageProps) {
   const qc = useQueryClient();
   const [receiverRaw, setReceiverRaw] = useState("");
   const [receiver, setReceiver] = useState({ customerName: "", customerPhone: "", address: "" });
@@ -95,8 +107,8 @@ export function OrdersPage() {
   return (
     <>
       <PageHeader
-        title="登记代发"
-        description="手工登记代发订单、识别收货信息、Excel 批量导入并维护发货物流。"
+        title={title}
+        description={description}
         actions={
           <>
             <button className="ghost-button" onClick={() => downloadFile("/orders/template")}>下载模板</button>
@@ -105,7 +117,7 @@ export function OrdersPage() {
         }
       />
       <div className="order-entry-layout">
-        <Panel title={`新增代发  登记人：${me?.user?.username ?? ""}`}>
+        <Panel title={`${panelTitle}  登记人：${me?.user?.username ?? ""}`}>
           <form className="form-grid order-form" onSubmit={submitOrder}>
             <div className="receiver-action order-form-section section-receiver">
               <div className="order-section-title">
@@ -218,7 +230,7 @@ export function OrdersPage() {
               </label>
             </div>
             {createOrder.error ? <div className="error">{createOrder.error.message}</div> : null}
-            <button className="primary-button">登记代发</button>
+            <button className="primary-button">{submitLabel}</button>
           </form>
         </Panel>
         <Panel title="Excel 导入">
@@ -232,4 +244,8 @@ export function OrdersPage() {
       </div>
     </>
   );
+}
+
+export function OrdersPage() {
+  return <OrderEntryPage />;
 }

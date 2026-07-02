@@ -108,19 +108,22 @@ test("auth, supplier, product, order and shipment flow", async () => {
     .field("customerName", "张三")
     .field("customerPhone", "13800000000")
     .field("address", "上海市")
-    .field("status", "待处理")
+    .field("status", "已提交退货")
     .field("action", "拦截")
     .field("reason", "七天无理由")
     .field("note", "测试退货")
     .expect(201);
-  assert.equal(returnRecord.body.trackingNo, "SF123");
+  assert.equal(returnRecord.body.trackingNo, "");
   const returnsByStatus = await agent.get("/api/returns?keyword=filled").expect(200);
   assert.equal(returnsByStatus.body[0].orderNo, "DF001");
-  const pendingReturns = await agent.get(`/api/returns?status=${encodeURIComponent("待处理")}`).expect(200);
+  const pendingReturns = await agent.get(`/api/returns?status=${encodeURIComponent("已提交退货")}`).expect(200);
   assert.equal(pendingReturns.body[0].id, returnRecord.body.id);
-  const completedReturn = await agent.patch(`/api/returns/${returnRecord.body.id}/status`).send({ status: "已处理" }).expect(200);
-  assert.equal(completedReturn.body.status, "已处理");
-  const pendingReturnsAfterComplete = await agent.get(`/api/returns?status=${encodeURIComponent("待处理")}`).expect(200);
+  const arrangedReturn = await agent.patch(`/api/returns/${returnRecord.body.id}/status`).send({ status: "已安排退回" }).expect(200);
+  assert.equal(arrangedReturn.body.status, "已安排退回");
+  assert.equal(arrangedReturn.body.trackingNo, "SF123");
+  const receivedReturn = await agent.patch(`/api/returns/${returnRecord.body.id}/status`).send({ status: "已收货" }).expect(200);
+  assert.equal(receivedReturn.body.status, "已收货");
+  const pendingReturnsAfterComplete = await agent.get(`/api/returns?status=${encodeURIComponent("已提交退货")}`).expect(200);
   assert.equal(pendingReturnsAfterComplete.body.length, 0);
   const returnOrders = await agent.get("/api/returns/orders?keyword=filled").expect(200);
   assert.equal(returnOrders.body[0].orderNo, "DF001");
@@ -132,10 +135,10 @@ test("auth, supplier, product, order and shipment flow", async () => {
     .field("model", "默认规格")
     .field("customerName", "张三")
     .field("address", "上海市")
-    .field("status", "待处理")
+    .field("status", "已提交退货")
     .field("action", "寄回")
     .field("reason", "质量问题")
-    .expect(400);
+    .expect(201);
   await agent.delete(`/api/orders/${order.body.id}/shipment`).expect(200);
   const afterDeleteShipment = await agent.get(`/api/orders/${order.body.id}`).expect(200);
   assert.equal(afterDeleteShipment.body.status, "pending");
