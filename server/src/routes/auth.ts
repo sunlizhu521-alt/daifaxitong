@@ -1,6 +1,7 @@
 import { Router } from "express";
 import type { RequestHandler } from "express";
 import { z } from "zod";
+import { checkLoginRateLimit, clearLoginAttempts, recordLoginFailure } from "../auth/rateLimit.js";
 import { createUser, deleteUser, ensureAdminUser, getUserById, getUserByUsername, listUsers, toPublicUser, updateUserAccess } from "../auth/users.js";
 import { verifyPassword } from "../auth/password.js";
 import { allPageKeys, hasPageAccess, pageOptions, ROLE_ADMIN, type PageKey } from "../permissions.js";
@@ -74,8 +75,16 @@ authRouter.post("/login", (req, res) => {
     return;
   }
 
+  const loginIp = getRequestIp(req);
+  const rateCheck = checkLoginRateLimit(loginIp);
+  if (!rateCheck.allowed) {
+    res.status(429).json({ message: rateCheck.message! });
+    return;
+  }
+
   const user = getUserByUsername(parsed.data.username);
   if (!user || !verifyPassword(parsed.data.password, user.passwordHash)) {
+    recordLoginFailure(loginIp);
     res.status(401).json({ message: "账号或密码错误" });
     return;
   }
@@ -93,6 +102,7 @@ authRouter.post("/login", (req, res) => {
     pageAccess: publicUser.pageAccess
   };
   req.session.loginIp = getRequestIp(req);
+  clearLoginAttempts(loginIp);
   res.json(publicUser);
 });
 
