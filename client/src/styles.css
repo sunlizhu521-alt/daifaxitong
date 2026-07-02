@@ -65,7 +65,12 @@ button { cursor: pointer; }
 .order-form { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
 .order-form .error, .order-form .success, .order-form button:last-child { grid-column: 1 / -1; }
 .receiver-action, .receiver-result-grid, .order-meta-grid, .order-item-grid, .order-detail-grid, .order-note-row { grid-column: 1 / -1; display: grid; gap: 10px; }
-.order-form-section { padding: 12px; border: 1px solid #d8dee8; border-radius: 8px; background: #f8fafc; }
+.order-form-section { padding: 12px; border: 1px solid #d8dee8; border-left: 4px solid var(--accent); border-radius: 8px; background: #f8fafc; }
+.order-section-title { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid #e4e9f1; }
+.order-section-title strong { font-size: 14px; color: #17202a; }
+.order-section-title span { color: var(--text-muted); font-size: 12px; }
+.field-block { display: grid; gap: 6px; min-width: 0; }
+.field-block > span { color: #344054; font-size: 12px; font-weight: 700; }
 .receiver-action { grid-template-columns: minmax(0, 1fr); }
 .receiver-action textarea { min-height: 74px; }
 .receiver-action button { min-height: 42px; }
@@ -148,6 +153,7 @@ tr:hover td { background: #fafcff; }
   .nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .two-column, .dashboard-grid, .metric-grid { grid-template-columns: 1fr; }
   .receiver-action, .receiver-result-grid, .order-meta-grid, .order-item-grid, .order-detail-grid { grid-template-columns: 1fr; }
+  .order-section-title { display: grid; gap: 4px; }
   .page-header { flex-direction: column; }
   .main { padding: 16px; }
   table { min-width: 720px; }

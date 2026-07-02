@@ -108,68 +108,114 @@ export function OrdersPage() {
         <Panel title={`新增代发  登记人：${me?.user?.username ?? ""}`}>
           <form className="form-grid order-form" onSubmit={submitOrder}>
             <div className="receiver-action order-form-section">
-              <textarea
-                placeholder="粘贴收货信息，例如：张三 13800000000 上海市浦东新区示例路1号"
-                value={receiverRaw}
-                onChange={(event) => setReceiverRaw(event.target.value)}
-                required
-              />
+              <div className="order-section-title">
+                <strong>收货信息识别</strong>
+                <span>粘贴原始收货信息后识别姓名、电话、地址</span>
+              </div>
+              <label className="field-block">
+                <span>粘贴收货信息</span>
+                <textarea
+                  placeholder="例如：张三 13800000000 上海市浦东新区示例路1号"
+                  value={receiverRaw}
+                  onChange={(event) => setReceiverRaw(event.target.value)}
+                  required
+                />
+              </label>
               <button type="button" className="ghost-button" onClick={recognizeReceiver}>识别姓名/电话/地址</button>
             </div>
             <div className="receiver-result-grid order-form-section">
-              <input
-                name="customerName"
-                placeholder="收货人姓名"
-                value={receiver.customerName}
-                onChange={(event) => setReceiver((current) => ({ ...current, customerName: event.target.value }))}
-                required
-              />
-              <input
-                name="customerPhone"
-                placeholder="收货人电话"
-                value={receiver.customerPhone}
-                onChange={(event) => setReceiver((current) => ({ ...current, customerPhone: event.target.value }))}
-                required
-              />
-              <input
-                name="address"
-                placeholder="收货地址"
-                value={receiver.address}
-                onChange={(event) => setReceiver((current) => ({ ...current, address: event.target.value }))}
-                required
-              />
+              <div className="order-section-title">
+                <strong>收货信息明细</strong>
+                <span>识别结果可手动修改</span>
+              </div>
+              <label className="field-block">
+                <span>收货人姓名</span>
+                <input
+                  name="customerName"
+                  placeholder="收货人姓名"
+                  value={receiver.customerName}
+                  onChange={(event) => setReceiver((current) => ({ ...current, customerName: event.target.value }))}
+                  required
+                />
+              </label>
+              <label className="field-block">
+                <span>收货人电话</span>
+                <input
+                  name="customerPhone"
+                  placeholder="收货人电话"
+                  value={receiver.customerPhone}
+                  onChange={(event) => setReceiver((current) => ({ ...current, customerPhone: event.target.value }))}
+                  required
+                />
+              </label>
+              <label className="field-block">
+                <span>收货地址</span>
+                <input
+                  name="address"
+                  placeholder="收货地址"
+                  value={receiver.address}
+                  onChange={(event) => setReceiver((current) => ({ ...current, address: event.target.value }))}
+                  required
+                />
+              </label>
             </div>
             <div className="order-detail-grid order-form-section">
-              <select name="storeName" required>
-                <option value="">选择店铺</option>
-                {stores.map((store) => (
-                  <option value={store.name} key={store.id}>
-                    {store.shortName || store.name}
-                  </option>
-                ))}
-              </select>
-              <input name="orderNo" placeholder="店铺订单编号" required />
-              <select name="supplierId" required>
-                <option value="">选择供应商</option>
-                {suppliers.map((supplier) => (
-                  <option value={supplier.id} key={supplier.id}>
-                    {supplier.shortName || supplier.name}
-                  </option>
-                ))}
-              </select>
-              <select name="productId" required>
-                <option value="">选择SKU</option>
-                {products.map((product) => (
-                  <option value={product.id} key={product.id}>
-                    {product.name} / {product.ssku ?? product.sku}
-                  </option>
-                ))}
-              </select>
-              <input name="quantity" type="number" min="1" placeholder="数量" required />
+              <div className="order-section-title">
+                <strong>订单与商品</strong>
+                <span>店铺、订单、供应商、SKU、数量均为必填</span>
+              </div>
+              <label className="field-block">
+                <span>选择店铺</span>
+                <select name="storeName" required>
+                  <option value="">选择店铺</option>
+                  {stores.map((store) => (
+                    <option value={store.name} key={store.id}>
+                      {store.shortName || store.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field-block">
+                <span>店铺订单编号</span>
+                <input name="orderNo" placeholder="店铺订单编号" required />
+              </label>
+              <label className="field-block">
+                <span>选择供应商</span>
+                <select name="supplierId" required>
+                  <option value="">选择供应商</option>
+                  {suppliers.map((supplier) => (
+                    <option value={supplier.id} key={supplier.id}>
+                      {supplier.shortName || supplier.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field-block">
+                <span>选择SKU</span>
+                <select name="productId" required>
+                  <option value="">选择SKU</option>
+                  {products.map((product) => (
+                    <option value={product.id} key={product.id}>
+                      {product.name} / {product.ssku ?? product.sku}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field-block">
+                <span>数量</span>
+                <input name="quantity" type="number" min="1" placeholder="数量" required />
+              </label>
             </div>
             <input key={me?.user?.username ?? "registrar"} type="hidden" name="registrarName" value={me?.user?.username ?? ""} />
             <div className="order-note-row order-form-section">
-              <textarea name="note" placeholder="备注" />
+              <div className="order-section-title">
+                <strong>备注</strong>
+                <span>可填写特殊要求或补充信息</span>
+              </div>
+              <label className="field-block">
+                <span>备注内容</span>
+                <textarea name="note" placeholder="备注" />
+              </label>
             </div>
             {createOrder.error ? <div className="error">{createOrder.error.message}</div> : null}
             <button className="primary-button">登记代发</button>
