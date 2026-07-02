@@ -314,7 +314,7 @@ ordersRouter.post("/", (req, res) => {
 });
 
 ordersRouter.put("/:id", (req, res) => {
-  if (req.session.user?.role !== ROLE_ADMIN || req.session.user?.username !== config.adminUsername) {
+  if (req.session.user?.role !== ROLE_ADMIN) {
     res.status(403).json({ message: "只有孙立柱可以操作" });
     return;
   }
@@ -332,7 +332,7 @@ ordersRouter.put("/:id", (req, res) => {
 });
 
 ordersRouter.delete("/:id", (req, res) => {
-  if (req.session.user?.role !== ROLE_ADMIN || req.session.user?.username !== config.adminUsername) {
+  if (req.session.user?.role !== ROLE_ADMIN) {
     res.status(403).json({ message: "只有孙立柱可以操作" });
     return;
   }
