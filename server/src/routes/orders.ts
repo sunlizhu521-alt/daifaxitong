@@ -4,6 +4,7 @@ import multer from "multer";
 import { z } from "zod";
 import { config } from "../config.js";
 import { getDb, nowIso } from "../db/index.js";
+import { notifyBusinessAction } from "../notifications/dingtalk.js";
 import { ROLE_ADMIN } from "../permissions.js";
 import { optionalId } from "../utils.js";
 
@@ -346,7 +347,13 @@ ordersRouter.post("/", (req, res) => {
     return;
   }
   try {
-    res.status(201).json(saveOrder(parsed.data));
+    const order = saveOrder(parsed.data) as Record<string, unknown> | null;
+    void notifyBusinessAction({
+      action: parsed.data.orderType === "accessory" ? "配件登记" : "登记代发",
+      operator: req.session.user?.username,
+      order
+    });
+    res.status(201).json(order);
   } catch (error) {
     res.status(409).json({ message: error instanceof Error && error.message === "NOT_FOUND" ? "订单不存在" : "订单号已存在" });
   }
@@ -366,6 +373,7 @@ ordersRouter.put("/:id", (req, res) => {
     const orderId = Number(req.params.id);
     const result = saveOrder(parsed.data, orderId);
     logOrderEvent(orderId, "修改订单", "修改订单基础信息", req.session.user?.username);
+    void notifyBusinessAction({ action: "修改订单", operator: req.session.user?.username, order: result as Record<string, unknown> });
     res.json(result);
   } catch (error) {
     const isNotFound = error instanceof Error && error.message === "NOT_FOUND";
@@ -378,11 +386,13 @@ ordersRouter.delete("/:id", (req, res) => {
     res.status(403).json({ message: "只有孙立柱可以操作" });
     return;
   }
+  const order = readOrder(Number(req.params.id)) as Record<string, unknown> | null;
   const result = getDb().prepare("DELETE FROM orders WHERE id = ?").run(Number(req.params.id));
   if (result.changes === 0) {
     res.status(404).json({ message: "订单不存在" });
     return;
   }
+  void notifyBusinessAction({ action: "删除订单", operator: req.session.user?.username, order });
   res.json({ ok: true });
 });
 
@@ -402,7 +412,14 @@ ordersRouter.patch("/:id/purchase-order", (req, res) => {
     getDb()
       .prepare("UPDATE orders SET purchaseOrderNo = ?, updatedAt = ? WHERE id = ?")
       .run(parsed.data.purchaseOrderNo, nowIso(), orderId);
-    res.json(readOrder(orderId));
+    const order = readOrder(orderId) as Record<string, unknown> | null;
+    void notifyBusinessAction({
+      action: "修改采购订单号",
+      operator: req.session.user?.username,
+      order,
+      fields: [{ label: "填写内容", value: parsed.data.purchaseOrderNo }]
+    });
+    res.json(order);
     return;
   }
   const result = getDb()
@@ -412,18 +429,28 @@ ordersRouter.patch("/:id/purchase-order", (req, res) => {
     res.status(404).json({ message: "订单不存在" });
     return;
   }
-  res.json(readOrder(orderId));
+  const order = readOrder(orderId) as Record<string, unknown> | null;
+  void notifyBusinessAction({
+    action: "填写采购订单号",
+    operator: req.session.user?.username,
+    order,
+    fields: [{ label: "填写内容", value: parsed.data.purchaseOrderNo }]
+  });
+  res.json(order);
 });
 
 ordersRouter.delete("/:id/purchase-order", (req, res) => {
+  const orderId = Number(req.params.id);
   const result = getDb()
     .prepare("UPDATE orders SET purchaseOrderNo = '', purchaseOrderUser = '', status = CASE WHEN status = 'purchased' THEN 'pending' ELSE status END, updatedAt = ? WHERE id = ?")
-    .run(nowIso(), Number(req.params.id));
+    .run(nowIso(), orderId);
   if (result.changes === 0) {
     res.status(404).json({ message: "订单不存在" });
     return;
   }
-  res.json(readOrder(Number(req.params.id)));
+  const order = readOrder(orderId) as Record<string, unknown> | null;
+  void notifyBusinessAction({ action: "删除采购订单号", operator: req.session.user?.username, order });
+  res.json(order);
 });
 
 ordersRouter.patch("/:id/status", (req, res) => {
@@ -443,7 +470,14 @@ ordersRouter.patch("/:id/status", (req, res) => {
   }
   const action = parsed.data.status === "shipped" ? "已提货" : parsed.data.status === "filled" ? "未发走" : "状态变更";
   logOrderEvent(orderId, action, `${statusText[existing?.status ?? ""] ?? existing?.status ?? "-"} -> ${statusText[parsed.data.status]}`, req.session.user?.username);
-  res.json(readOrder(orderId));
+  const order = readOrder(orderId) as Record<string, unknown> | null;
+  void notifyBusinessAction({
+    action,
+    operator: req.session.user?.username,
+    order,
+    fields: [{ label: "状态变化", value: `${statusText[existing?.status ?? ""] ?? existing?.status ?? "-"} -> ${statusText[parsed.data.status]}` }]
+  });
+  res.json(order);
 });
 
 ordersRouter.patch("/:id/shipping-edit", (req, res) => {
@@ -488,7 +522,14 @@ ordersRouter.patch("/:id/shipping-edit", (req, res) => {
     );
   });
   tx();
-  res.json(readOrder(orderId));
+  const updated = readOrder(orderId) as Record<string, unknown> | null;
+  void notifyBusinessAction({
+    action: "发货安排修改",
+    operator: req.session.user?.username,
+    order: updated,
+    fields: [{ label: "填写内容", value: `${productName} / ${productSku} / 数量${parsed.data.quantity}` }]
+  });
+  res.json(updated);
 });
 
 ordersRouter.post("/:id/ship", (req, res) => {
@@ -518,7 +559,18 @@ ordersRouter.post("/:id/ship", (req, res) => {
   ).run(id, supplierId, parsed.data.carrierId ?? null, carrierName, parsed.data.trackingNo, parsed.data.shippedAt, parsed.data.status, parsed.data.note);
   db.prepare("UPDATE orders SET status = ?, updatedAt = ? WHERE id = ?").run(parsed.data.status, nowIso(), id);
   logOrderEvent(id, "填写快递单号", `${carrierName} ${parsed.data.trackingNo}`, req.session.user?.username);
-  res.json(readOrder(id));
+  const updated = readOrder(id) as Record<string, unknown> | null;
+  void notifyBusinessAction({
+    action: parsed.data.status === "shipped" ? "配件发货" : "填写快递单号",
+    operator: req.session.user?.username,
+    order: updated,
+    fields: [
+      { label: "填写快递公司", value: carrierName },
+      { label: "填写快递单号", value: parsed.data.trackingNo },
+      { label: "发货时间", value: parsed.data.shippedAt }
+    ]
+  });
+  res.json(updated);
 });
 
 ordersRouter.delete("/:id/shipment", (req, res) => {
@@ -542,6 +594,11 @@ ordersRouter.delete("/:id/shipment", (req, res) => {
     db.prepare("UPDATE orders SET status = ?, updatedAt = ? WHERE id = ?").run(remaining?.status ?? "pending", nowIso(), id);
   });
   tx();
+  void notifyBusinessAction({
+    action: "删除快递单号",
+    operator: req.session.user?.username,
+    order: readOrder(id) as Record<string, unknown> | null
+  });
   res.json(readOrder(id));
 });
 
@@ -623,6 +680,14 @@ ordersRouter.post("/import", upload.single("file"), async (req, res) => {
   });
   try {
     tx();
+    void notifyBusinessAction({
+      action: "批量导入代发单",
+      operator: req.session.user?.username,
+      fields: [
+        { label: "文件名", value: req.file.originalname },
+        { label: "成功行数", value: rows.length }
+      ]
+    });
     res.json({ totalRows: rows.length, successRows: rows.length, failedRows: 0 });
   } catch {
     res.status(409).json({ message: "导入失败，请检查是否存在重复订单号" });

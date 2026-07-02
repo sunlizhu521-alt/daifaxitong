@@ -19,6 +19,7 @@ export function ReturnOperationPage() {
       qc.invalidateQueries({ queryKey: ["return-operations"] });
       qc.invalidateQueries({ queryKey: ["return-orders"] });
       qc.invalidateQueries({ queryKey: ["dropship-summary"] });
+      qc.invalidateQueries({ queryKey: ["accessory-summary"] });
     }
   });
 
@@ -58,7 +59,7 @@ export function ReturnOperationPage() {
               <th>SKU</th>
               <th>型号</th>
               <th>退货操作</th>
-              <th>快递单号</th>
+              <th>快递单号 *</th>
               <th>退货理由</th>
               <th>状态</th>
               <th>备注</th>
@@ -87,7 +88,7 @@ export function ReturnOperationPage() {
                     <input
                       value={trackingNo}
                       onChange={(event) => setTrackingNos((current) => ({ ...current, [row.id]: event.target.value }))}
-                      placeholder={row.action === "寄回" ? "填写寄回快递单号" : "自动带出发货单号"}
+                      placeholder={row.action === "寄回" ? "填写寄回快递单号 *" : "自动带出发货单号"}
                       readOnly={row.action !== "寄回"}
                       required={row.action === "寄回"}
                     />

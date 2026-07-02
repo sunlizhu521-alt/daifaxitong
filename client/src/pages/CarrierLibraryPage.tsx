@@ -38,7 +38,7 @@ export function CarrierLibraryPage() {
       <div className="two-column catalog-layout library-layout">
         <Panel title={editing ? "编辑快递公司" : "新增快递公司"}>
           <form className="form-grid" onSubmit={submit}>
-            <input name="name" placeholder="快递名称" defaultValue={editing?.name} required />
+            <input name="name" placeholder="快递名称 *" defaultValue={editing?.name} required />
             <input name="contact" placeholder="联系人" defaultValue={editing?.contact} />
             <input name="address" placeholder="地址" defaultValue={editing?.address} />
             <textarea name="note" placeholder="备注" defaultValue={editing?.note} />

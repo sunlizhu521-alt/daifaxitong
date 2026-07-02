@@ -34,7 +34,16 @@ function rowsFromResponse(data: OrderListResponse | undefined) {
   return Array.isArray(data) ? data : data.rows;
 }
 
-export function DropshipSummaryPage() {
+type SummaryPageProps = {
+  title: string;
+  description: string;
+  panelTitle: string;
+  editTitle: string;
+  orderType: "dropship" | "accessory";
+  queryKey: string;
+};
+
+function SummaryPage({ title, description, panelTitle, editTitle, orderType, queryKey }: SummaryPageProps) {
   const qc = useQueryClient();
   const [keyword, setKeyword] = useState("");
   const [status, setStatus] = useState("");
@@ -47,10 +56,10 @@ export function DropshipSummaryPage() {
   const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers"], queryFn: () => api<Supplier[]>("/suppliers") });
   const { data: stores = [] } = useQuery({ queryKey: ["stores"], queryFn: () => api<Store[]>("/stores") });
   const { data: orderResponse } = useQuery({
-    queryKey: ["dropship-summary", keyword, status, supplierId, storeName, startDate, endDate],
+    queryKey: [queryKey, keyword, status, supplierId, storeName, startDate, endDate],
     queryFn: () =>
       api<OrderListResponse>(
-        `/orders?keyword=${encodeURIComponent(keyword)}&status=${encodeURIComponent(status)}&supplierId=${encodeURIComponent(supplierId)}&storeName=${encodeURIComponent(storeName)}&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`
+        `/orders?orderType=${encodeURIComponent(orderType)}&keyword=${encodeURIComponent(keyword)}&status=${encodeURIComponent(status)}&supplierId=${encodeURIComponent(supplierId)}&storeName=${encodeURIComponent(storeName)}&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`
       )
   });
   const orders = rowsFromResponse(orderResponse);
@@ -58,7 +67,7 @@ export function DropshipSummaryPage() {
   const deleteOrder = useMutation({
     mutationFn: (id: number) => api(`/orders/${id}`, { method: "DELETE" }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["dropship-summary"] });
+      qc.invalidateQueries({ queryKey: [queryKey] });
       qc.invalidateQueries({ queryKey: ["summary"] });
     }
   });
@@ -66,7 +75,7 @@ export function DropshipSummaryPage() {
     mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}`, { method: "PUT", body: JSON.stringify(body) }),
     onSuccess: () => {
       setEditing(null);
-      qc.invalidateQueries({ queryKey: ["dropship-summary"] });
+      qc.invalidateQueries({ queryKey: [queryKey] });
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
       qc.invalidateQueries({ queryKey: ["purchase-orders"] });
@@ -114,7 +123,7 @@ export function DropshipSummaryPage() {
 
   return (
     <>
-      <PageHeader title="代发汇总" description="汇总代发订单、采购订单、发货、供应商、店铺和备注信息。" />
+      <PageHeader title={title} description={description} />
       <Panel title="筛选器">
         <div className="toolbar filter-toolbar">
           <input placeholder="搜索订单号/采购订单号/姓名/电话/地址/商品/SKU" value={keyword} onChange={(event) => setKeyword(event.target.value)} />
@@ -143,7 +152,7 @@ export function DropshipSummaryPage() {
           <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
         </div>
       </Panel>
-      <Panel title="代发汇总">
+      <Panel title={panelTitle}>
         <table className="nowrap-table">
           <thead>
             <tr>
@@ -209,7 +218,7 @@ export function DropshipSummaryPage() {
       {editing ? (
         <div className="modal-backdrop">
           <form className="modal summary-edit-modal" onSubmit={submitEdit}>
-            <h2>修改代发订单</h2>
+            <h2>{editTitle}</h2>
             <label className="modal-field">
               <span>订单编号</span>
               <input name="orderNo" defaultValue={editing.orderNo} required />
@@ -267,5 +276,31 @@ export function DropshipSummaryPage() {
         </div>
       ) : null}
     </>
+  );
+}
+
+export function DropshipSummaryPage() {
+  return (
+    <SummaryPage
+      title="成品汇总"
+      description="汇总成品代发订单、采购订单、发货、供应商、店铺和备注信息。"
+      panelTitle="成品汇总"
+      editTitle="修改成品订单"
+      orderType="dropship"
+      queryKey="dropship-summary"
+    />
+  );
+}
+
+export function AccessorySummaryPage() {
+  return (
+    <SummaryPage
+      title="配件汇总"
+      description="汇总配件代发订单、配件发货、供应商、店铺和备注信息。"
+      panelTitle="配件汇总"
+      editTitle="修改配件订单"
+      orderType="accessory"
+      queryKey="accessory-summary"
+    />
   );
 }

@@ -11,6 +11,7 @@ const orderedPaths = [
   { key: "shippingSchedule", path: "/shipping-schedule" },
   { key: "purchaseOrders", path: "/purchase-orders" },
   { key: "dropshipSummary", path: "/dropship-summary" },
+  { key: "accessorySummary", path: "/accessory-summary" },
   { key: "returnRegistration", path: "/returns" },
   { key: "returnOperation", path: "/return-operations" },
   { key: "returnReceipt", path: "/return-receipts" },
@@ -57,11 +58,11 @@ export function LoginPage() {
         </div>
         <p className="auth-note">账号由管理员在权限管理页面创建。</p>
         <label>
-          账号
+          账号 *
           <input name="username" defaultValue="孙立柱" autoComplete="username" required />
         </label>
         <label>
-          密码
+          密码 *
           <input name="password" type="password" autoComplete="current-password" required />
         </label>
         {error ? <div className="error">{error}</div> : null}

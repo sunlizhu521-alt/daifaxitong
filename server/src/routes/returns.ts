@@ -5,6 +5,7 @@ import multer from "multer";
 import { z } from "zod";
 import { config } from "../config.js";
 import { getDb, nowIso } from "../db/index.js";
+import { notifyBusinessAction } from "../notifications/dingtalk.js";
 import { ROLE_ADMIN } from "../permissions.js";
 
 export const returnsRouter = Router();
@@ -43,7 +44,7 @@ function rowToReturn(row: Record<string, unknown>) {
   return {
     ...row,
     attachments: JSON.parse(String(row.attachmentJson ?? "[]")) as string[]
-  };
+  } as Record<string, unknown> & { attachments: string[] };
 }
 
 function latestTrackingNo(orderNo: string) {
@@ -272,7 +273,24 @@ returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
       nowIso()
     );
   const row = db.prepare("SELECT * FROM returns WHERE id = ?").get(result.lastInsertRowid) as Record<string, unknown>;
-  res.status(201).json(rowToReturn(row));
+  const payload = rowToReturn(row);
+  void notifyBusinessAction({
+    action: "提交退货",
+    operator: req.session.user?.username,
+    fields: [
+      { label: "订单号", value: payload.orderNo },
+      { label: "店铺", value: payload.storeName },
+      { label: "客户", value: payload.customerName },
+      { label: "电话", value: payload.customerPhone },
+      { label: "地址", value: payload.address },
+      { label: "型号", value: payload.model },
+      { label: "退货操作", value: payload.action },
+      { label: "退货理由", value: payload.reason },
+      { label: "备注", value: payload.note },
+      { label: "附件数量", value: payload.attachments.length }
+    ]
+  });
+  res.status(201).json(payload);
 });
 
 const returnStatusSchema = z.object({
@@ -317,7 +335,21 @@ returnsRouter.patch("/:id/status", (req, res) => {
     return;
   }
   const row = getDb().prepare("SELECT * FROM returns WHERE id = ?").get(id) as Record<string, unknown>;
-  res.json(rowToReturn(row));
+  const payload = rowToReturn(row);
+  void notifyBusinessAction({
+    action: parsed.data.status === "已收货" ? "退货收货" : "退货操作",
+    operator: req.session.user?.username,
+    fields: [
+      { label: "订单号", value: payload.orderNo },
+      { label: "客户", value: payload.customerName },
+      { label: "退货操作", value: payload.action },
+      { label: "快递单号", value: payload.trackingNo },
+      { label: "状态", value: payload.status },
+      { label: "退货理由", value: payload.reason },
+      { label: "备注", value: payload.note }
+    ]
+  });
+  res.json(payload);
 });
 
 returnsRouter.delete("/:id", (req, res) => {
@@ -325,10 +357,23 @@ returnsRouter.delete("/:id", (req, res) => {
     res.status(403).json({ message: "只有管理员可以删除记录" });
     return;
   }
-  const result = getDb().prepare("DELETE FROM returns WHERE id = ?").run(Number(req.params.id));
+  const id = Number(req.params.id);
+  const row = getDb().prepare("SELECT * FROM returns WHERE id = ?").get(id) as Record<string, unknown> | undefined;
+  const result = getDb().prepare("DELETE FROM returns WHERE id = ?").run(id);
   if (result.changes === 0) {
     res.status(404).json({ message: "退货记录不存在" });
     return;
   }
+  const payload = row ? rowToReturn(row) : null;
+  void notifyBusinessAction({
+    action: "撤销退货",
+    operator: req.session.user?.username,
+    fields: [
+      { label: "订单号", value: payload?.orderNo },
+      { label: "客户", value: payload?.customerName },
+      { label: "退货操作", value: payload?.action },
+      { label: "退货理由", value: payload?.reason }
+    ]
+  });
   res.json({ ok: true });
 });

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { getDb, nowIso } from "../db/index.js";
+import { notifyBusinessAction } from "../notifications/dingtalk.js";
 import { ROLE_ADMIN } from "../permissions.js";
 
 export const carriersRouter = Router();
@@ -34,7 +35,18 @@ carriersRouter.post("/", (req, res) => {
     const result = db
       .prepare("INSERT INTO carriers (name, contact, address, note, updatedAt) VALUES (?, ?, ?, ?, ?)")
       .run(parsed.data.name, parsed.data.contact, parsed.data.address, parsed.data.note, nowIso());
-    res.status(201).json(db.prepare("SELECT * FROM carriers WHERE id = ?").get(result.lastInsertRowid));
+    const row = db.prepare("SELECT * FROM carriers WHERE id = ?").get(result.lastInsertRowid) as Record<string, unknown>;
+    void notifyBusinessAction({
+      action: "新增快递公司",
+      operator: req.session.user?.username,
+      fields: [
+        { label: "快递名称", value: row.name },
+        { label: "联系人", value: row.contact },
+        { label: "地址", value: row.address },
+        { label: "备注", value: row.note }
+      ]
+    });
+    res.status(201).json(row);
   } catch {
     res.status(409).json({ message: "快递名称已存在" });
   }
@@ -59,7 +71,18 @@ carriersRouter.put("/:id", (req, res) => {
     res.status(409).json({ message: "快递名称已存在" });
     return;
   }
-  res.json(getDb().prepare("SELECT * FROM carriers WHERE id = ?").get(id));
+  const row = getDb().prepare("SELECT * FROM carriers WHERE id = ?").get(id) as Record<string, unknown>;
+  void notifyBusinessAction({
+    action: "修改快递公司",
+    operator: req.session.user?.username,
+    fields: [
+      { label: "快递名称", value: row.name },
+      { label: "联系人", value: row.contact },
+      { label: "地址", value: row.address },
+      { label: "备注", value: row.note }
+    ]
+  });
+  res.json(row);
 });
 
 carriersRouter.delete("/:id", (req, res) => {
@@ -68,6 +91,7 @@ carriersRouter.delete("/:id", (req, res) => {
     return;
   }
   const id = Number(req.params.id);
+  const row = getDb().prepare("SELECT * FROM carriers WHERE id = ?").get(id) as Record<string, unknown> | undefined;
   const used = getDb().prepare("SELECT COUNT(*) AS count FROM shipments WHERE carrierId = ?").get(id) as { count: number };
   if (used.count > 0) {
     res.status(409).json({ message: "快递公司已被发货记录引用，不能删除" });
@@ -78,5 +102,10 @@ carriersRouter.delete("/:id", (req, res) => {
     res.status(404).json({ message: "快递公司不存在" });
     return;
   }
+  void notifyBusinessAction({
+    action: "删除快递公司",
+    operator: req.session.user?.username,
+    fields: [{ label: "快递名称", value: row?.name }]
+  });
   res.json({ ok: true });
 });

@@ -61,6 +61,7 @@ export function OrderEntryPage({
     mutationFn: (body: unknown) => api("/orders", { method: "POST", body: JSON.stringify(body) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: [orderType === "accessory" ? "accessory-summary" : "dropship-summary"] });
       qc.invalidateQueries({ queryKey: ["summary"] });
       setReceiverRaw("");
       setReceiver({ customerName: "", customerPhone: "", address: "" });
@@ -68,7 +69,10 @@ export function OrderEntryPage({
   });
   const importOrders = useMutation({
     mutationFn: (form: FormData) => api("/orders/import", { method: "POST", body: form }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["orders"] })
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["dropship-summary"] });
+    }
   });
 
   function recognizeReceiver() {
@@ -261,7 +265,10 @@ export function OrderEntryPage({
         </Panel>
         <Panel title="Excel 导入">
           <form className="upload-box" onSubmit={uploadFile}>
-            <input name="file" type="file" accept=".xlsx,.xls" required />
+            <label className="field-block">
+              <span>导入文件</span>
+              <input name="file" type="file" accept=".xlsx,.xls" required />
+            </label>
             <button className="primary-button">导入代发单</button>
           </form>
           {importOrders.error ? <div className="error">{importOrders.error.message}</div> : null}

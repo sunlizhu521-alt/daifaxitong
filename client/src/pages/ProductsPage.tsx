@@ -45,11 +45,11 @@ export function ProductsPage() {
       <div className="two-column catalog-layout library-layout">
         <Panel title={editing ? "编辑商品" : "新增商品"}>
           <form className="form-grid" onSubmit={submit}>
-            <input name="materialCode" placeholder="物料编码" defaultValue={editing?.materialCode} required />
+            <input name="materialCode" placeholder="物料编码 *" defaultValue={editing?.materialCode} required />
             <input name="productLine" placeholder="产品线" defaultValue={editing?.productLine} />
             <input name="series" placeholder="系列" defaultValue={editing?.series} />
-            <input name="ssku" placeholder="SKU" defaultValue={editing?.ssku ?? editing?.sku} required />
-            <input name="name" placeholder="名称" defaultValue={editing?.name} required />
+            <input name="ssku" placeholder="SKU *" defaultValue={editing?.ssku ?? editing?.sku} required />
+            <input name="name" placeholder="名称 *" defaultValue={editing?.name} required />
             <input name="supplierModel" placeholder="供应商型号" defaultValue={editing?.supplierModel} />
             <select name="supplierId" defaultValue={editing?.supplierId ?? ""}>
               <option value="">未选择供应商</option>
@@ -66,7 +66,10 @@ export function ProductsPage() {
         </Panel>
         <Panel title="批量导入商品">
           <form className="upload-box" onSubmit={uploadFile}>
-            <input name="file" type="file" accept=".xlsx,.xls" required />
+            <label className="field-block">
+              <span>导入文件</span>
+              <input name="file" type="file" accept=".xlsx,.xls" required />
+            </label>
             <button className="primary-button">批量导入</button>
           </form>
           <small>支持列：物料编码、产品线、系列、SKU、名称、供应商型号、供应商、备注。</small>

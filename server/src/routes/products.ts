@@ -4,6 +4,7 @@ import multer from "multer";
 import { z } from "zod";
 import { config } from "../config.js";
 import { getDb, nowIso } from "../db/index.js";
+import { notifyBusinessAction } from "../notifications/dingtalk.js";
 import { ROLE_ADMIN } from "../permissions.js";
 import { cell, normalizeHeader, optionalId } from "../utils.js";
 
@@ -65,7 +66,21 @@ productsRouter.post("/", (req, res) => {
         parsed.data.note,
         nowIso()
       );
-    res.status(201).json(db.prepare(`${baseSelect} WHERE p.id = ?`).get(result.lastInsertRowid));
+    const row = db.prepare(`${baseSelect} WHERE p.id = ?`).get(result.lastInsertRowid) as Record<string, unknown>;
+    void notifyBusinessAction({
+      action: "新增商品",
+      operator: req.session.user?.username,
+      fields: [
+        { label: "物料编码", value: row.materialCode },
+        { label: "产品线", value: row.productLine },
+        { label: "系列", value: row.series },
+        { label: "SKU", value: row.ssku },
+        { label: "名称", value: row.name },
+        { label: "供应商型号", value: row.supplierModel },
+        { label: "供应商", value: row.supplierName }
+      ]
+    });
+    res.status(201).json(row);
   } catch {
     res.status(409).json({ message: "商品名称和 SKU 已存在" });
   }
@@ -169,6 +184,14 @@ productsRouter.post("/import", upload.single("file"), async (req, res) => {
       ).run("products", req.file!.originalname, rows.length, parsedRows.length, 0, "[]");
     });
     tx();
+    void notifyBusinessAction({
+      action: "批量导入商品",
+      operator: req.session.user?.username,
+      fields: [
+        { label: "文件名", value: req.file.originalname },
+        { label: "成功行数", value: parsedRows.length }
+      ]
+    });
     res.json({ totalRows: rows.length, successRows: parsedRows.length, failedRows: 0 });
   } catch {
     if (!res.headersSent) {
@@ -211,7 +234,21 @@ productsRouter.put("/:id", (req, res) => {
       res.status(404).json({ message: "商品不存在" });
       return;
     }
-    res.json(db.prepare(`${baseSelect} WHERE p.id = ?`).get(id));
+    const row = db.prepare(`${baseSelect} WHERE p.id = ?`).get(id) as Record<string, unknown>;
+    void notifyBusinessAction({
+      action: "修改商品",
+      operator: req.session.user?.username,
+      fields: [
+        { label: "物料编码", value: row.materialCode },
+        { label: "产品线", value: row.productLine },
+        { label: "系列", value: row.series },
+        { label: "SKU", value: row.ssku },
+        { label: "名称", value: row.name },
+        { label: "供应商型号", value: row.supplierModel },
+        { label: "供应商", value: row.supplierName }
+      ]
+    });
+    res.json(row);
   } catch {
     res.status(409).json({ message: "商品名称和 SKU 已存在" });
   }
@@ -224,6 +261,7 @@ productsRouter.delete("/:id", (req, res) => {
   }
   const id = Number(req.params.id);
   const db = getDb();
+  const row = db.prepare(`${baseSelect} WHERE p.id = ?`).get(id) as Record<string, unknown> | undefined;
   const used = db.prepare("SELECT COUNT(*) AS count FROM order_items WHERE productId = ?").get(id) as { count: number };
   if (used.count > 0) {
     res.status(409).json({ message: "商品已被订单引用，不能删除" });
@@ -234,5 +272,13 @@ productsRouter.delete("/:id", (req, res) => {
     res.status(404).json({ message: "商品不存在" });
     return;
   }
+  void notifyBusinessAction({
+    action: "删除商品",
+    operator: req.session.user?.username,
+    fields: [
+      { label: "名称", value: row?.name },
+      { label: "SKU", value: row?.ssku }
+    ]
+  });
   res.json({ ok: true });
 });

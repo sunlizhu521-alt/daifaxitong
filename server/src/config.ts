@@ -13,6 +13,8 @@ export const config = {
   adminUsername: process.env.ADMIN_USERNAME ?? "孙立柱",
   adminPassword: process.env.ADMIN_PASSWORD ?? "",
   sessionSecret: process.env.SESSION_SECRET ?? "",
+  dingtalkWebhook: process.env.DINGTALK_WEBHOOK ?? process.env.WEBHOOK ?? "",
+  dingtalkSecret: process.env.DINGTALK_SECRET ?? process.env.SECRET ?? "",
   clientDist: path.resolve(rootDir, "server/dist/public")
 };
 

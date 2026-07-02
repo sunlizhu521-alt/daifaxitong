@@ -44,7 +44,7 @@ export function SuppliersPage() {
       <div className="two-column catalog-layout library-layout">
         <Panel title={editing ? "编辑供应商" : "新增供应商"}>
           <form className="form-grid" onSubmit={submit}>
-            <input name="name" placeholder="供应商名称" defaultValue={editing?.name} required />
+            <input name="name" placeholder="供应商名称 *" defaultValue={editing?.name} required />
             <input name="shortName" placeholder="供应商简称" defaultValue={editing?.shortName} />
             <input name="contact" placeholder="联系人" defaultValue={editing?.contact} />
             <input name="phone" placeholder="电话" defaultValue={editing?.phone} />
@@ -56,7 +56,10 @@ export function SuppliersPage() {
         </Panel>
         <Panel title="批量导入供应商">
           <form className="upload-box" onSubmit={uploadFile}>
-            <input name="file" type="file" accept=".xlsx,.xls" required />
+            <label className="field-block">
+              <span>导入文件</span>
+              <input name="file" type="file" accept=".xlsx,.xls" required />
+            </label>
             <button className="primary-button">批量导入</button>
           </form>
           <small>支持列：供应商名称、供应商简称、联系人、电话、店址、备注。</small>

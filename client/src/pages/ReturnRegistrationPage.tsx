@@ -129,8 +129,8 @@ export function ReturnRegistrationPage() {
               <th>地址</th>
               <th>型号</th>
               <th>状态</th>
-              <th>操作</th>
-              <th>退货理由</th>
+              <th>操作 *</th>
+              <th>退货理由 *</th>
               <th>备注</th>
               <th>附件</th>
               <th>退货登记</th>
@@ -155,7 +155,7 @@ export function ReturnRegistrationPage() {
                     onChange={(event) => setReturnActions((current) => ({ ...current, [row.orderId]: event.target.value }))}
                     required
                   >
-                    <option value="">选择操作</option>
+                    <option value="">选择操作 *</option>
                     <option value="拦截">拦截</option>
                     <option value="召回">召回</option>
                     <option value="寄回">寄回</option>
@@ -163,7 +163,7 @@ export function ReturnRegistrationPage() {
                 </td>
                 <td>
                   <select form={formId} name="reason" defaultValue={row.returnId ? row.reason || "" : ""} required>
-                    <option value="">选择退货理由</option>
+                    <option value="">选择退货理由 *</option>
                     <option value="七天无理由">七天无理由</option>
                     <option value="质量问题">质量问题</option>
                   </select>

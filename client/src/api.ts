@@ -134,6 +134,7 @@ export type PageOption = {
     | "shippingSchedule"
     | "purchaseOrders"
     | "dropshipSummary"
+    | "accessorySummary"
     | "returnRegistration"
     | "returnOperation"
     | "returnReceipt"

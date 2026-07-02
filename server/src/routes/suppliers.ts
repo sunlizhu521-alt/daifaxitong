@@ -4,6 +4,7 @@ import multer from "multer";
 import { z } from "zod";
 import { config } from "../config.js";
 import { getDb, nowIso } from "../db/index.js";
+import { notifyBusinessAction } from "../notifications/dingtalk.js";
 import { ROLE_ADMIN } from "../permissions.js";
 import { cell, normalizeHeader } from "../utils.js";
 
@@ -54,7 +55,20 @@ suppliersRouter.post("/", (req, res) => {
         parsed.data.note,
         nowIso()
       );
-    res.status(201).json(db.prepare("SELECT * FROM suppliers WHERE id = ?").get(result.lastInsertRowid));
+    const row = db.prepare("SELECT * FROM suppliers WHERE id = ?").get(result.lastInsertRowid) as Record<string, unknown>;
+    void notifyBusinessAction({
+      action: "新增供应商",
+      operator: req.session.user?.username,
+      fields: [
+        { label: "供应商名称", value: row.name },
+        { label: "供应商简称", value: row.shortName },
+        { label: "联系人", value: row.contact },
+        { label: "电话", value: row.phone },
+        { label: "店址", value: row.storeAddress },
+        { label: "备注", value: row.note }
+      ]
+    });
+    res.status(201).json(row);
   } catch {
     res.status(409).json({ message: "供应商名称已存在" });
   }
@@ -118,6 +132,14 @@ suppliersRouter.post("/import", upload.single("file"), async (req, res) => {
       ).run("suppliers", req.file!.originalname, rows.length, rows.length, 0, "[]");
     });
     tx();
+    void notifyBusinessAction({
+      action: "批量导入供应商",
+      operator: req.session.user?.username,
+      fields: [
+        { label: "文件名", value: req.file.originalname },
+        { label: "成功行数", value: rows.length }
+      ]
+    });
     res.json({ totalRows: rows.length, successRows: rows.length, failedRows: 0 });
   } catch {
     if (!res.headersSent) {
@@ -154,7 +176,20 @@ suppliersRouter.put("/:id", (req, res) => {
       res.status(404).json({ message: "供应商不存在" });
       return;
     }
-    res.json(db.prepare("SELECT * FROM suppliers WHERE id = ?").get(id));
+    const row = db.prepare("SELECT * FROM suppliers WHERE id = ?").get(id) as Record<string, unknown>;
+    void notifyBusinessAction({
+      action: "修改供应商",
+      operator: req.session.user?.username,
+      fields: [
+        { label: "供应商名称", value: row.name },
+        { label: "供应商简称", value: row.shortName },
+        { label: "联系人", value: row.contact },
+        { label: "电话", value: row.phone },
+        { label: "店址", value: row.storeAddress },
+        { label: "备注", value: row.note }
+      ]
+    });
+    res.json(row);
   } catch {
     res.status(409).json({ message: "供应商名称已存在" });
   }
@@ -167,6 +202,7 @@ suppliersRouter.delete("/:id", (req, res) => {
   }
   const id = Number(req.params.id);
   const db = getDb();
+  const row = db.prepare("SELECT * FROM suppliers WHERE id = ?").get(id) as Record<string, unknown> | undefined;
   const usedByProducts = db.prepare("SELECT COUNT(*) AS count FROM products WHERE supplierId = ?").get(id) as { count: number };
   const usedByOrders = db.prepare("SELECT COUNT(*) AS count FROM orders WHERE supplierId = ?").get(id) as { count: number };
   const usedByShipments = db.prepare("SELECT COUNT(*) AS count FROM shipments WHERE supplierId = ?").get(id) as { count: number };
@@ -179,5 +215,10 @@ suppliersRouter.delete("/:id", (req, res) => {
     res.status(404).json({ message: "供应商不存在" });
     return;
   }
+  void notifyBusinessAction({
+    action: "删除供应商",
+    operator: req.session.user?.username,
+    fields: [{ label: "供应商名称", value: row?.name }]
+  });
   res.json({ ok: true });
 });

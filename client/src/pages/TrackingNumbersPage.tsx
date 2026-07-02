@@ -126,12 +126,12 @@ export function TrackingNumbersPage() {
             <tr>
               <th>订单号</th>
               <th>客户</th>
-              <th>快递公司</th>
-              <th>快递单号</th>
+              <th>快递公司 *</th>
+              <th>快递单号 *</th>
               <th>供应商</th>
               <th>数量</th>
               <th>状态</th>
-              <th>发货时间</th>
+              <th>发货时间 *</th>
               <th>操作</th>
             </tr>
           </thead>
@@ -143,7 +143,7 @@ export function TrackingNumbersPage() {
                 <td>
                   <form id={`shipment-${order.id}`} className="inline-shipment-form" onSubmit={(event) => submitShipment(order, event)}>
                     <select name="carrierId" defaultValue={order.carrierId ?? ""} required>
-                      <option value="">选择快递</option>
+                      <option value="">选择快递 *</option>
                       {carriers.map((carrier) => (
                         <option value={carrier.id} key={carrier.id}>{carrier.name}</option>
                       ))}
@@ -151,7 +151,7 @@ export function TrackingNumbersPage() {
                   </form>
                 </td>
                 <td>
-                  <input form={`shipment-${order.id}`} name="trackingNo" placeholder="快递单号" defaultValue={order.trackingNo ?? ""} required />
+                  <input form={`shipment-${order.id}`} name="trackingNo" placeholder="快递单号 *" defaultValue={order.trackingNo ?? ""} required />
                 </td>
                 <td>{order.supplierName ?? "-"}</td>
                 <td>{order.totalQuantity ?? 0}</td>

@@ -84,13 +84,23 @@ button { cursor: pointer; }
 .section-note .order-section-title strong { color: #b45309; }
 .field-block { display: grid; gap: 6px; min-width: 0; }
 .field-block > span { color: #344054; font-size: 12px; font-weight: 700; }
+.field-block:has(input[required]) > span::after,
+.field-block:has(select[required]) > span::after,
+.field-block:has(textarea[required]) > span::after,
+.modal-field:has(input[required]) > span::after,
+.modal-field:has(select[required]) > span::after,
+.modal-field:has(textarea[required]) > span::after {
+  content: " *";
+  color: var(--red);
+  font-weight: 800;
+}
 .receiver-action { grid-template-columns: minmax(0, 1fr); }
 .receiver-action textarea { min-height: 74px; }
 .receiver-action button { min-height: 42px; }
 .receiver-result-grid { grid-template-columns: minmax(150px, 0.7fr) minmax(180px, 0.85fr) minmax(320px, 1.8fr); }
 .order-meta-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .order-item-grid { grid-template-columns: minmax(180px, 0.9fr) minmax(280px, 1.4fr) minmax(120px, 0.45fr); }
-.order-detail-grid { grid-template-columns: minmax(140px, 0.8fr) minmax(180px, 1fr) minmax(140px, 0.85fr) minmax(260px, 1.45fr) minmax(110px, 0.45fr); align-items: start; }
+.order-detail-grid { grid-template-columns: minmax(120px, 0.75fr) minmax(150px, 0.9fr) minmax(130px, 0.8fr) minmax(180px, 1fr) minmax(180px, 1fr) minmax(90px, 0.45fr); align-items: start; }
 .order-note-row { grid-template-columns: minmax(0, 1fr); }
 .order-form textarea[name="note"] { min-height: 58px; }
 input, select, textarea { width: 100%; border: 1px solid #cfd6e2; border-radius: 6px; padding: 8px 10px; background: #fff; color: #17202a; min-height: 36px; }

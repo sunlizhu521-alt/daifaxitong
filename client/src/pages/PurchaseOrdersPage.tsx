@@ -61,11 +61,11 @@ export function PurchaseOrdersPage() {
         <table>
           <thead>
             <tr>
-              <th>采购下单人</th>
+              <th>采购下单人 *</th>
               <th>供应商</th>
               <th>店铺</th>
               <th>订单编号</th>
-              <th>采购订单号</th>
+              <th>采购订单号 *</th>
               <th>客户姓名</th>
               <th>电话</th>
               <th>收货地址</th>
@@ -82,14 +82,14 @@ export function PurchaseOrdersPage() {
               <tr key={order.id}>
                 <td>
                   <form id={`purchase-order-${order.id}`} onSubmit={(event) => submitPurchaseOrder(order, event)}>
-                    <input name="purchaseOrderUser" placeholder="采购下单人" defaultValue={order.purchaseOrderUser || me?.user?.username || ""} required />
+                    <input name="purchaseOrderUser" placeholder="采购下单人 *" defaultValue={order.purchaseOrderUser || me?.user?.username || ""} required />
                   </form>
                 </td>
                 <td>{order.supplierName ?? "-"}</td>
                 <td>{order.storeName || "-"}</td>
                 <td>{order.orderNo}</td>
                 <td>
-                  <input form={`purchase-order-${order.id}`} name="purchaseOrderNo" placeholder="填写采购订单号" defaultValue={order.purchaseOrderNo ?? ""} required />
+                  <input form={`purchase-order-${order.id}`} name="purchaseOrderNo" placeholder="填写采购订单号 *" defaultValue={order.purchaseOrderNo ?? ""} required />
                 </td>
                 <td>{order.customerName}</td>
                 <td>{order.customerPhone ?? "-"}</td>

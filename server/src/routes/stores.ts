@@ -4,6 +4,7 @@ import multer from "multer";
 import { z } from "zod";
 import { config } from "../config.js";
 import { getDb, nowIso } from "../db/index.js";
+import { notifyBusinessAction } from "../notifications/dingtalk.js";
 import { ROLE_ADMIN } from "../permissions.js";
 import { cell, normalizeHeader } from "../utils.js";
 
@@ -40,7 +41,19 @@ storesRouter.post("/", (req, res) => {
     const result = db
       .prepare("INSERT INTO stores (name, shortName, platform, owner, operator, note, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)")
       .run(parsed.data.name, parsed.data.shortName, parsed.data.platform, parsed.data.operator, parsed.data.operator, parsed.data.note, nowIso());
-    res.status(201).json(db.prepare("SELECT * FROM stores WHERE id = ?").get(result.lastInsertRowid));
+    const row = db.prepare("SELECT * FROM stores WHERE id = ?").get(result.lastInsertRowid) as Record<string, unknown>;
+    void notifyBusinessAction({
+      action: "新增店铺",
+      operator: req.session.user?.username,
+      fields: [
+        { label: "店铺名称", value: row.name },
+        { label: "店铺简称", value: row.shortName },
+        { label: "平台", value: row.platform },
+        { label: "运营", value: row.operator },
+        { label: "备注", value: row.note }
+      ]
+    });
+    res.status(201).json(row);
   } catch {
     res.status(409).json({ message: "店铺和平台已存在" });
   }
@@ -102,6 +115,14 @@ storesRouter.post("/import", upload.single("file"), async (req, res) => {
       ).run("stores", req.file!.originalname, rows.length, rows.length, 0, "[]");
     });
     tx();
+    void notifyBusinessAction({
+      action: "批量导入店铺",
+      operator: req.session.user?.username,
+      fields: [
+        { label: "文件名", value: req.file.originalname },
+        { label: "成功行数", value: rows.length }
+      ]
+    });
     res.json({ totalRows: rows.length, successRows: rows.length, failedRows: 0 });
   } catch {
     if (!res.headersSent) {
@@ -128,7 +149,19 @@ storesRouter.put("/:id", (req, res) => {
       res.status(404).json({ message: "店铺不存在" });
       return;
     }
-    res.json(db.prepare("SELECT * FROM stores WHERE id = ?").get(id));
+    const row = db.prepare("SELECT * FROM stores WHERE id = ?").get(id) as Record<string, unknown>;
+    void notifyBusinessAction({
+      action: "修改店铺",
+      operator: req.session.user?.username,
+      fields: [
+        { label: "店铺名称", value: row.name },
+        { label: "店铺简称", value: row.shortName },
+        { label: "平台", value: row.platform },
+        { label: "运营", value: row.operator },
+        { label: "备注", value: row.note }
+      ]
+    });
+    res.json(row);
   } catch {
     res.status(409).json({ message: "店铺和平台已存在" });
   }
@@ -139,10 +172,17 @@ storesRouter.delete("/:id", (req, res) => {
     res.status(403).json({ message: "只有管理员可以删除记录" });
     return;
   }
-  const result = getDb().prepare("DELETE FROM stores WHERE id = ?").run(Number(req.params.id));
+  const id = Number(req.params.id);
+  const row = getDb().prepare("SELECT * FROM stores WHERE id = ?").get(id) as Record<string, unknown> | undefined;
+  const result = getDb().prepare("DELETE FROM stores WHERE id = ?").run(id);
   if (result.changes === 0) {
     res.status(404).json({ message: "店铺不存在" });
     return;
   }
+  void notifyBusinessAction({
+    action: "删除店铺",
+    operator: req.session.user?.username,
+    fields: [{ label: "店铺名称", value: row?.name }]
+  });
   res.json({ ok: true });
 });

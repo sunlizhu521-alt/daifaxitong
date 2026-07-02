@@ -42,7 +42,7 @@ export function AccessoryShippingPage() {
     mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}/ship`, { method: "POST", body: JSON.stringify(body) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["accessory-shipping"] });
-      qc.invalidateQueries({ queryKey: ["dropship-summary"] });
+      qc.invalidateQueries({ queryKey: ["accessory-summary"] });
       qc.invalidateQueries({ queryKey: ["summary"] });
     }
   });
@@ -89,9 +89,9 @@ export function AccessoryShippingPage() {
               <th>商品名称</th>
               <th>数量</th>
               <th>状态</th>
-              <th>快递公司</th>
-              <th>快递单号</th>
-              <th>发货时间</th>
+              <th>快递公司 *</th>
+              <th>快递单号 *</th>
+              <th>发货时间 *</th>
               <th>操作</th>
               <th>备注</th>
             </tr>
@@ -111,11 +111,11 @@ export function AccessoryShippingPage() {
                 <td><span className={`status ${order.status}`}>{statusText[order.status]}</span></td>
                 <td>
                   <form id={`accessory-shipment-${order.id}`} className="inline-shipment-form" onSubmit={(event) => submitShipment(order, event)}>
-                    <input name="carrier" placeholder="快递公司" defaultValue={order.carrier ?? ""} required />
+                    <input name="carrier" placeholder="快递公司 *" defaultValue={order.carrier ?? ""} required />
                   </form>
                 </td>
                 <td>
-                  <input form={`accessory-shipment-${order.id}`} name="trackingNo" placeholder="快递单号" defaultValue={order.trackingNo ?? ""} required />
+                  <input form={`accessory-shipment-${order.id}`} name="trackingNo" placeholder="快递单号 *" defaultValue={order.trackingNo ?? ""} required />
                 </td>
                 <td>
                   <input form={`accessory-shipment-${order.id}`} name="shippedAt" type="datetime-local" defaultValue={defaultShipTime(order.shippedAt)} required />

@@ -44,9 +44,9 @@ export function StoreLibraryPage() {
       <div className="two-column catalog-layout library-layout">
         <Panel title={editing ? "编辑店铺" : "新增店铺"}>
           <form className="form-grid" onSubmit={submit}>
-            <input name="name" placeholder="店铺名称" defaultValue={editing?.name} required />
+            <input name="name" placeholder="店铺名称 *" defaultValue={editing?.name} required />
             <input name="shortName" placeholder="店铺简称" defaultValue={editing?.shortName} />
-            <input name="platform" placeholder="平台" defaultValue={editing?.platform} required />
+            <input name="platform" placeholder="平台 *" defaultValue={editing?.platform} required />
             <input name="operator" placeholder="运营" defaultValue={editing?.operator} />
             <textarea name="note" placeholder="备注" defaultValue={editing?.note} />
             {save.error ? <div className="error">{save.error.message}</div> : null}
@@ -55,7 +55,10 @@ export function StoreLibraryPage() {
         </Panel>
         <Panel title="批量导入店铺">
           <form className="upload-box" onSubmit={uploadFile}>
-            <input name="file" type="file" accept=".xlsx,.xls" required />
+            <label className="field-block">
+              <span>导入文件</span>
+              <input name="file" type="file" accept=".xlsx,.xls" required />
+            </label>
             <button className="primary-button">批量导入</button>
           </form>
           <small>支持列：店铺名称、店铺简称、平台、运营、备注。</small>
