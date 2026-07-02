@@ -107,7 +107,7 @@ export function OrdersPage() {
       <div className="order-entry-layout">
         <Panel title={`新增代发  登记人：${me?.user?.username ?? ""}`}>
           <form className="form-grid order-form" onSubmit={submitOrder}>
-            <div className="receiver-action order-form-section">
+            <div className="receiver-action order-form-section section-receiver">
               <div className="order-section-title">
                 <strong>收货信息识别</strong>
                 <span>粘贴原始收货信息后识别姓名、电话、地址</span>
@@ -123,7 +123,7 @@ export function OrdersPage() {
               </label>
               <button type="button" className="ghost-button" onClick={recognizeReceiver}>识别姓名/电话/地址</button>
             </div>
-            <div className="receiver-result-grid order-form-section">
+            <div className="receiver-result-grid order-form-section section-result">
               <div className="order-section-title">
                 <strong>收货信息明细</strong>
                 <span>识别结果可手动修改</span>
@@ -159,7 +159,7 @@ export function OrdersPage() {
                 />
               </label>
             </div>
-            <div className="order-detail-grid order-form-section">
+            <div className="order-detail-grid order-form-section section-detail">
               <div className="order-section-title">
                 <strong>订单与商品</strong>
                 <span>店铺、订单、供应商、SKU、数量均为必填</span>
@@ -207,7 +207,7 @@ export function OrdersPage() {
               </label>
             </div>
             <input key={me?.user?.username ?? "registrar"} type="hidden" name="registrarName" value={me?.user?.username ?? ""} />
-            <div className="order-note-row order-form-section">
+            <div className="order-note-row order-form-section section-note">
               <div className="order-section-title">
                 <strong>备注</strong>
                 <span>可填写特殊要求或补充信息</span>
