@@ -21,6 +21,8 @@ export function ReturnRegistrationPage() {
   const [appliedStartDate, setAppliedStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [appliedEndDate, setAppliedEndDate] = useState("");
+  const [returnActions, setReturnActions] = useState<Record<number, string>>({});
+  const [returnTrackingNos, setReturnTrackingNos] = useState<Record<number, string>>({});
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
   const { data: rows = [] } = useQuery({
     queryKey: ["return-orders", appliedKeyword, appliedStoreName, appliedSupplierId, appliedSeries, appliedSku, appliedStartDate, appliedEndDate],
@@ -146,6 +148,13 @@ export function ReturnRegistrationPage() {
           <tbody>
             {rows.map((row) => {
               const formId = `return-form-${row.orderId}`;
+              const actionValue = returnActions[row.orderId] ?? (row.returnId ? row.action ?? "" : "");
+              const needsReturnTrackingNo = actionValue === "寄回";
+              const trackingNoValue = needsReturnTrackingNo
+                ? returnTrackingNos[row.orderId] ?? row.returnTrackingNo ?? ""
+                : actionValue
+                  ? row.shipmentTrackingNo ?? ""
+                  : "";
               return (
               <tr key={row.orderId}>
                 <td>{row.storeName || "-"}</td>
@@ -160,7 +169,14 @@ export function ReturnRegistrationPage() {
                 <td>{row.address}</td>
                 <td>{row.returnStatus || row.orderStatus}</td>
                 <td>
-                  <select form={formId} name="action" defaultValue={row.action || "拦截"} required>
+                  <select
+                    form={formId}
+                    name="action"
+                    value={actionValue}
+                    onChange={(event) => setReturnActions((current) => ({ ...current, [row.orderId]: event.target.value }))}
+                    required
+                  >
+                    <option value="">选择操作</option>
                     <option value="拦截">拦截</option>
                     <option value="召回">召回</option>
                     <option value="寄回">寄回</option>
@@ -170,13 +186,17 @@ export function ReturnRegistrationPage() {
                   <input
                     form={formId}
                     name="trackingNo"
-                    placeholder="寄回时填写"
-                    defaultValue={row.returnTrackingNo || ""}
+                    placeholder={needsReturnTrackingNo ? "填写寄回快递单号" : actionValue ? "自动带出原快递单号" : "先选择操作"}
+                    value={trackingNoValue}
+                    onChange={(event) => setReturnTrackingNos((current) => ({ ...current, [row.orderId]: event.target.value }))}
+                    readOnly={!needsReturnTrackingNo}
+                    required={needsReturnTrackingNo}
                   />
                   {row.shipmentTrackingNo ? <small className="muted-text">原单号：{row.shipmentTrackingNo}</small> : null}
                 </td>
                 <td>
-                  <select form={formId} name="reason" defaultValue={row.reason || "七天无理由"} required>
+                  <select form={formId} name="reason" defaultValue={row.returnId ? row.reason || "" : ""} required>
+                    <option value="">选择退货理由</option>
                     <option value="七天无理由">七天无理由</option>
                     <option value="质量问题">质量问题</option>
                   </select>
