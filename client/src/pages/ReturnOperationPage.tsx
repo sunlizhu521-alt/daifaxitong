@@ -25,10 +25,6 @@ export function ReturnOperationPage() {
 
   function confirmComplete(row: ReturnRecord) {
     const trackingNo = row.action === "寄回" ? (trackingNos[row.id] ?? row.trackingNo ?? "").trim() : row.shipmentTrackingNo ?? row.trackingNo ?? "";
-    if (row.action === "寄回" && !trackingNo) {
-      window.alert("寄回需要填写快递单号");
-      return;
-    }
     if (!window.confirm(`确认订单 ${row.orderNo} 已经完成退货操作吗？`)) return;
     completeReturn.mutate({ id: row.id, trackingNo });
   }
@@ -59,7 +55,7 @@ export function ReturnOperationPage() {
               <th>SKU</th>
               <th>型号</th>
               <th>退货操作</th>
-              <th>快递单号 *</th>
+              <th>快递单号</th>
               <th>退货理由</th>
               <th>状态</th>
               <th>备注</th>
@@ -88,9 +84,8 @@ export function ReturnOperationPage() {
                     <input
                       value={trackingNo}
                       onChange={(event) => setTrackingNos((current) => ({ ...current, [row.id]: event.target.value }))}
-                      placeholder={row.action === "寄回" ? "填写寄回快递单号 *" : "自动带出发货单号"}
+                      placeholder={row.action === "寄回" ? "可填写寄回快递单号" : "自动带出发货单号"}
                       readOnly={row.action !== "寄回"}
-                      required={row.action === "寄回"}
                     />
                   </td>
                   <td>{row.reason}</td>

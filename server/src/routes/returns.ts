@@ -314,17 +314,8 @@ returnsRouter.patch("/:id/status", (req, res) => {
   }
   let trackingNo = parsed.data.trackingNo.trim();
   if (parsed.data.status === "已安排退回") {
-    if (current.action === "寄回") {
-      if (!trackingNo) {
-        res.status(400).json({ message: "寄回需要填写快递单号" });
-        return;
-      }
-    } else {
+    if (current.action !== "寄回" && !trackingNo) {
       trackingNo = latestTrackingNo(current.orderNo);
-      if (!trackingNo) {
-        res.status(400).json({ message: "未找到原订单快递单号，请先在发货信息中登记快递单号" });
-        return;
-      }
     }
   }
   const result = getDb()
