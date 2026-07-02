@@ -294,7 +294,7 @@ returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
 });
 
 const returnStatusSchema = z.object({
-  status: z.enum(["待处理", "已处理", "已提交退货", "已安排退回", "已收货"]),
+  status: z.enum(["待处理", "已处理", "已提交退货", "已安排退回", "已收货", "已收到退货"]),
   trackingNo: z.string().optional().default("")
 });
 
@@ -328,7 +328,7 @@ returnsRouter.patch("/:id/status", (req, res) => {
   const row = getDb().prepare("SELECT * FROM returns WHERE id = ?").get(id) as Record<string, unknown>;
   const payload = rowToReturn(row);
   void notifyBusinessAction({
-    action: parsed.data.status === "已收货" ? "退货收货" : "退货操作",
+    action: parsed.data.status === "已收货" || parsed.data.status === "已收到退货" ? "退货收货" : "退货操作",
     operator: req.session.user?.username,
     fields: [
       { label: "订单号", value: payload.orderNo },

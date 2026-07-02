@@ -11,7 +11,7 @@ export function ReturnReceiptPage() {
     queryFn: () => api<ReturnRecord[]>(`/returns?status=${encodeURIComponent("已安排退回")}&keyword=${encodeURIComponent(keyword)}`)
   });
   const receiveReturn = useMutation({
-    mutationFn: (id: number) => api(`/returns/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "已收货" }) }),
+    mutationFn: (id: number) => api(`/returns/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "已收到退货" }) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["return-receipts"] });
       qc.invalidateQueries({ queryKey: ["return-operations"] });
@@ -80,7 +80,7 @@ export function ReturnReceiptPage() {
                 </td>
                 <td className="row-actions">
                   <button type="button" className="primary-button" onClick={() => confirmReceived(row)}>
-                    已收货
+                    已收到退货
                   </button>
                 </td>
               </tr>
