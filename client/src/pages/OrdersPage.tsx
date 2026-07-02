@@ -31,13 +31,21 @@ type OrderEntryPageProps = {
   description?: string;
   panelTitle?: string;
   submitLabel?: string;
+  itemInputMode?: "select" | "manual";
+  receiverNameLabel?: string;
+  receiverPhoneLabel?: string;
+  addressLabel?: string;
 };
 
 export function OrderEntryPage({
   title = "登记代发",
   description = "手工登记代发订单、识别收货信息、Excel 批量导入并维护发货物流。",
   panelTitle = "新增代发",
-  submitLabel = "登记代发"
+  submitLabel = "登记代发",
+  itemInputMode = "select",
+  receiverNameLabel = "收货人姓名",
+  receiverPhoneLabel = "收货人电话",
+  addressLabel = "收货地址"
 }: OrderEntryPageProps) {
   const qc = useQueryClient();
   const [receiverRaw, setReceiverRaw] = useState("");
@@ -73,8 +81,10 @@ export function OrderEntryPage({
   function submitOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const product = products.find((item) => item.id === Number(form.get("productId")));
-    if (!product) return;
+    const product = itemInputMode === "select" ? products.find((item) => item.id === Number(form.get("productId"))) : undefined;
+    if (itemInputMode === "select" && !product) return;
+    const manualProductSku = String(form.get("productSku") ?? "").trim();
+    const manualProductName = String(form.get("productName") ?? "").trim();
     createOrder.mutate({
       orderNo: form.get("orderNo"),
       supplierId: form.get("supplierId"),
@@ -86,12 +96,12 @@ export function OrderEntryPage({
       note: form.get("note"),
       items: [
         {
-          productId: product.id,
-          productName: product.name,
-          productSku: product.ssku ?? product.sku,
+          productId: product?.id ?? null,
+          productName: product?.name ?? manualProductName,
+          productSku: product?.ssku ?? product?.sku ?? manualProductSku,
           quantity: form.get("quantity"),
-          unitCost: product.costPrice ?? 0,
-          unitSalePrice: product.salePrice ?? 0
+          unitCost: product?.costPrice ?? 0,
+          unitSalePrice: product?.salePrice ?? 0
         }
       ]
     });
@@ -141,30 +151,30 @@ export function OrderEntryPage({
                 <span>识别结果可手动修改</span>
               </div>
               <label className="field-block">
-                <span>收货人姓名</span>
+                <span>{receiverNameLabel}</span>
                 <input
                   name="customerName"
-                  placeholder="收货人姓名"
+                  placeholder={receiverNameLabel}
                   value={receiver.customerName}
                   onChange={(event) => setReceiver((current) => ({ ...current, customerName: event.target.value }))}
                   required
                 />
               </label>
               <label className="field-block">
-                <span>收货人电话</span>
+                <span>{receiverPhoneLabel}</span>
                 <input
                   name="customerPhone"
-                  placeholder="收货人电话"
+                  placeholder={receiverPhoneLabel}
                   value={receiver.customerPhone}
                   onChange={(event) => setReceiver((current) => ({ ...current, customerPhone: event.target.value }))}
                   required
                 />
               </label>
               <label className="field-block">
-                <span>收货地址</span>
+                <span>{addressLabel}</span>
                 <input
                   name="address"
-                  placeholder="收货地址"
+                  placeholder={addressLabel}
                   value={receiver.address}
                   onChange={(event) => setReceiver((current) => ({ ...current, address: event.target.value }))}
                   required
@@ -174,7 +184,7 @@ export function OrderEntryPage({
             <div className="order-detail-grid order-form-section section-detail">
               <div className="order-section-title">
                 <strong>订单与商品</strong>
-                <span>店铺、订单、供应商、SKU、数量均为必填</span>
+                <span>{itemInputMode === "manual" ? "店铺、订单、供应商、品号、商品名称、数量均为必填" : "店铺、订单、供应商、SKU、数量均为必填"}</span>
               </div>
               <label className="field-block">
                 <span>选择店铺</span>
@@ -202,17 +212,30 @@ export function OrderEntryPage({
                   ))}
                 </select>
               </label>
-              <label className="field-block">
-                <span>选择SKU</span>
-                <select name="productId" required>
-                  <option value="">选择SKU</option>
-                  {products.map((product) => (
-                    <option value={product.id} key={product.id}>
-                      {product.name} / {product.ssku ?? product.sku}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {itemInputMode === "manual" ? (
+                <>
+                  <label className="field-block">
+                    <span>填写品号</span>
+                    <input name="productSku" placeholder="填写品号" required />
+                  </label>
+                  <label className="field-block">
+                    <span>商品名称</span>
+                    <input name="productName" placeholder="商品名称" required />
+                  </label>
+                </>
+              ) : (
+                <label className="field-block">
+                  <span>选择SKU</span>
+                  <select name="productId" required>
+                    <option value="">选择SKU</option>
+                    {products.map((product) => (
+                      <option value={product.id} key={product.id}>
+                        {product.name} / {product.ssku ?? product.sku}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <label className="field-block">
                 <span>数量</span>
                 <input name="quantity" type="number" min="1" placeholder="数量" required />
