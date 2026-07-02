@@ -173,7 +173,7 @@ test("registered users must be authorized before accessing pages", async () => {
 
   await member.get("/api/orders").expect(200);
   await member.get("/api/products").expect(200);
-  await member.get("/api/dashboard/summary").expect(403);
+  await member.get("/api/dashboard/summary").expect(404);
 
   const supplier = await admin.post("/api/suppliers").send({ name: "权限测试供应商" }).expect(201);
   const product = await admin

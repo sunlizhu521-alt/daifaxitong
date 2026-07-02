@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { api, type User } from "../api";
 
 const orderedPaths = [
-  { key: "dashboard", path: "/" },
   { key: "dropShippingRegistration", path: "/drop-shipping" },
   { key: "accessoryRegistration", path: "/accessories" },
   { key: "accessoryShipping", path: "/accessory-shipping" },
@@ -22,7 +21,7 @@ const orderedPaths = [
 ] as const;
 
 function firstPath(user: User) {
-  return orderedPaths.find((item) => user.pageAccess.includes(item.key))?.path ?? "/";
+  return orderedPaths.find((item) => user.pageAccess.includes(item.key))?.path ?? "/drop-shipping";
 }
 
 export function LoginPage() {

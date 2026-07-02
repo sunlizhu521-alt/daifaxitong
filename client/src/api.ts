@@ -127,7 +127,6 @@ export type ReturnOrderRow = {
 
 export type PageOption = {
   key:
-    | "dashboard"
     | "dropShippingRegistration"
     | "trackingNumbers"
     | "accessoryShipping"

@@ -51,6 +51,9 @@ export function createApp() {
   });
 
   app.use("/api", apiRouter);
+  app.use("/api", (_req, res) => {
+    res.status(404).json({ message: "接口不存在" });
+  });
 
   if (fs.existsSync(config.clientDist)) {
     app.use(express.static(config.clientDist));

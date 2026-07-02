@@ -1,11 +1,10 @@
 import { useEffect } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { BarChart3, Boxes, CalendarClock, CheckCircle2, ClipboardCheck, ClipboardList, FileText, LogOut, Package, PackageCheck, PackagePlus, RotateCcw, ShieldCheck, Store, Truck, Undo2, Warehouse } from "lucide-react";
+import { Boxes, CalendarClock, CheckCircle2, ClipboardCheck, ClipboardList, FileText, LogOut, Package, PackageCheck, PackagePlus, RotateCcw, ShieldCheck, Store, Truck, Undo2, Warehouse } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api, type User } from "../api";
 
 const nav = [
-  { key: "dashboard", to: "/", label: "仪表盘", icon: BarChart3 },
   { key: "dropShippingRegistration", to: "/drop-shipping", label: "登记代发", icon: ClipboardList },
   { key: "accessoryRegistration", to: "/accessories", label: "配件登记", icon: PackagePlus },
   { key: "accessoryShipping", to: "/accessory-shipping", label: "配件发货", icon: PackageCheck },
@@ -27,7 +26,7 @@ type NavKey = (typeof nav)[number]["key"];
 
 function pathKey(pathname: string) {
   const item = nav.find((entry) => entry.to === pathname);
-  return item?.key ?? "dashboard";
+  return item?.key ?? "dropShippingRegistration";
 }
 
 function hasNavAccess(user: User, key: NavKey) {
@@ -35,7 +34,7 @@ function hasNavAccess(user: User, key: NavKey) {
 }
 
 function firstAllowedPath(user: User) {
-  return nav.find((item) => hasNavAccess(user, item.key))?.to ?? "/";
+  return nav.find((item) => hasNavAccess(user, item.key))?.to ?? "/drop-shipping";
 }
 
 export function AppShell() {
@@ -82,7 +81,7 @@ export function AppShell() {
         </div>
         <nav className="nav">
           {visibleNav.map((item) => (
-            <NavLink key={item.to} to={item.to} end={item.to === "/"}>
+            <NavLink key={item.to} to={item.to}>
               <item.icon size={18} />
               {item.label}
             </NavLink>

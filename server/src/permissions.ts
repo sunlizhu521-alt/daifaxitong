@@ -2,7 +2,6 @@ export const ROLE_ADMIN = "管理员";
 export const ROLE_USER = "普通用户";
 
 export const pageOptions = [
-  { key: "dashboard", label: "仪表盘", path: "/" },
   { key: "dropShippingRegistration", label: "登记代发", path: "/drop-shipping" },
   { key: "accessoryRegistration", label: "配件登记", path: "/accessories" },
   { key: "accessoryShipping", label: "配件发货", path: "/accessory-shipping" },
