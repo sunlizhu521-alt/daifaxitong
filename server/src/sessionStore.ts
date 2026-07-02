@@ -56,6 +56,14 @@ export class SqliteSessionStore extends session.Store {
     getDb().prepare("UPDATE sessions SET expires = ? WHERE sid = ?").run(expires, sid);
     callback?.();
   }
+
+  static cleanupExpired() {
+    try {
+      getDb().prepare("DELETE FROM sessions WHERE expires < ?").run(Date.now());
+    } catch {
+      // 清理失败不影响主流程
+    }
+  }
 }
 
 export function getRequestIp(req: Request) {
@@ -63,3 +71,10 @@ export function getRequestIp(req: Request) {
   const raw = Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(",")[0] || req.ip || req.socket.remoteAddress || "";
   return raw.trim().replace(/^::ffff:/, "");
 }
+
+// 每6小时清理一次过期 session
+const cleanupInterval = setInterval(() => {
+  SqliteSessionStore.cleanupExpired();
+}, 1000 * 60 * 60 * 6);
+cleanupInterval.unref();
+SqliteSessionStore.cleanupExpired();
