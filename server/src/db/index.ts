@@ -11,6 +11,8 @@ export function getDb() {
     fs.mkdirSync(path.dirname(config.databasePath), { recursive: true });
     db = new Database(config.databasePath);
     db.pragma("foreign_keys = ON");
+    db.pragma("journal_mode = WAL");
+    db.pragma("busy_timeout = 5000");
     db.exec(schema);
     migrateDb(db);
   }
