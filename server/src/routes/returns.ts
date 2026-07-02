@@ -61,6 +61,7 @@ function latestTrackingNo(orderNo: string) {
 
 returnsRouter.get("/", (req, res) => {
   const keyword = String(req.query.keyword ?? "").trim();
+  const status = String(req.query.status ?? "").trim();
   const storeName = String(req.query.storeName ?? "").trim();
   const supplierId = String(req.query.supplierId ?? "").trim();
   const series = String(req.query.series ?? "").trim();
@@ -90,6 +91,10 @@ returnsRouter.get("/", (req, res) => {
       `%${keyword}%`,
       `%${keyword}%`
     );
+  }
+  if (status) {
+    filters.push("r.status = ?");
+    params.push(status);
   }
   if (storeName) {
     filters.push("r.storeName = ?");
@@ -270,6 +275,27 @@ returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
     );
   const row = db.prepare("SELECT * FROM returns WHERE id = ?").get(result.lastInsertRowid) as Record<string, unknown>;
   res.status(201).json(rowToReturn(row));
+});
+
+const returnStatusSchema = z.object({
+  status: z.enum(["待处理", "已处理"])
+});
+
+returnsRouter.patch("/:id/status", (req, res) => {
+  const parsed = returnStatusSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ message: parsed.error.issues[0]?.message ?? "参数错误" });
+    return;
+  }
+  const result = getDb()
+    .prepare("UPDATE returns SET status = ?, updatedAt = ? WHERE id = ?")
+    .run(parsed.data.status, nowIso(), Number(req.params.id));
+  if (result.changes === 0) {
+    res.status(404).json({ message: "退货记录不存在" });
+    return;
+  }
+  const row = getDb().prepare("SELECT * FROM returns WHERE id = ?").get(Number(req.params.id)) as Record<string, unknown>;
+  res.json(rowToReturn(row));
 });
 
 returnsRouter.delete("/:id", (req, res) => {

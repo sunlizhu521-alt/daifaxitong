@@ -296,6 +296,10 @@ ordersRouter.post("/", (req, res) => {
 });
 
 ordersRouter.put("/:id", (req, res) => {
+  if (req.session.user?.role !== ROLE_ADMIN || req.session.user?.username !== config.adminUsername) {
+    res.status(403).json({ message: "只有孙立柱可以操作" });
+    return;
+  }
   const parsed = orderSchema.safeParse({ ...req.body, registrarName: req.body?.registrarName || req.session.user?.username || "" });
   if (!parsed.success) {
     res.status(400).json({ message: parsed.error.issues[0]?.message ?? "参数错误" });
@@ -310,8 +314,8 @@ ordersRouter.put("/:id", (req, res) => {
 });
 
 ordersRouter.delete("/:id", (req, res) => {
-  if (req.session.user?.role !== ROLE_ADMIN) {
-    res.status(403).json({ message: "只有管理员可以删除记录" });
+  if (req.session.user?.role !== ROLE_ADMIN || req.session.user?.username !== config.adminUsername) {
+    res.status(403).json({ message: "只有孙立柱可以操作" });
     return;
   }
   const result = getDb().prepare("DELETE FROM orders WHERE id = ?").run(Number(req.params.id));
@@ -328,14 +332,27 @@ ordersRouter.patch("/:id/purchase-order", (req, res) => {
     res.status(400).json({ message: parsed.error.issues[0]?.message ?? "参数错误" });
     return;
   }
+  const orderId = Number(req.params.id);
+  const existing = getDb().prepare("SELECT purchaseOrderNo FROM orders WHERE id = ?").get(orderId) as { purchaseOrderNo?: string | null } | undefined;
+  if (!existing) {
+    res.status(404).json({ message: "订单不存在" });
+    return;
+  }
+  if (existing.purchaseOrderNo) {
+    getDb()
+      .prepare("UPDATE orders SET purchaseOrderNo = ?, updatedAt = ? WHERE id = ?")
+      .run(parsed.data.purchaseOrderNo, nowIso(), orderId);
+    res.json(readOrder(orderId));
+    return;
+  }
   const result = getDb()
     .prepare("UPDATE orders SET purchaseOrderNo = ?, purchaseOrderUser = ?, status = 'purchased', updatedAt = ? WHERE id = ?")
-    .run(parsed.data.purchaseOrderNo, parsed.data.purchaseOrderUser || req.session.user?.username || "", nowIso(), Number(req.params.id));
+    .run(parsed.data.purchaseOrderNo, parsed.data.purchaseOrderUser || req.session.user?.username || "", nowIso(), orderId);
   if (result.changes === 0) {
     res.status(404).json({ message: "订单不存在" });
     return;
   }
-  res.json(readOrder(Number(req.params.id)));
+  res.json(readOrder(orderId));
 });
 
 ordersRouter.delete("/:id/purchase-order", (req, res) => {

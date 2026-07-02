@@ -11,6 +11,7 @@ const orderedPaths = [
   { key: "purchaseOrders", path: "/purchase-orders" },
   { key: "dropshipSummary", path: "/dropship-summary" },
   { key: "returnRegistration", path: "/returns" },
+  { key: "returnOperation", path: "/return-operations" },
   { key: "suppliers", path: "/suppliers" },
   { key: "productLibrary", path: "/products" },
   { key: "storeLibrary", path: "/stores" },

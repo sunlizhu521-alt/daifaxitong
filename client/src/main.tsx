@@ -14,6 +14,7 @@ import { ShippingSchedulePage } from "./pages/ShippingSchedulePage";
 import { PurchaseOrdersPage } from "./pages/PurchaseOrdersPage";
 import { DropshipSummaryPage } from "./pages/DropshipSummaryPage";
 import { ReturnRegistrationPage } from "./pages/ReturnRegistrationPage";
+import { ReturnOperationPage } from "./pages/ReturnOperationPage";
 import { StoreLibraryPage } from "./pages/StoreLibraryPage";
 import { CarrierLibraryPage } from "./pages/CarrierLibraryPage";
 import "./styles.css";
@@ -34,6 +35,7 @@ const router = createBrowserRouter([
       { path: "purchase-orders", element: <PurchaseOrdersPage /> },
       { path: "dropship-summary", element: <DropshipSummaryPage /> },
       { path: "returns", element: <ReturnRegistrationPage /> },
+      { path: "return-operations", element: <ReturnOperationPage /> },
       { path: "suppliers", element: <SuppliersPage /> },
       { path: "products", element: <ProductsPage /> },
       { path: "orders", element: <Navigate to="/drop-shipping" replace /> },

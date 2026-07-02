@@ -31,15 +31,6 @@ export function PurchaseOrdersPage() {
       qc.invalidateQueries({ queryKey: ["orders"] });
     }
   });
-  const deletePurchaseOrder = useMutation({
-    mutationFn: (id: number) => api(`/orders/${id}/purchase-order`, { method: "DELETE" }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["purchase-orders"] });
-      qc.invalidateQueries({ queryKey: ["dropship-summary"] });
-      qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
-      qc.invalidateQueries({ queryKey: ["orders"] });
-    }
-  });
 
   function submitPurchaseOrder(order: OrderListRow, event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -47,13 +38,10 @@ export function PurchaseOrdersPage() {
     savePurchaseOrder.mutate({
       id: order.id,
       purchaseOrderNo: String(form.get("purchaseOrderNo") ?? "").trim(),
-      purchaseOrderUser: String(form.get("purchaseOrderUser") ?? me?.user?.username ?? "").trim()
+      purchaseOrderUser: order.purchaseOrderNo
+        ? order.purchaseOrderUser || me?.user?.username || ""
+        : String(form.get("purchaseOrderUser") ?? me?.user?.username ?? "").trim()
     });
-  }
-
-  function removePurchaseOrder(order: OrderListRow) {
-    if (!window.confirm(`确定删除订单 ${order.orderNo} 的采购订单号吗？`)) return;
-    deletePurchaseOrder.mutate(order.id);
   }
 
   return (
@@ -112,15 +100,13 @@ export function PurchaseOrdersPage() {
                 <td><span className={`status ${order.status}`}>{statusText[order.status]}</span></td>
                 <td>{order.note || order.shipmentNote || "-"}</td>
                 <td className="row-actions">
-                  <button type="submit" form={`purchase-order-${order.id}`} className="primary-button">{order.purchaseOrderNo ? "编辑" : "提交"}</button>
-                  <button type="button" onClick={() => removePurchaseOrder(order)}>删除</button>
+                  <button type="submit" form={`purchase-order-${order.id}`} className="primary-button">{order.purchaseOrderNo ? "修改" : "提交"}</button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
         {savePurchaseOrder.error ? <div className="error">{savePurchaseOrder.error.message}</div> : null}
-        {deletePurchaseOrder.error ? <div className="error">{deletePurchaseOrder.error.message}</div> : null}
       </Panel>
     </>
   );

@@ -19,4 +19,4 @@ apiRouter.use("/suppliers", requireAnyPage(["suppliers", "dropShippingRegistrati
 apiRouter.use("/orders", requireAnyPage(["dropShippingRegistration", "trackingNumbers", "shippingSchedule", "purchaseOrders", "dropshipSummary", "returnRegistration"]), ordersRouter);
 apiRouter.use("/carriers", requireAnyPage(["carrierLibrary", "trackingNumbers", "shippingSchedule"]), carriersRouter);
 apiRouter.use("/stores", requireAnyPage(["storeLibrary", "trackingNumbers", "returnRegistration", "dropshipSummary", "purchaseOrders"]), storesRouter);
-apiRouter.use("/returns", requirePage("returnRegistration"), returnsRouter);
+apiRouter.use("/returns", requireAnyPage(["returnRegistration", "returnOperation"]), returnsRouter);

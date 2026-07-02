@@ -8,8 +8,8 @@ const addressStartPattern =
 
 function parseReceiverInfo(raw: string) {
   const text = raw.replace(/\r/g, "\n").replace(/[，,]/g, " ").replace(/\s+/g, " ").trim();
-  const phoneMatch = text.match(/(?:\+?86[-\s]?)?1[3-9]\d{9}/);
-  const phone = phoneMatch?.[0].replace(/\D/g, "").replace(/^86/, "") ?? "";
+  const phoneMatch = text.match(/(?:\+?86[-\s]?)?1[3-9]\d{9}(?:[-－—]\d{1,8})?/);
+  const phone = phoneMatch?.[0].replace(/^(?:\+?86[-\s]?)/, "").replace(/[－—]/g, "-").replace(/\s/g, "") ?? "";
   const withoutPhone = (phone ? text.replace(phoneMatch?.[0] ?? "", " ") : text)
     .replace(/(收件人|收货人|姓名|电话|手机|地址)[:：]/g, " ")
     .replace(/\s+/g, " ")

@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { api, type OrderListRow, type Store, type Supplier } from "../api";
+import { FormEvent, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, type OrderListRow, type Store, type Supplier, type User } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
 const statusText: Record<string, string> = {
@@ -16,13 +16,27 @@ function mergeNotes(order: OrderListRow) {
   return [order.note, order.shipmentNote].map((item) => item?.trim()).filter(Boolean).join(" / ") || "-";
 }
 
+type OrderDetail = OrderListRow & {
+  items: Array<{
+    productId?: number | null;
+    productName: string;
+    productSku: string;
+    quantity: number;
+    unitCost?: number;
+    unitSalePrice?: number;
+  }>;
+};
+
 export function DropshipSummaryPage() {
+  const qc = useQueryClient();
   const [keyword, setKeyword] = useState("");
   const [status, setStatus] = useState("");
   const [supplierId, setSupplierId] = useState("");
   const [storeName, setStoreName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [editing, setEditing] = useState<OrderDetail | null>(null);
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
   const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers"], queryFn: () => api<Supplier[]>("/suppliers") });
   const { data: stores = [] } = useQuery({ queryKey: ["stores"], queryFn: () => api<Store[]>("/stores") });
   const { data: orders = [] } = useQuery({
@@ -32,6 +46,63 @@ export function DropshipSummaryPage() {
         `/orders?keyword=${encodeURIComponent(keyword)}&status=${encodeURIComponent(status)}&supplierId=${encodeURIComponent(supplierId)}&storeName=${encodeURIComponent(storeName)}&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`
       )
   });
+  const canManage = me?.user?.username === "孙立柱";
+  const deleteOrder = useMutation({
+    mutationFn: (id: number) => api(`/orders/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["dropship-summary"] });
+      qc.invalidateQueries({ queryKey: ["summary"] });
+    }
+  });
+  const updateOrder = useMutation({
+    mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+    onSuccess: () => {
+      setEditing(null);
+      qc.invalidateQueries({ queryKey: ["dropship-summary"] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
+      qc.invalidateQueries({ queryKey: ["purchase-orders"] });
+      qc.invalidateQueries({ queryKey: ["return-orders"] });
+      qc.invalidateQueries({ queryKey: ["summary"] });
+    }
+  });
+
+  async function openEdit(order: OrderListRow) {
+    setEditing(await api<OrderDetail>(`/orders/${order.id}`));
+  }
+
+  function removeOrder(order: OrderListRow) {
+    if (!window.confirm(`确定删除订单 ${order.orderNo} 吗？删除后相关商品明细和发货信息也会删除。`)) return;
+    deleteOrder.mutate(order.id);
+  }
+
+  function submitEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editing) return;
+    const form = new FormData(event.currentTarget);
+    updateOrder.mutate({
+      id: editing.id,
+      body: {
+        orderNo: String(form.get("orderNo") ?? "").trim(),
+        supplierId: form.get("supplierId"),
+        storeName: String(form.get("storeName") ?? "").trim(),
+        registrarName: editing.registrarName || "",
+        customerName: String(form.get("customerName") ?? "").trim(),
+        customerPhone: String(form.get("customerPhone") ?? "").trim(),
+        address: String(form.get("address") ?? "").trim(),
+        status: String(form.get("status") ?? editing.status),
+        note: String(form.get("note") ?? "").trim(),
+        items: editing.items.map((item) => ({
+          productId: item.productId ?? null,
+          productName: item.productName,
+          productSku: item.productSku,
+          quantity: item.quantity,
+          unitCost: item.unitCost ?? 0,
+          unitSalePrice: item.unitSalePrice ?? 0
+        }))
+      }
+    });
+  }
 
   return (
     <>
@@ -87,6 +158,7 @@ export function DropshipSummaryPage() {
               <th>采购订单号</th>
               <th>状态</th>
               <th>备注</th>
+              {canManage ? <th>操作</th> : null}
             </tr>
           </thead>
           <tbody>
@@ -111,11 +183,79 @@ export function DropshipSummaryPage() {
                 <td>{order.purchaseOrderNo || "-"}</td>
                 <td><span className={`status ${order.status}`}>{statusText[order.status]}</span></td>
                 <td>{mergeNotes(order)}</td>
+                {canManage ? (
+                  <td className="row-actions">
+                    <button type="button" className="primary-button" onClick={() => openEdit(order)}>修改</button>
+                    <button type="button" onClick={() => removeOrder(order)}>删除</button>
+                  </td>
+                ) : null}
               </tr>
             ))}
           </tbody>
         </table>
+        {deleteOrder.error ? <div className="error">{deleteOrder.error.message}</div> : null}
+        {updateOrder.error ? <div className="error">{updateOrder.error.message}</div> : null}
       </Panel>
+      {editing ? (
+        <div className="modal-backdrop">
+          <form className="modal summary-edit-modal" onSubmit={submitEdit}>
+            <h2>修改代发订单</h2>
+            <label className="modal-field">
+              <span>订单编号</span>
+              <input name="orderNo" defaultValue={editing.orderNo} required />
+            </label>
+            <label className="modal-field">
+              <span>店铺</span>
+              <select name="storeName" defaultValue={editing.storeName || ""} required>
+                <option value="">选择店铺</option>
+                {stores.map((store) => (
+                  <option value={store.name} key={store.id}>{store.shortName || store.name}</option>
+                ))}
+              </select>
+            </label>
+            <label className="modal-field">
+              <span>供应商</span>
+              <select name="supplierId" defaultValue={editing.supplierId ?? ""}>
+                <option value="">无供应商</option>
+                {suppliers.map((supplier) => (
+                  <option value={supplier.id} key={supplier.id}>{supplier.shortName || supplier.name}</option>
+                ))}
+              </select>
+            </label>
+            <label className="modal-field">
+              <span>客户姓名</span>
+              <input name="customerName" defaultValue={editing.customerName} required />
+            </label>
+            <label className="modal-field">
+              <span>电话</span>
+              <input name="customerPhone" defaultValue={editing.customerPhone || ""} />
+            </label>
+            <label className="modal-field">
+              <span>地址</span>
+              <textarea name="address" defaultValue={editing.address} required />
+            </label>
+            <label className="modal-field">
+              <span>状态</span>
+              <select name="status" defaultValue={editing.status} required>
+                <option value="pending">待发货</option>
+                <option value="filled">已填单号</option>
+                <option value="purchased">已下采购单</option>
+                <option value="shipped">已发货</option>
+                <option value="exception">异常</option>
+                <option value="cancelled">已取消</option>
+              </select>
+            </label>
+            <label className="modal-field">
+              <span>备注</span>
+              <textarea name="note" defaultValue={editing.note || ""} />
+            </label>
+            <div className="modal-actions">
+              <button type="button" className="ghost-button" onClick={() => setEditing(null)}>取消</button>
+              <button className="primary-button" disabled={updateOrder.isPending}>保存修改</button>
+            </div>
+          </form>
+        </div>
+      ) : null}
     </>
   );
 }

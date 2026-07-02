@@ -50,7 +50,7 @@ export function ReturnRegistrationPage() {
 
   function deleteRecord(row: ReturnOrderRow) {
     if (!row.returnId) return;
-    if (!window.confirm(`确定删除退货记录 ${row.orderNo} 吗？`)) return;
+    if (!window.confirm(`确定撤销退货 ${row.orderNo} 吗？`)) return;
     remove.mutate(row.returnId);
   }
 
@@ -80,8 +80,8 @@ export function ReturnRegistrationPage() {
 
   return (
     <>
-      <PageHeader title="退货记录" description="记录拦截、召回、寄回处理信息，跟踪快递单号、原因、备注和图片附件。" />
-      <Panel title="退货记录">
+      <PageHeader title="退货登记" description="登记拦截、召回、寄回处理信息，提交后进入退货操作页面处理。" />
+      <Panel title="退货登记">
         <div className="toolbar filter-toolbar">
           <select value={storeName} onChange={(event) => setStoreName(event.target.value)}>
             <option value="">全部店铺</option>
@@ -142,7 +142,6 @@ export function ReturnRegistrationPage() {
               <th>备注</th>
               <th>附件</th>
               <th>退货登记</th>
-              {isAdmin ? <th>管理</th> : null}
             </tr>
           </thead>
           <tbody>
@@ -214,18 +213,16 @@ export function ReturnRegistrationPage() {
                   </div>
                   <input form={formId} name="attachments" type="file" accept="image/*" multiple />
                 </td>
-                <td className="row-actions">
+                <td className="row-actions return-registration-actions">
                   <form id={formId} className="inline-return-form" onSubmit={(event) => submitReturn(row, event)}>
                     <button className="primary-button" disabled={saveReturn.isPending}>
-                      {row.returnId ? "保存退货" : "登记退货"}
+                      提交退货
                     </button>
                   </form>
+                  {isAdmin && row.returnId ? (
+                    <button type="button" onClick={() => deleteRecord(row)}>撤销退货</button>
+                  ) : null}
                 </td>
-                {isAdmin && row.returnId ? (
-                  <td className="row-actions">
-                    <button onClick={() => deleteRecord(row)}>删除</button>
-                  </td>
-                ) : isAdmin ? <td>-</td> : null}
               </tr>
               );
             })}

@@ -89,6 +89,7 @@ export type ReturnRecord = {
   productSku?: string | null;
   attachments: string[];
   createdAt: string;
+  updatedAt?: string;
 };
 
 export type ReturnOrderRow = {
@@ -126,6 +127,7 @@ export type PageOption = {
     | "purchaseOrders"
     | "dropshipSummary"
     | "returnRegistration"
+    | "returnOperation"
     | "suppliers"
     | "productLibrary"
     | "storeLibrary"

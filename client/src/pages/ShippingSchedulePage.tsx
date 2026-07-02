@@ -35,7 +35,7 @@ export function ShippingSchedulePage() {
     <>
       <PageHeader
         title="发货安排"
-        description="查看待发货订单，登记供应商发货信息并确认已发货。"
+        description="查看待发货订单，登记供应商发货信息并确认已提货。"
         actions={<button className="primary-button" onClick={() => downloadFile(`/orders/shipping-export?status=${encodeURIComponent(status)}`)}>导出发货安排</button>}
       />
       <Panel title="发货信息">
@@ -83,7 +83,7 @@ export function ShippingSchedulePage() {
                 <td>{order.carrier || "-"}</td>
                 <td>{order.trackingNo || "-"}</td>
                 <td className="row-actions">
-                  <button type="button" onClick={() => markShipped.mutate(order.id)}>提交</button>
+                  <button type="button" onClick={() => markShipped.mutate(order.id)}>已提货</button>
                   <button type="button" onClick={() => navigate(`/returns?keyword=${encodeURIComponent(order.orderNo)}`)}>退货</button>
                 </td>
                 <td>{order.note || order.shipmentNote || "-"}</td>

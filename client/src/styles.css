@@ -108,6 +108,9 @@ td input, td select { min-width: 140px; }
 td textarea { min-width: 180px; min-height: 44px; }
 td input[type="file"] { min-width: 190px; margin-top: 6px; }
 .inline-return-form { min-width: 92px; }
+.return-registration-actions { flex-wrap: nowrap; justify-content: center; min-width: 220px; white-space: nowrap; }
+.return-registration-actions .inline-return-form,
+.return-registration-actions button { flex: 0 0 auto; white-space: nowrap; }
 .muted-text { display: block; margin-top: 4px; color: var(--text-muted); font-size: 12px; white-space: nowrap; }
 
 .primary-button, .ghost-button, .row-actions button { border-radius: 7px; border: 1px solid transparent; min-height: 36px; padding: 0 13px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-size: 14px; }
@@ -150,6 +153,7 @@ tr:hover td { background: #fafcff; }
 .upload-box input[type="file"] { background: #f8fafc; }
 .modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.36); display: grid; place-items: center; padding: 24px; z-index: 10; }
 .modal { width: 440px; background: #fff; border-radius: 10px; padding: 20px; display: grid; gap: 10px; box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24); }
+.summary-edit-modal { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow-y: auto; }
 .modal h2 { margin: 0 0 6px; font-size: 18px; }
 .modal-field { display: grid; gap: 6px; color: #344054; font-size: 13px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }

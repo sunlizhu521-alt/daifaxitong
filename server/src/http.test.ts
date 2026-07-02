@@ -67,6 +67,11 @@ test("auth, supplier, product, order and shipment flow", async () => {
   assert.equal(purchaseRows.body[0].purchaseOrderNo, "CG20260701001");
   assert.equal(purchaseRows.body[0].purchaseOrderUser, "采购A");
   assert.equal(purchaseRows.body[0].status, "purchased");
+  await agent.patch(`/api/orders/${order.body.id}/purchase-order`).send({ purchaseOrderNo: "CG20260701002", purchaseOrderUser: "采购B" }).expect(200);
+  const modifiedPurchaseRows = await agent.get("/api/orders?keyword=CG20260701002").expect(200);
+  assert.equal(modifiedPurchaseRows.body[0].purchaseOrderNo, "CG20260701002");
+  assert.equal(modifiedPurchaseRows.body[0].purchaseOrderUser, "采购A");
+  assert.equal(modifiedPurchaseRows.body[0].status, "purchased");
   const purchaseUserRows = await agent.get("/api/orders?keyword=采购A").expect(200);
   assert.equal(purchaseUserRows.body[0].orderNo, "DF001");
   await agent.patch(`/api/orders/${order.body.id}/status`).send({ status: "shipped" }).expect(200);
@@ -111,6 +116,12 @@ test("auth, supplier, product, order and shipment flow", async () => {
   assert.equal(returnRecord.body.trackingNo, "SF123");
   const returnsByStatus = await agent.get("/api/returns?keyword=filled").expect(200);
   assert.equal(returnsByStatus.body[0].orderNo, "DF001");
+  const pendingReturns = await agent.get(`/api/returns?status=${encodeURIComponent("待处理")}`).expect(200);
+  assert.equal(pendingReturns.body[0].id, returnRecord.body.id);
+  const completedReturn = await agent.patch(`/api/returns/${returnRecord.body.id}/status`).send({ status: "已处理" }).expect(200);
+  assert.equal(completedReturn.body.status, "已处理");
+  const pendingReturnsAfterComplete = await agent.get(`/api/returns?status=${encodeURIComponent("待处理")}`).expect(200);
+  assert.equal(pendingReturnsAfterComplete.body.length, 0);
   const returnOrders = await agent.get("/api/returns/orders?keyword=filled").expect(200);
   assert.equal(returnOrders.body[0].orderNo, "DF001");
   assert.equal(returnOrders.body[0].returnId, returnRecord.body.id);
