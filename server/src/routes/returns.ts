@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { Router } from "express";
 import multer from "multer";
@@ -239,6 +240,8 @@ returnsRouter.get("/orders", (req, res) => {
 returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
   const parsed = returnSchema.safeParse(req.body);
   if (!parsed.success) {
+    const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+    files.forEach((f) => fs.unlink(f.path, () => undefined));
     res.status(400).json({ message: parsed.error.issues[0]?.message ?? "参数错误" });
     return;
   }
