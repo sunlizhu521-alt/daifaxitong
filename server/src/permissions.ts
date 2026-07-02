@@ -6,7 +6,7 @@ export const pageOptions = [
   { key: "accessoryRegistration", label: "配件登记", path: "/accessories" },
   { key: "accessoryShipping", label: "配件发货", path: "/accessory-shipping" },
   { key: "trackingNumbers", label: "快递单号", path: "/tracking-numbers" },
-  { key: "carrierLibrary", label: "快递库", path: "/carriers" },
+  { key: "carrierLibrary", label: "快递信息", path: "/carriers" },
   { key: "shippingSchedule", label: "发货安排", path: "/shipping-schedule" },
   { key: "purchaseOrders", label: "采购订单", path: "/purchase-orders" },
   { key: "dropshipSummary", label: "成品汇总", path: "/dropship-summary" },
@@ -14,9 +14,9 @@ export const pageOptions = [
   { key: "returnRegistration", label: "退货登记", path: "/returns" },
   { key: "returnOperation", label: "退货操作", path: "/return-operations" },
   { key: "returnReceipt", label: "退货收货", path: "/return-receipts" },
-  { key: "suppliers", label: "供应商", path: "/suppliers" },
-  { key: "productLibrary", label: "商品库", path: "/products" },
-  { key: "storeLibrary", label: "店铺库", path: "/stores" },
+  { key: "suppliers", label: "供应商库", path: "/suppliers" },
+  { key: "productLibrary", label: "商品信息", path: "/products" },
+  { key: "storeLibrary", label: "店铺信息", path: "/stores" },
   { key: "permissionManagement", label: "权限管理", path: "/permissions" }
 ] as const;
 

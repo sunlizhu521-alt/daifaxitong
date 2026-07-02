@@ -16,10 +16,10 @@ const nav = [
   { key: "returnRegistration", to: "/returns", label: "退货登记", icon: RotateCcw },
   { key: "returnOperation", to: "/return-operations", label: "退货操作", icon: CheckCircle2 },
   { key: "returnReceipt", to: "/return-receipts", label: "退货收货", icon: Undo2 },
-  { key: "suppliers", to: "/suppliers", label: "供应商", icon: Boxes },
-  { key: "productLibrary", to: "/products", label: "商品库", icon: Package },
-  { key: "storeLibrary", to: "/stores", label: "店铺库", icon: Store },
-  { key: "carrierLibrary", to: "/carriers", label: "快递库", icon: Warehouse },
+  { key: "suppliers", to: "/suppliers", label: "供应商库", icon: Boxes },
+  { key: "productLibrary", to: "/products", label: "商品信息", icon: Package },
+  { key: "storeLibrary", to: "/stores", label: "店铺信息", icon: Store },
+  { key: "carrierLibrary", to: "/carriers", label: "快递信息", icon: Warehouse },
   { key: "permissionManagement", to: "/permissions", label: "权限管理", icon: ShieldCheck }
 ] as const;
 
