@@ -5,10 +5,10 @@ import { z } from "zod";
 import { config } from "../config.js";
 import { getDb, nowIso } from "../db/index.js";
 import { ROLE_ADMIN } from "../permissions.js";
+import { optionalId } from "../utils.js";
 
 export const ordersRouter = Router();
 const upload = multer({ dest: config.uploadDir });
-const optionalId = z.preprocess((value) => (value === "" || value === undefined ? null : value), z.coerce.number().int().positive().nullable());
 
 const orderItemSchema = z.object({
   productId: optionalId,

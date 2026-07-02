@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export function cell(row: Record<string, unknown>, names: string[]) {
   const normalized = new Map(
     Object.entries(row).map(([key, value]) => [normalizeHeader(key), value])
@@ -12,3 +14,5 @@ export function cell(row: Record<string, unknown>, names: string[]) {
 export function normalizeHeader(value: string) {
   return value.replace(/^\uFEFF/, "").replace(/[\s/_\-（）()：:]/g, "").toLowerCase();
 }
+
+export const optionalId = z.preprocess((value) => (value === "" || value === undefined ? null : value), z.coerce.number().int().positive().nullable());
