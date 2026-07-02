@@ -1,9 +1,17 @@
 import { Router } from "express";
 import { getDb } from "../db/index.js";
 
+let cache: { data: unknown; timestamp: number } | null = null;
+const CACHE_TTL = 60_000; // 60秒
+
 export const dashboardRouter = Router();
 
 dashboardRouter.get("/summary", (_req, res) => {
+  if (cache && Date.now() - cache.timestamp < CACHE_TTL) {
+    res.json(cache.data);
+    return;
+  }
+
   const db = getDb();
   const today = new Date().toISOString().slice(0, 10);
   const counts = db
@@ -32,5 +40,6 @@ dashboardRouter.get("/summary", (_req, res) => {
     )
     .all();
   const recentOrders = db.prepare("SELECT * FROM orders ORDER BY id DESC LIMIT 8").all();
+  cache = { data: { counts, trend, recentOrders }, timestamp: Date.now() };
   res.json({ counts, trend, recentOrders });
 });
