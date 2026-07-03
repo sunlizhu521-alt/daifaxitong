@@ -334,7 +334,7 @@ returnsRouter.patch("/:id/status", (req, res) => {
       { label: "订单号", value: payload.orderNo },
       { label: "客户", value: payload.customerName },
       { label: "退货操作", value: payload.action },
-      { label: "快递单号", value: payload.trackingNo },
+      { label: "发货单号", value: payload.trackingNo },
       { label: "状态", value: payload.status },
       { label: "退货理由", value: payload.reason },
       { label: "备注", value: payload.note }

@@ -82,14 +82,14 @@ export function TrackingNumbersPage() {
   }
 
   function removeShipment(order: OrderListRow) {
-    if (!window.confirm(`确定删除订单 ${order.orderNo} 的快递单号吗？`)) return;
+    if (!window.confirm(`确定删除订单 ${order.orderNo} 的发货单号吗？`)) return;
     deleteShipment.mutate(order.id);
   }
 
   return (
     <>
-      <PageHeader title="快递单号" description="查询代发订单状态、客户信息和快递流转记录。" />
-      <Panel title="快递单号查询">
+      <PageHeader title="发货单号" description="查询代发订单状态、客户信息和快递流转记录。" />
+      <Panel title="发货单号查询">
         <div className="toolbar filter-toolbar">
           <select value={storeName} onChange={(event) => setStoreName(event.target.value)}>
             <option value="">全部店铺</option>
@@ -128,7 +128,7 @@ export function TrackingNumbersPage() {
               <th>订单号</th>
               <th>客户</th>
               <th>快递公司 *</th>
-              <th>快递单号 *</th>
+              <th>发货单号 *</th>
               <th>供应商</th>
               <th>数量</th>
               <th>状态</th>
@@ -152,7 +152,7 @@ export function TrackingNumbersPage() {
                   </form>
                 </td>
                 <td>
-                  <input form={`shipment-${order.id}`} name="trackingNo" placeholder="快递单号 *" defaultValue={order.trackingNo ?? ""} required />
+                  <input form={`shipment-${order.id}`} name="trackingNo" placeholder="发货单号 *" defaultValue={order.trackingNo ?? ""} required />
                 </td>
                 <td>{order.supplierName ?? "-"}</td>
                 <td>{order.totalQuantity ?? 0}</td>

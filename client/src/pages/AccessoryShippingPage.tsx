@@ -60,7 +60,7 @@ export function AccessoryShippingPage() {
 
   return (
     <>
-      <PageHeader title="配件发货" description="查看配件订单，填写快递公司和快递单号后确认已发货。" />
+      <PageHeader title="配件发货" description="查看配件订单，填写快递公司和发货单号后确认已发货。" />
       <Panel title="配件发货信息">
         <div className="toolbar filter-toolbar">
           <select value={status} onChange={(event) => setStatus(event.target.value)}>
@@ -85,7 +85,7 @@ export function AccessoryShippingPage() {
               <th>数量</th>
               <th>状态</th>
               <th>快递公司 *</th>
-              <th>快递单号 *</th>
+              <th>发货单号 *</th>
               <th>发货时间 *</th>
               <th>操作</th>
               <th>备注</th>
@@ -115,7 +115,7 @@ export function AccessoryShippingPage() {
                   </form>
                 </td>
                 <td>
-                  <input form={`accessory-shipment-${order.id}`} name="trackingNo" placeholder="快递单号 *" defaultValue={order.trackingNo ?? ""} required />
+                  <input form={`accessory-shipment-${order.id}`} name="trackingNo" placeholder="发货单号 *" defaultValue={order.trackingNo ?? ""} required />
                 </td>
                 <td>
                   <input form={`accessory-shipment-${order.id}`} name="shippedAt" type="datetime-local" defaultValue={defaultShipTime(order.shippedAt)} required />

@@ -162,7 +162,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
               <th>数量</th>
               <th>发货时间</th>
               <th>快递公司</th>
-              <th>快递单号</th>
+              <th>发货单号</th>
               <th>供应商</th>
               <th>采购订单号填写人</th>
               <th>采购订单号</th>
