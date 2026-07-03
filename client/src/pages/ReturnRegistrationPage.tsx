@@ -90,7 +90,7 @@ export function ReturnRegistrationPage() {
 
   return (
     <>
-      <PageHeader title="退货登记" description="登记拦截、召回、寄回处理信息，提交后进入退货操作页面处理。" />
+      <PageHeader title="退货登记" description="登记拦截、自行寄回、上门取件处理信息，提交后进入退货操作页面处理。" />
       <Panel title="退货登记">
         <div className="toolbar filter-toolbar">
           <select value={storeName} onChange={(event) => setStoreName(event.target.value)}>
@@ -150,7 +150,7 @@ export function ReturnRegistrationPage() {
           <tbody>
             {rows.map((row) => {
               const formId = `return-form-${row.orderId}`;
-              const actionValue = returnActions[row.orderId] ?? (row.returnId ? row.action ?? "" : "");
+              const actionValue = returnActions[row.orderId] ?? (row.returnId ? (row.action === "寄回" ? "自行寄回" : row.action ?? "") : "");
               return (
               <tr key={row.orderId}>
                 <td>{row.customerName}</td>
@@ -168,8 +168,8 @@ export function ReturnRegistrationPage() {
                   >
                     <option value="">选择操作 *</option>
                     <option value="拦截">拦截</option>
-                    <option value="召回">召回</option>
-                    <option value="寄回">寄回</option>
+                    <option value="自行寄回">自行寄回</option>
+                    <option value="上门取件">上门取件</option>
                   </select>
                 </td>
                 <td>

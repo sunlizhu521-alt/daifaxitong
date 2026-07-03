@@ -145,7 +145,7 @@ test("auth, supplier, product, order and shipment flow", async () => {
     .field("customerName", "张三")
     .field("address", "上海市")
     .field("status", "已提交退货")
-    .field("action", "寄回")
+    .field("action", "自行寄回")
     .field("reason", "质量问题")
     .expect(201);
   await agent.delete(`/api/orders/${order.body.id}/shipment`).expect(200);

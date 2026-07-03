@@ -4,6 +4,14 @@ import { api, type ReturnRecord } from "../api";
 import { notifyApp } from "../ui/AppNotifications";
 import { PageHeader, Panel } from "../ui/Section";
 
+function canEditReturnTracking(action: string) {
+  return action === "自行寄回" || action === "寄回" || action === "上门取件";
+}
+
+function actionText(action: string) {
+  return action === "寄回" ? "自行寄回" : action;
+}
+
 export function ReturnOperationPage() {
   const qc = useQueryClient();
   const [keyword, setKeyword] = useState("");
@@ -36,7 +44,7 @@ export function ReturnOperationPage() {
   }, [returns]);
 
   function returnTrackingNo(row: ReturnRecord) {
-    return row.action === "寄回" ? (trackingNos[row.id] ?? row.trackingNo ?? "").trim() : row.shipmentTrackingNo ?? row.trackingNo ?? "";
+    return canEditReturnTracking(row.action) ? (trackingNos[row.id] ?? row.trackingNo ?? "").trim() : row.shipmentTrackingNo ?? row.trackingNo ?? "";
   }
 
   function confirmComplete(row: ReturnRecord) {
@@ -82,7 +90,7 @@ export function ReturnOperationPage() {
 
   return (
     <>
-      <PageHeader title="退货操作" description="处理已经提交退货登记的订单，确认拦截、召回或寄回是否已经完成。" />
+      <PageHeader title="退货操作" description="处理已经提交退货登记的订单，确认拦截、自行寄回或上门取件是否已经完成。" />
       <Panel title="待操作退货">
         <div className="toolbar filter-toolbar">
           <input
@@ -128,7 +136,8 @@ export function ReturnOperationPage() {
           <tbody>
             {returns.map((row) => {
               const trackingNo = returnTrackingNo(row);
-              const trackingPlaceholder = row.action === "寄回" ? "可填写寄回发货单号" : "暂无发货单号";
+              const editableTracking = canEditReturnTracking(row.action);
+              const trackingPlaceholder = editableTracking ? "可填写退货发货单号" : "暂无发货单号";
               return (
                 <tr key={row.id}>
                   <td className="selection-cell">
@@ -150,13 +159,13 @@ export function ReturnOperationPage() {
                   <td>{row.productSeries || "-"}</td>
                   <td>{row.productSku || "-"}</td>
                   <td>{row.model || "-"}</td>
-                  <td>{row.action}</td>
+                  <td>{actionText(row.action)}</td>
                   <td>
                     <input
                       value={trackingNo}
                       onChange={(event) => setTrackingNos((current) => ({ ...current, [row.id]: event.target.value }))}
                       placeholder={trackingPlaceholder}
-                      readOnly={row.action !== "寄回"}
+                      readOnly={!editableTracking}
                     />
                   </td>
                   <td>{row.reason}</td>

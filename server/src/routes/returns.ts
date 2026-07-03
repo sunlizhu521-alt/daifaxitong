@@ -34,7 +34,7 @@ const returnSchema = z.object({
   customerPhone: z.string().optional().default(""),
   address: z.string().trim().min(1, "地址不能为空"),
   status: z.string().trim().min(1, "状态不能为空").default("已提交退货"),
-  action: z.enum(["拦截", "召回", "寄回"]),
+  action: z.enum(["拦截", "自行寄回", "上门取件", "寄回"]).transform((value) => (value === "寄回" ? "自行寄回" : value)),
   trackingNo: z.string().optional().default(""),
   reason: z.enum(["七天无理由", "质量问题"]),
   note: z.string().optional().default("")
@@ -314,7 +314,7 @@ returnsRouter.patch("/:id/status", (req, res) => {
   }
   let trackingNo = parsed.data.trackingNo.trim();
   if (parsed.data.status === "已安排退回" || parsed.data.status === "退货待接收") {
-    if (current.action !== "寄回" && !trackingNo) {
+    if (current.action !== "自行寄回" && current.action !== "寄回" && current.action !== "上门取件" && !trackingNo) {
       trackingNo = latestTrackingNo(current.orderNo);
     }
   }

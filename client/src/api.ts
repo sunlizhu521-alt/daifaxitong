@@ -87,7 +87,7 @@ export type ReturnRecord = {
   customerPhone?: string;
   address: string;
   status: string;
-  action: "拦截" | "召回" | "寄回";
+  action: "拦截" | "自行寄回" | "上门取件" | "寄回";
   trackingNo?: string;
   reason: "七天无理由" | "质量问题";
   note?: string;
