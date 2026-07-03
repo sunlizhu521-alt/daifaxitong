@@ -154,6 +154,7 @@ export function ReturnRegistrationPage() {
               <th>退货理由 *</th>
               <th>备注</th>
               <th>附件</th>
+              <th>查看附件</th>
               <th>退货登记</th>
             </tr>
           </thead>
@@ -193,14 +194,16 @@ export function ReturnRegistrationPage() {
                   <textarea form={formId} name="note" placeholder="填写备注" defaultValue={row.note || ""} />
                 </td>
                 <td>
-                  <div className="attachment-list">
-                    {row.attachments.map((url) => (
-                      <a href={url} target="_blank" rel="noreferrer" key={url}>
-                        <img src={url} alt="附件" />
-                      </a>
-                    ))}
-                  </div>
                   <input form={formId} name="attachments" type="file" accept="image/*" multiple />
+                </td>
+                <td className="row-actions">
+                  {row.attachments.length > 0 ? (
+                    row.attachments.map((url, index) => (
+                      <a href={url} target="_blank" rel="noreferrer" key={url}>
+                        查看{index + 1}
+                      </a>
+                    ))
+                  ) : "-"}
                 </td>
                 <td className="row-actions return-registration-actions">
                   <form id={formId} className="inline-return-form" onSubmit={(event) => submitReturn(row, event)}>
