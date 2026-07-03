@@ -1,7 +1,8 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { api, downloadFile, rowsFromListResponse, type ListResponse, type OrderListRow, type Product, type Supplier } from "../api";
+import { notifyApp } from "../ui/AppNotifications";
 import { PageHeader, Panel } from "../ui/Section";
 
 const statusText: Record<string, string> = {
@@ -27,6 +28,7 @@ export function ShippingSchedulePage() {
   const navigate = useNavigate();
   const [status, setStatus] = useState("filled");
   const [editing, setEditing] = useState<OrderDetail | null>(null);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(() => new Set());
   const { data: orderResponse } = useQuery({
     queryKey: ["shipping-schedule", status],
     queryFn: () => api<ListResponse<OrderListRow>>(`/orders?status=${encodeURIComponent(status)}`)
@@ -34,6 +36,8 @@ export function ShippingSchedulePage() {
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: () => api<Product[]>("/products") });
   const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers"], queryFn: () => api<Supplier[]>("/suppliers") });
   const orders = rowsFromListResponse(orderResponse);
+  const selectedVisibleOrders = useMemo(() => orders.filter((order) => selectedOrderIds.has(order.id)), [orders, selectedOrderIds]);
+  const allVisibleSelected = orders.length > 0 && orders.every((order) => selectedOrderIds.has(order.id));
   const markShipped = useMutation({
     mutationFn: (id: number) => api(`/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "shipped" }) }),
     onSuccess: () => {
@@ -43,6 +47,49 @@ export function ShippingSchedulePage() {
       qc.invalidateQueries({ queryKey: ["summary"] });
     }
   });
+
+  useEffect(() => {
+    setSelectedOrderIds((current) => {
+      const visibleIds = new Set(orders.map((order) => order.id));
+      const next = new Set([...current].filter((id) => visibleIds.has(id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [orders]);
+
+  async function submitSelectedOrders() {
+    if (selectedVisibleOrders.length === 0) {
+      notifyApp({ variant: "error", message: "请先选择要批量提交的订单" });
+      return;
+    }
+    try {
+      for (const order of selectedVisibleOrders) {
+        await markShipped.mutateAsync(order.id);
+      }
+      setSelectedOrderIds(new Set());
+    } catch {
+      // api 层已经弹出失败原因，这里不重复提示。
+    }
+  }
+
+  function toggleOrderSelected(orderId: number, checked: boolean) {
+    setSelectedOrderIds((current) => {
+      const next = new Set(current);
+      if (checked) next.add(orderId);
+      else next.delete(orderId);
+      return next;
+    });
+  }
+
+  function toggleAllVisible(checked: boolean) {
+    setSelectedOrderIds((current) => {
+      const next = new Set(current);
+      for (const order of orders) {
+        if (checked) next.add(order.id);
+        else next.delete(order.id);
+      }
+      return next;
+    });
+  }
   const markUnshipped = useMutation({
     mutationFn: (id: number) => api(`/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "filled" }) }),
     onSuccess: () => {
@@ -103,10 +150,21 @@ export function ShippingSchedulePage() {
             <option value="purchased">已下采购单</option>
             <option value="shipped">已发货</option>
           </select>
+          <button type="button" className="primary-button" onClick={submitSelectedOrders} disabled={markShipped.isPending}>
+            批量提交
+          </button>
         </div>
         <table>
           <thead>
             <tr>
+              <th className="selection-cell">
+                <input
+                  type="checkbox"
+                  aria-label="选择当前列表全部订单"
+                  checked={allVisibleSelected}
+                  onChange={(event) => toggleAllVisible(event.target.checked)}
+                />
+              </th>
               <th>供应商</th>
               <th>店铺</th>
               <th>订单编号</th>
@@ -128,6 +186,14 @@ export function ShippingSchedulePage() {
           <tbody>
             {orders.map((order) => (
               <tr key={order.id}>
+                <td className="selection-cell">
+                  <input
+                    type="checkbox"
+                    aria-label={`选择订单 ${order.orderNo}`}
+                    checked={selectedOrderIds.has(order.id)}
+                    onChange={(event) => toggleOrderSelected(order.id, event.target.checked)}
+                  />
+                </td>
                 <td>{order.supplierName ?? "-"}</td>
                 <td>{order.storeName || "-"}</td>
                 <td>{order.orderNo}</td>
