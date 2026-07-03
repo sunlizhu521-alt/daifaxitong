@@ -37,7 +37,7 @@ export function LoginPage() {
     const form = new FormData(event.currentTarget);
     const body = JSON.stringify({ username: form.get("username"), password: form.get("password") });
     try {
-      const user = await api<User>("/auth/login", { method: "POST", body });
+      const user = await api<User>("/auth/login", { method: "POST", body, notify: true });
       navigate(firstPath(user), { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "登录失败");

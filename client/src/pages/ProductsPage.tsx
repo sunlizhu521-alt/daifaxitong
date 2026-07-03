@@ -12,18 +12,18 @@ export function ProductsPage() {
   const isAdmin = me?.user?.role === "管理员" || me?.user?.username === "孙立柱";
   const save = useMutation({
     mutationFn: (body: Record<string, FormDataEntryValue>) =>
-      api<Product>(editing ? `/products/${editing.id}` : "/products", { method: editing ? "PUT" : "POST", body: JSON.stringify(body) }),
+      api<Product>(editing ? `/products/${editing.id}` : "/products", { method: editing ? "PUT" : "POST", body: JSON.stringify(body), notify: true }),
     onSuccess: () => {
       setEditing(null);
       qc.invalidateQueries({ queryKey: ["products"] });
     }
   });
   const remove = useMutation({
-    mutationFn: (id: number) => api(`/products/${id}`, { method: "DELETE" }),
+    mutationFn: (id: number) => api(`/products/${id}`, { method: "DELETE", notify: true }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] })
   });
   const importProducts = useMutation({
-    mutationFn: (form: FormData) => api("/products/import", { method: "POST", body: form }),
+    mutationFn: (form: FormData) => api("/products/import", { method: "POST", body: form, notify: true }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] })
   });
 

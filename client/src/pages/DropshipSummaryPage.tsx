@@ -58,14 +58,14 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
   const orders = rowsFromListResponse(orderResponse);
   const canManage = me?.user?.username === "孙立柱";
   const deleteOrder = useMutation({
-    mutationFn: (id: number) => api(`/orders/${id}`, { method: "DELETE" }),
+    mutationFn: (id: number) => api(`/orders/${id}`, { method: "DELETE", notify: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [queryKey] });
       qc.invalidateQueries({ queryKey: ["summary"] });
     }
   });
   const updateOrder = useMutation({
-    mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+    mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}`, { method: "PUT", body: JSON.stringify(body), notify: true }),
     onSuccess: () => {
       setEditing(null);
       qc.invalidateQueries({ queryKey: [queryKey] });

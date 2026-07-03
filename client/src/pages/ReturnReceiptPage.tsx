@@ -11,7 +11,7 @@ export function ReturnReceiptPage() {
     queryFn: () => api<ReturnRecord[]>(`/returns?status=${encodeURIComponent("退货待接收")}&keyword=${encodeURIComponent(keyword)}`)
   });
   const receiveReturn = useMutation({
-    mutationFn: (id: number) => api(`/returns/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "已收到退货" }) }),
+    mutationFn: (id: number) => api(`/returns/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "已收到退货" }), notify: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["return-receipts"] });
       qc.invalidateQueries({ queryKey: ["return-operations"] });

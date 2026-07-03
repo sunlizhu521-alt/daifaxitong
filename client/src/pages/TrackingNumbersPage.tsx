@@ -48,7 +48,7 @@ export function TrackingNumbersPage() {
   const selectedVisibleOrders = useMemo(() => orders.filter((order) => selectedOrderIds.has(order.id)), [orders, selectedOrderIds]);
   const allVisibleSelected = orders.length > 0 && orders.every((order) => selectedOrderIds.has(order.id));
   const ship = useMutation({
-    mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}/ship`, { method: "POST", body: JSON.stringify(body) }),
+    mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}/ship`, { method: "POST", body: JSON.stringify(body), notify: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tracking-orders"] });
       qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
@@ -57,7 +57,7 @@ export function TrackingNumbersPage() {
     }
   });
   const deleteShipment = useMutation({
-    mutationFn: (id: number) => api(`/orders/${id}/shipment`, { method: "DELETE" }),
+    mutationFn: (id: number) => api(`/orders/${id}/shipment`, { method: "DELETE", notify: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tracking-orders"] });
       qc.invalidateQueries({ queryKey: ["shipping-schedule"] });

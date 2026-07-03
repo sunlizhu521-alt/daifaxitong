@@ -37,11 +37,11 @@ export function ReturnRegistrationPage() {
   const seriesOptions = useMemo(() => [...new Set(products.map((product) => product.series).filter(Boolean))], [products]);
   const skuOptions = useMemo(() => [...new Set(products.map((product) => product.ssku ?? product.sku).filter(Boolean))], [products]);
   const remove = useMutation({
-    mutationFn: (id: number) => api(`/returns/${id}`, { method: "DELETE" }),
+    mutationFn: (id: number) => api(`/returns/${id}`, { method: "DELETE", notify: true }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["return-orders"] })
   });
   const saveReturn = useMutation({
-    mutationFn: (form: FormData) => api("/returns", { method: "POST", body: form }),
+    mutationFn: (form: FormData) => api("/returns", { method: "POST", body: form, notify: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["return-orders"] });
     }

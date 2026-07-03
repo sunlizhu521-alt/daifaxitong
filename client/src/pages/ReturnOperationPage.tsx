@@ -14,7 +14,7 @@ export function ReturnOperationPage() {
 
   const completeReturn = useMutation({
     mutationFn: ({ id, trackingNo }: { id: number; trackingNo: string }) =>
-      api(`/returns/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "退货待接收", trackingNo }) }),
+      api(`/returns/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "退货待接收", trackingNo }), notify: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["return-operations"] });
       qc.invalidateQueries({ queryKey: ["return-orders"] });

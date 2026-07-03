@@ -15,14 +15,14 @@ export function CarrierLibraryPage() {
   const isAdmin = me?.user?.role === "管理员" || me?.user?.username === "孙立柱";
   const save = useMutation({
     mutationFn: (body: Record<string, FormDataEntryValue>) =>
-      api<Carrier>(editing ? `/carriers/${editing.id}` : "/carriers", { method: editing ? "PUT" : "POST", body: JSON.stringify(body) }),
+      api<Carrier>(editing ? `/carriers/${editing.id}` : "/carriers", { method: editing ? "PUT" : "POST", body: JSON.stringify(body), notify: true }),
     onSuccess: () => {
       setEditing(null);
       qc.invalidateQueries({ queryKey: ["carriers"] });
     }
   });
   const remove = useMutation({
-    mutationFn: (id: number) => api(`/carriers/${id}`, { method: "DELETE" }),
+    mutationFn: (id: number) => api(`/carriers/${id}`, { method: "DELETE", notify: true }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["carriers"] })
   });
 

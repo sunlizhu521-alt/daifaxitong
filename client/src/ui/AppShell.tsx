@@ -60,7 +60,7 @@ export function AppShell() {
   }, [isLoading, location.pathname, navigate, user]);
 
   async function logout() {
-    await api("/auth/logout", { method: "POST" });
+    await api("/auth/logout", { method: "POST", notify: true });
     navigate("/login", { replace: true });
   }
 

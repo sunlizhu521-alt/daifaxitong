@@ -25,18 +25,18 @@ export function PermissionsPage() {
 
   const saveAccess = useMutation({
     mutationFn: ({ userId, pageAccess }: { userId: string; pageAccess: string[] }) =>
-      api(`/auth/users/${userId}/access`, { method: "PATCH", body: JSON.stringify({ pageAccess }) }),
+      api(`/auth/users/${userId}/access`, { method: "PATCH", body: JSON.stringify({ pageAccess }), notify: true }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["permission-users"] })
   });
 
   const create = useMutation({
     mutationFn: (body: { username: string; password: string }) =>
-      api("/auth/users", { method: "POST", body: JSON.stringify(body) }),
+      api("/auth/users", { method: "POST", body: JSON.stringify(body), notify: true }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["permission-users"] })
   });
 
   const remove = useMutation({
-    mutationFn: (id: string) => api(`/auth/users/${id}`, { method: "DELETE" }),
+    mutationFn: (id: string) => api(`/auth/users/${id}`, { method: "DELETE", notify: true }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["permission-users"] })
   });
 

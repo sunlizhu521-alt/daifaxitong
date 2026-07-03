@@ -58,7 +58,7 @@ export function OrderEntryPage({
   const { data: stores = [] } = useQuery({ queryKey: ["stores"], queryFn: () => api<Store[]>("/stores") });
 
   const createOrder = useMutation({
-    mutationFn: (body: unknown) => api("/orders", { method: "POST", body: JSON.stringify(body) }),
+    mutationFn: (body: unknown) => api("/orders", { method: "POST", body: JSON.stringify(body), notify: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: [orderType === "accessory" ? "accessory-summary" : "dropship-summary"] });
@@ -68,7 +68,7 @@ export function OrderEntryPage({
     }
   });
   const importOrders = useMutation({
-    mutationFn: (form: FormData) => api("/orders/import", { method: "POST", body: form }),
+    mutationFn: (form: FormData) => api("/orders/import", { method: "POST", body: form, notify: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["dropship-summary"] });

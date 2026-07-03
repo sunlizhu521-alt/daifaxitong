@@ -11,18 +11,18 @@ export function SuppliersPage() {
   const isAdmin = me?.user?.role === "管理员" || me?.user?.username === "孙立柱";
   const save = useMutation({
     mutationFn: (body: Partial<Supplier>) =>
-      api<Supplier>(editing ? `/suppliers/${editing.id}` : "/suppliers", { method: editing ? "PUT" : "POST", body: JSON.stringify(body) }),
+      api<Supplier>(editing ? `/suppliers/${editing.id}` : "/suppliers", { method: editing ? "PUT" : "POST", body: JSON.stringify(body), notify: true }),
     onSuccess: () => {
       setEditing(null);
       qc.invalidateQueries({ queryKey: ["suppliers"] });
     }
   });
   const remove = useMutation({
-    mutationFn: (id: number) => api(`/suppliers/${id}`, { method: "DELETE" }),
+    mutationFn: (id: number) => api(`/suppliers/${id}`, { method: "DELETE", notify: true }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["suppliers"] })
   });
   const importSuppliers = useMutation({
-    mutationFn: (form: FormData) => api("/suppliers/import", { method: "POST", body: form }),
+    mutationFn: (form: FormData) => api("/suppliers/import", { method: "POST", body: form, notify: true }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["suppliers"] })
   });
 

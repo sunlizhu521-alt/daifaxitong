@@ -164,23 +164,23 @@ export function rowsFromListResponse<T>(data: ListResponse<T> | null | undefined
   return [];
 }
 
-function isWriteRequest(options: RequestInit) {
-  const method = String(options.method ?? "GET").toUpperCase();
-  return method !== "GET" && method !== "HEAD";
-}
+type ApiOptions = RequestInit & {
+  notify?: boolean;
+};
 
 function notifyResult(variant: "success" | "error", message: string) {
   window.dispatchEvent(new CustomEvent("app:notification", { detail: { variant, message } }));
 }
 
-export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const shouldNotify = isWriteRequest(options);
+export async function api<T>(path: string, options: ApiOptions = {}): Promise<T> {
+  const { notify, ...requestOptions } = options;
+  const shouldNotify = notify === true;
   let response: Response;
   try {
     response = await fetch(`/api${path}`, {
       credentials: "include",
-      headers: options.body instanceof FormData ? undefined : { "Content-Type": "application/json" },
-      ...options
+      headers: requestOptions.body instanceof FormData ? undefined : { "Content-Type": "application/json" },
+      ...requestOptions
     });
   } catch (error) {
     if (shouldNotify) notifyResult("error", "请求失败，请检查网络后重试");

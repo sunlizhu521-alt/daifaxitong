@@ -39,7 +39,7 @@ export function ShippingSchedulePage() {
   const selectedVisibleOrders = useMemo(() => orders.filter((order) => selectedOrderIds.has(order.id)), [orders, selectedOrderIds]);
   const allVisibleSelected = orders.length > 0 && orders.every((order) => selectedOrderIds.has(order.id));
   const markShipped = useMutation({
-    mutationFn: (id: number) => api(`/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "shipped" }) }),
+    mutationFn: (id: number) => api(`/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "shipped" }), notify: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
       qc.invalidateQueries({ queryKey: ["dropship-summary"] });
@@ -91,7 +91,7 @@ export function ShippingSchedulePage() {
     });
   }
   const markUnshipped = useMutation({
-    mutationFn: (id: number) => api(`/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "filled" }) }),
+    mutationFn: (id: number) => api(`/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "filled" }), notify: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
       qc.invalidateQueries({ queryKey: ["dropship-summary"] });
@@ -100,7 +100,7 @@ export function ShippingSchedulePage() {
     }
   });
   const updateShipping = useMutation({
-    mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}/shipping-edit`, { method: "PATCH", body: JSON.stringify(body) }),
+    mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}/shipping-edit`, { method: "PATCH", body: JSON.stringify(body), notify: true }),
     onSuccess: () => {
       setEditing(null);
       qc.invalidateQueries({ queryKey: ["shipping-schedule"] });

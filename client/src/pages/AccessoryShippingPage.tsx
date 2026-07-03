@@ -34,7 +34,7 @@ export function AccessoryShippingPage() {
   const orders = rowsFromListResponse(orderResponse);
 
   const ship = useMutation({
-    mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}/ship`, { method: "POST", body: JSON.stringify(body) }),
+    mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}/ship`, { method: "POST", body: JSON.stringify(body), notify: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["accessory-shipping"] });
       qc.invalidateQueries({ queryKey: ["accessory-summary"] });
