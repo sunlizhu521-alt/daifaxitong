@@ -10,16 +10,20 @@ export function ReturnReceiptPage() {
   const [selectedReturnIds, setSelectedReturnIds] = useState<Set<number>>(() => new Set());
   const { data: returns = [] } = useQuery({
     queryKey: ["return-receipts", keyword],
-    queryFn: () => api<ReturnRecord[]>(`/returns?status=${encodeURIComponent("退货待接收")}&keyword=${encodeURIComponent(keyword)}`)
+    queryFn: () => api<ReturnRecord[]>(`/returns?status=${encodeURIComponent("退回中")}&keyword=${encodeURIComponent(keyword)}`)
   });
   const receiveReturn = useMutation({
-    mutationFn: (id: number) => api(`/returns/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "已收到退货" }), notify: true }),
+    mutationFn: (id: number) => api(`/returns/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "退货成功" }), notify: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["return-receipts"] });
       qc.invalidateQueries({ queryKey: ["return-operations"] });
       qc.invalidateQueries({ queryKey: ["return-orders"] });
       qc.invalidateQueries({ queryKey: ["dropship-summary"] });
       qc.invalidateQueries({ queryKey: ["accessory-summary"] });
+      qc.invalidateQueries({ queryKey: ["tracking-orders"] });
+      qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
+      qc.invalidateQueries({ queryKey: ["accessory-shipping"] });
+      qc.invalidateQueries({ queryKey: ["purchase-orders"] });
     }
   });
   const selectedVisibleReturns = useMemo(() => returns.filter((row) => selectedReturnIds.has(row.id)), [returns, selectedReturnIds]);

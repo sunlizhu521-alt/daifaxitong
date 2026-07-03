@@ -132,7 +132,7 @@ function saveOrder(data: z.infer<typeof orderSchema>, id?: number) {
 }
 
 ordersRouter.get("/", (req, res) => {
-  const { keyword = "", status = "", supplierId = "", storeName = "", series = "", sku = "", startDate = "", endDate = "", hasTracking = "", orderType = "", page = "1", pageSize = "50" } = req.query;
+  const { keyword = "", status = "", supplierId = "", storeName = "", series = "", sku = "", startDate = "", endDate = "", hasTracking = "", orderType = "", includeAccessoryPending = "", page = "1", pageSize = "50" } = req.query;
   const pageNum = Math.max(1, Number(page) || 1);
   const pageSizeNum = Math.min(200, Math.max(1, Number(pageSize) || 50));
   const offset = (pageNum - 1) * pageSizeNum;
@@ -142,7 +142,10 @@ ordersRouter.get("/", (req, res) => {
     filters.push("(o.orderNo LIKE ? OR o.purchaseOrderNo LIKE ? OR o.purchaseOrderUser LIKE ? OR o.storeName LIKE ? OR o.customerName LIKE ? OR o.customerPhone LIKE ? OR o.address LIKE ? OR oi.productName LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ? OR p.materialCode LIKE ? OR latestReturn.status LIKE ? OR latestReturn.action LIKE ? OR latestReturn.reason LIKE ?)");
     params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
   }
-  if (status) {
+  if (status && includeAccessoryPending === "yes" && status === "filled") {
+    filters.push("((o.orderType = 'dropship' AND o.status = ?) OR (o.orderType = 'accessory' AND o.status = 'pending'))");
+    params.push(status);
+  } else if (status) {
     filters.push("o.status = ?");
     params.push(status);
   }

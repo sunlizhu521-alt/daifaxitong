@@ -41,7 +41,7 @@ export function TrackingNumbersPage() {
     queryKey: ["tracking-orders", keyword, storeName, supplierId, series, sku, hasTracking],
     queryFn: () =>
       api<ListResponse<OrderListRow>>(
-        `/orders?keyword=${encodeURIComponent(keyword)}&storeName=${encodeURIComponent(storeName)}&supplierId=${encodeURIComponent(supplierId)}&series=${encodeURIComponent(series)}&sku=${encodeURIComponent(sku)}&hasTracking=${encodeURIComponent(hasTracking)}`
+        `/orders?orderType=dropship&keyword=${encodeURIComponent(keyword)}&storeName=${encodeURIComponent(storeName)}&supplierId=${encodeURIComponent(supplierId)}&series=${encodeURIComponent(series)}&sku=${encodeURIComponent(sku)}&hasTracking=${encodeURIComponent(hasTracking)}`
       )
   });
   const orders = rowsFromListResponse(orderResponse);
@@ -219,7 +219,7 @@ export function TrackingNumbersPage() {
                 <td>{order.totalQuantity ?? 0}</td>
                 <td>{order.address}</td>
                 <td>
-                  <span className={`status ${order.status}`}>{statusText[order.status]}</span>
+                  <span className={`status ${order.status}`}>{order.returnStatus || statusText[order.status]}</span>
                 </td>
                 <td>
                   <form id={`shipment-${order.id}`} className="inline-shipment-form" onSubmit={(event) => submitShipment(order, event)}>

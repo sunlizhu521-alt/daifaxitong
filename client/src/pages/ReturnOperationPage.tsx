@@ -24,12 +24,16 @@ export function ReturnOperationPage() {
 
   const completeReturn = useMutation({
     mutationFn: ({ id, trackingNo }: { id: number; trackingNo: string }) =>
-      api(`/returns/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "退货待接收", trackingNo }), notify: true }),
+      api(`/returns/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "退回中", trackingNo }), notify: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["return-operations"] });
       qc.invalidateQueries({ queryKey: ["return-orders"] });
       qc.invalidateQueries({ queryKey: ["dropship-summary"] });
       qc.invalidateQueries({ queryKey: ["accessory-summary"] });
+      qc.invalidateQueries({ queryKey: ["tracking-orders"] });
+      qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
+      qc.invalidateQueries({ queryKey: ["accessory-shipping"] });
+      qc.invalidateQueries({ queryKey: ["purchase-orders"] });
     }
   });
   const selectedVisibleReturns = useMemo(() => returns.filter((row) => selectedReturnIds.has(row.id)), [returns, selectedReturnIds]);

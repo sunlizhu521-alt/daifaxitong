@@ -296,7 +296,7 @@ returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
 });
 
 const returnStatusSchema = z.object({
-  status: z.enum(["待处理", "已处理", "已提交退货", "已安排退回", "退货待接收", "已收货", "已收到退货"]),
+  status: z.enum(["待处理", "已处理", "已提交退货", "已安排退回", "退货待接收", "已收货", "已收到退货", "退回中", "退货成功"]),
   trackingNo: z.string().optional().default("")
 });
 
@@ -315,7 +315,7 @@ returnsRouter.patch("/:id/status", (req, res) => {
     return;
   }
   let trackingNo = parsed.data.trackingNo.trim();
-  if (parsed.data.status === "已安排退回" || parsed.data.status === "退货待接收") {
+  if (parsed.data.status === "已安排退回" || parsed.data.status === "退货待接收" || parsed.data.status === "退回中") {
     if (current.action !== "自行寄回" && current.action !== "寄回" && current.action !== "上门取件" && !trackingNo) {
       trackingNo = latestTrackingNo(current.orderNo);
     }
@@ -331,12 +331,12 @@ returnsRouter.patch("/:id/status", (req, res) => {
   const payload = rowToReturn(row);
   logOrderEventByOrderNo(
     String(payload.orderNo),
-    parsed.data.status === "已收货" || parsed.data.status === "已收到退货" ? "退货收货" : "退货操作",
+    parsed.data.status === "已收货" || parsed.data.status === "已收到退货" || parsed.data.status === "退货成功" ? "退货收货" : "退货操作",
     `${payload.status}${payload.trackingNo ? ` / ${payload.trackingNo}` : ""}`,
     req.session.user?.username
   );
   void notifyBusinessAction({
-    action: parsed.data.status === "已收货" || parsed.data.status === "已收到退货" ? "退货收货" : "退货操作",
+    action: parsed.data.status === "已收货" || parsed.data.status === "已收到退货" || parsed.data.status === "退货成功" ? "退货收货" : "退货操作",
     operator: req.session.user?.username,
     fields: [
       { label: "订单号", value: payload.orderNo },

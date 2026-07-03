@@ -168,7 +168,7 @@ export function PurchaseOrdersPage() {
                 <td>{order.customerName}</td>
                 <td>{order.customerPhone ?? "-"}</td>
                 <td>{order.address}</td>
-                <td><span className={`status ${order.status}`}>{statusText[order.status]}</span></td>
+                <td><span className={`status ${order.status}`}>{order.returnStatus || statusText[order.status]}</span></td>
                 <td>{order.note || order.shipmentNote || "-"}</td>
                 <td className="row-actions">
                   <form id={`purchase-order-${order.id}`} className="inline-purchase-form" onSubmit={(event) => submitPurchaseOrder(order, event)}>

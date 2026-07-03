@@ -31,7 +31,7 @@ export function ShippingSchedulePage() {
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(() => new Set());
   const { data: orderResponse } = useQuery({
     queryKey: ["shipping-schedule", status],
-    queryFn: () => api<ListResponse<OrderListRow>>(`/orders?status=${encodeURIComponent(status)}`)
+    queryFn: () => api<ListResponse<OrderListRow>>(`/orders?status=${encodeURIComponent(status)}&includeAccessoryPending=${status === "filled" ? "yes" : ""}`)
   });
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: () => api<Product[]>("/products") });
   const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers"], queryFn: () => api<Supplier[]>("/suppliers") });
@@ -166,6 +166,7 @@ export function ShippingSchedulePage() {
                 />
               </th>
               <th>供应商</th>
+              <th>分类</th>
               <th>店铺</th>
               <th>订单编号</th>
               <th>客户姓名</th>
@@ -195,6 +196,7 @@ export function ShippingSchedulePage() {
                   />
                 </td>
                 <td>{order.supplierName ?? "-"}</td>
+                <td>{order.orderType === "accessory" ? "配件" : "成品"}</td>
                 <td>{order.storeName || "-"}</td>
                 <td>{order.orderNo}</td>
                 <td>{order.customerName}</td>
@@ -205,7 +207,7 @@ export function ShippingSchedulePage() {
                 <td>{order.productName || "-"}</td>
                 <td>{order.supplierModel || "-"}</td>
                 <td>{order.totalQuantity ?? 0}</td>
-                <td><span className={`status ${order.status}`}>{statusText[order.status]}</span></td>
+                <td><span className={`status ${order.status}`}>{order.returnStatus || statusText[order.status]}</span></td>
                 <td>{order.carrier || "-"}</td>
                 <td>{order.trackingNo || "-"}</td>
                 <td className="row-actions">

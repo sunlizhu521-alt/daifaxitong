@@ -179,7 +179,7 @@ export function AccessoryShippingPage() {
                 <td>{order.productSku || "-"}</td>
                 <td>{order.productName || "-"}</td>
                 <td>{order.totalQuantity ?? 0}</td>
-                <td><span className={`status ${order.status}`}>{statusText[order.status]}</span></td>
+                <td><span className={`status ${order.status}`}>{order.returnStatus || statusText[order.status]}</span></td>
                 <td>
                   <form id={`accessory-shipment-${order.id}`} className="inline-shipment-form" onSubmit={(event) => submitShipment(order, event)}>
                     <select name="carrier" defaultValue={order.carrier && carrierOptions.includes(order.carrier) ? order.carrier : ""} required>

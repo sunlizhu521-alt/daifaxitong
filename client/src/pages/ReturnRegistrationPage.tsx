@@ -42,6 +42,10 @@ export function ReturnRegistrationPage() {
       qc.invalidateQueries({ queryKey: ["return-orders"] });
       qc.invalidateQueries({ queryKey: ["dropship-summary"] });
       qc.invalidateQueries({ queryKey: ["accessory-summary"] });
+      qc.invalidateQueries({ queryKey: ["tracking-orders"] });
+      qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
+      qc.invalidateQueries({ queryKey: ["accessory-shipping"] });
+      qc.invalidateQueries({ queryKey: ["purchase-orders"] });
     }
   });
   const saveReturn = useMutation({
@@ -50,6 +54,10 @@ export function ReturnRegistrationPage() {
       qc.invalidateQueries({ queryKey: ["return-orders"] });
       qc.invalidateQueries({ queryKey: ["dropship-summary"] });
       qc.invalidateQueries({ queryKey: ["accessory-summary"] });
+      qc.invalidateQueries({ queryKey: ["tracking-orders"] });
+      qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
+      qc.invalidateQueries({ queryKey: ["accessory-shipping"] });
+      qc.invalidateQueries({ queryKey: ["purchase-orders"] });
     }
   });
 
@@ -84,7 +92,6 @@ export function ReturnRegistrationPage() {
   }
 
   function registrationStatus(row: ReturnOrderRow) {
-    if (row.returnStatus === "退货待接收") return "退货完成";
     return row.returnStatus || row.orderStatus;
   }
 
