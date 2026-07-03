@@ -7,9 +7,12 @@ const addressStartPattern =
   /(北京市|上海市|天津市|重庆市|河北省|山西省|辽宁省|吉林省|黑龙江省|江苏省|浙江省|安徽省|福建省|江西省|山东省|河南省|湖北省|湖南省|广东省|海南省|四川省|贵州省|云南省|陕西省|甘肃省|青海省|台湾省|内蒙古自治区|广西壮族自治区|西藏自治区|宁夏回族自治区|新疆维吾尔自治区|香港特别行政区|澳门特别行政区|[\u4e00-\u9fa5]{2,}(?:市|区|县|镇|乡|街道|路|号|小区|村))/;
 const addressSignalPattern = /(省|市|区|县|镇|乡|街道|路|街|巷|村|号|栋|幢|楼|室|单元|门|小区|园|公司|店|大道|广场|中心|仓库|科技园)/;
 const receiverLabelPattern = /(收件人|收货人|姓名|电话|手机|地址)[:：]/g;
+const phonePattern = /(?:\+?86[-\s]?)?1[3-9]\d{9}(?:[-－—]\d{1,8})?/;
+const chineseSurnamePattern = /^[赵钱孙李周吴郑王冯陈褚卫蒋沈韩杨朱秦尤许何吕施张孔曹严华金魏陶姜戚谢邹喻柏水窦章云苏潘葛奚范彭郎鲁韦昌马苗凤花方俞任袁柳鲍史唐费廉岑薛雷贺倪汤滕殷罗毕郝邬安常乐于时傅皮卞齐康伍余元卜顾孟平黄和穆萧尹姚邵湛汪祁毛禹狄米贝明臧计伏成戴谈宋庞熊纪舒屈项祝董梁杜阮蓝闵席季麻强贾路娄危江童颜郭梅盛林刁钟徐邱骆高夏蔡田胡凌霍虞万支柯昝管卢莫经房裘缪干解应宗丁宣邓郁单杭洪包诸左石崔吉龚程嵇邢裴陆荣翁荀羊於惠甄曲家封芮羿储靳汲邴糜松井段富巫乌焦巴弓牧隗山谷车侯宓蓬全郗班仰秋仲伊宫宁仇栾暴甘斜厉戎祖武符刘景詹龙叶幸司韶郜黎蓟溥印怀蒲邰从鄂索咸籍赖卓蔺屠蒙池乔阴郁胥能苍双闻莘党翟谭贡劳逄姬申扶堵冉宰郦雍却璩桑桂濮牛寿通边扈燕冀郏浦尚农温别庄晏柴瞿阎充慕连茹习宦艾鱼容向古易慎戈廖庾终暨居衡步都耿满弘匡国文寇广禄阙东欧殳沃利蔚越夔隆师巩厍聂晁勾敖融冷訾辛阚那简饶空曾毋沙乜养鞠须丰巢关蒯相查后荆红游竺权逯盖益桓公司上欧夏诸闻东方赫皇尉公羊澹公宗濮淳单太申公仲轩令钟宇长慕司司]/;
+const addressNameBoundaryPattern = /[省市区县镇乡村路街巷号栋幢楼室单元门旁口台处店馆院园户]$/;
 
 function cleanReceiverText(value: string) {
-  return value.replace(receiverLabelPattern, " ").replace(/[，,]/g, " ").replace(/\s+/g, " ").trim();
+  return value.replace(receiverLabelPattern, " ").replace(/[，,、;]/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function isAddressLike(value: string) {
@@ -17,43 +20,119 @@ function isAddressLike(value: string) {
 }
 
 function isLikelyReceiverName(value: string) {
-  const compact = value.replace(/\s/g, "");
-  return compact.length >= 2 && compact.length <= 8 && !/\d/.test(compact) && /^[\u4e00-\u9fa5A-Za-z·]+$/.test(compact) && !isAddressLike(compact);
+  const compact = value.replace(/\s/g, "").replace(/[，,。；;、]/g, "");
+  if (compact.length < 1 || compact.length > 8 || /\d/.test(compact)) return false;
+  if (!/^[\u4e00-\u9fa5A-Za-z·]+$/.test(compact) || isAddressLike(compact)) return false;
+  if (compact.length === 1) return chineseSurnamePattern.test(compact) || /^[A-Za-z]$/.test(compact);
+  return true;
+}
+
+function normalizePhone(value: string) {
+  return value.replace(/^(?:\+?86[-\s]?)/, "").replace(/[－—]/g, "-").replace(/\s/g, "");
+}
+
+function splitReceiverParts(value: string) {
+  return cleanReceiverText(value).split(/\s+/).filter(Boolean);
+}
+
+function removeNameFromText(value: string, name: string) {
+  if (!name) return cleanReceiverText(value);
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return cleanReceiverText(value.replace(new RegExp(escaped), " "));
+}
+
+function findSeparatedName(lines: string[]) {
+  const lineIndex = lines.findIndex(isLikelyReceiverName);
+  if (lineIndex >= 0) {
+    return {
+      name: lines[lineIndex],
+      address: lines.filter((_, index) => index !== lineIndex).join(" ")
+    };
+  }
+
+  const parts = lines.flatMap(splitReceiverParts);
+  const partIndex = parts.findIndex(isLikelyReceiverName);
+  if (partIndex >= 0) {
+    return {
+      name: parts[partIndex],
+      address: parts.filter((_, index) => index !== partIndex).join(" ")
+    };
+  }
+  return null;
+}
+
+function extractTrailingName(value: string) {
+  const compact = cleanReceiverText(value);
+  const parts = compact.split(/\s+/).filter(Boolean);
+  const lastPart = parts.at(-1);
+  if (lastPart && isLikelyReceiverName(lastPart)) {
+    return { name: lastPart, address: parts.slice(0, -1).join(" ") };
+  }
+
+  const titleMatch = compact.match(/([\u4e00-\u9fa5]{1,4}(?:先生|女士|小姐))$/);
+  if (titleMatch && chineseSurnamePattern.test(titleMatch[1])) {
+    return { name: titleMatch[1], address: compact.slice(0, -titleMatch[1].length).trim() };
+  }
+
+  for (const length of [4, 3, 2, 1]) {
+    const candidate = compact.slice(-length);
+    const address = compact.slice(0, -length).trim();
+    if (!address || !isAddressLike(address) || !addressNameBoundaryPattern.test(address)) continue;
+    if (!isLikelyReceiverName(candidate) || !chineseSurnamePattern.test(candidate)) continue;
+    return { name: candidate, address };
+  }
+  return null;
+}
+
+function extractLeadingName(value: string) {
+  const compact = cleanReceiverText(value);
+  const parts = compact.split(/\s+/).filter(Boolean);
+  const firstPart = parts[0];
+  if (firstPart && isLikelyReceiverName(firstPart)) {
+    return { name: firstPart, address: parts.slice(1).join(" ") };
+  }
+  return null;
 }
 
 function parseReceiverInfo(raw: string) {
   const text = raw.replace(/\r/g, "\n").trim();
-  const phoneMatch = text.match(/(?:\+?86[-\s]?)?1[3-9]\d{9}(?:[-－—]\d{1,8})?/);
-  const phone = phoneMatch?.[0].replace(/^(?:\+?86[-\s]?)/, "").replace(/[－—]/g, "-").replace(/\s/g, "") ?? "";
+  const phoneMatch = text.match(phonePattern);
+  const phone = phoneMatch?.[0] ? normalizePhone(phoneMatch[0]) : "";
+  const beforePhone = phoneMatch?.index !== undefined ? text.slice(0, phoneMatch.index) : "";
+  const afterPhone = phoneMatch?.index !== undefined ? text.slice(phoneMatch.index + phoneMatch[0].length) : "";
   const withoutPhoneRaw = phone ? text.replace(phoneMatch?.[0] ?? "", "\n") : text;
   const lines = withoutPhoneRaw
     .split(/\n+/)
     .map(cleanReceiverText)
     .filter(Boolean);
 
-  const nameLineIndex = lines.findIndex(isLikelyReceiverName);
-  if (nameLineIndex >= 0) {
+  const separated = findSeparatedName(lines);
+  if (separated) {
+    return { name: separated.name, phone, address: cleanReceiverText(separated.address) };
+  }
+
+  const trailingBeforePhone = extractTrailingName(beforePhone);
+  if (trailingBeforePhone) {
     return {
-      name: lines[nameLineIndex],
+      name: trailingBeforePhone.name,
       phone,
-      address: lines.filter((_, index) => index !== nameLineIndex).join(" ")
+      address: cleanReceiverText([trailingBeforePhone.address, afterPhone].filter(Boolean).join(" "))
+    };
+  }
+
+  const leadingAfterPhone = extractLeadingName(afterPhone);
+  if (leadingAfterPhone) {
+    return {
+      name: leadingAfterPhone.name,
+      phone,
+      address: cleanReceiverText([beforePhone, leadingAfterPhone.address].filter(Boolean).join(" "))
     };
   }
 
   const withoutPhone = cleanReceiverText(withoutPhoneRaw);
-  const parts = withoutPhone.split(/\s+/).filter(Boolean);
-  const namePartIndex = parts.findIndex(isLikelyReceiverName);
-  if (namePartIndex >= 0) {
-    return {
-      name: parts[namePartIndex],
-      phone,
-      address: parts.filter((_, index) => index !== namePartIndex).join(" ")
-    };
-  }
-
   const addressStart = withoutPhone.search(addressStartPattern);
   const name = (addressStart > 0 ? withoutPhone.slice(0, addressStart) : "").trim();
-  const address = (addressStart >= 0 ? withoutPhone.slice(addressStart).trim() : withoutPhone.replace(name, "").trim())
+  const address = (addressStart >= 0 ? withoutPhone.slice(addressStart).trim() : removeNameFromText(withoutPhone, name))
     .replace(/^(地址|收货地址)[:：]/, "")
     .trim();
   return { name, phone, address };
