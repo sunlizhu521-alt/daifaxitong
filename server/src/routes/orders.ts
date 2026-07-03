@@ -144,8 +144,8 @@ ordersRouter.get("/", (req, res) => {
   const filters: string[] = [];
   const params: unknown[] = [];
   if (keyword) {
-    filters.push("(o.orderNo LIKE ? OR o.purchaseOrderNo LIKE ? OR o.purchaseOrderUser LIKE ? OR o.storeName LIKE ? OR o.customerName LIKE ? OR o.customerPhone LIKE ? OR o.address LIKE ? OR oi.productName LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ?)");
-    params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
+    filters.push("(o.orderNo LIKE ? OR o.purchaseOrderNo LIKE ? OR o.purchaseOrderUser LIKE ? OR o.storeName LIKE ? OR o.customerName LIKE ? OR o.customerPhone LIKE ? OR o.address LIKE ? OR oi.productName LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ? OR p.materialCode LIKE ?)");
+    params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
   }
   if (status) {
     filters.push("o.status = ?");
@@ -200,6 +200,7 @@ ordersRouter.get("/", (req, res) => {
       `SELECT o.*, COUNT(oi.id) AS itemCount, SUM(oi.quantity) AS totalQuantity,
         GROUP_CONCAT(DISTINCT oi.productName) AS productName,
         GROUP_CONCAT(DISTINCT p.series) AS productSeries,
+        GROUP_CONCAT(DISTINCT p.materialCode) AS materialCode,
         GROUP_CONCAT(DISTINCT oi.productSku) AS productSku,
         GROUP_CONCAT(DISTINCT p.supplierModel) AS supplierModel,
         latest.carrierId AS carrierId, latest.carrier AS carrier, latest.trackingNo AS trackingNo, latest.shippedAt AS shippedAt,

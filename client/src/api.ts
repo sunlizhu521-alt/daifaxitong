@@ -60,6 +60,7 @@ export type OrderListRow = {
   note?: string;
   itemCount: number;
   totalQuantity: number;
+  materialCode?: string | null;
   productName?: string | null;
   productSeries?: string | null;
   productSku?: string | null;
