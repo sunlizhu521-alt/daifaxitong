@@ -164,11 +164,11 @@ tr:hover td { background: #fafcff; }
 .route-error-card h1 { margin: 0; font-size: 22px; }
 .route-error-card p { margin: 0; color: var(--text-muted); line-height: 1.6; word-break: break-word; }
 
-.notification-stack { position: fixed; top: 16px; right: 16px; z-index: 50; display: grid; gap: 10px; width: min(360px, calc(100vw - 32px)); pointer-events: none; }
-.notification-toast { display: grid; grid-template-columns: auto 1fr auto; align-items: start; gap: 8px; padding: 12px; border-radius: 8px; border: 1px solid; box-shadow: 0 18px 44px rgba(15, 23, 42, 0.16); background: #fff; pointer-events: auto; }
-.notification-toast strong { font-size: 13px; line-height: 1.5; }
-.notification-toast span { font-size: 13px; line-height: 1.5; color: #344054; word-break: break-word; }
-.notification-toast button { min-width: 24px; height: 24px; border: 0; border-radius: 6px; background: transparent; color: #667085; font-size: 18px; line-height: 1; padding: 0; }
+.notification-stack { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 50; display: grid; gap: 12px; width: min(420px, calc(100vw - 32px)); pointer-events: none; }
+.notification-toast { display: grid; grid-template-columns: auto 1fr auto; align-items: start; gap: 10px; padding: 16px; border-radius: 8px; border: 1px solid; box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28); background: #fff; pointer-events: auto; }
+.notification-toast strong { font-size: 16px; line-height: 1.5; }
+.notification-toast span { font-size: 15px; line-height: 1.6; color: #344054; word-break: break-word; }
+.notification-toast button { min-width: 28px; height: 28px; border: 0; border-radius: 6px; background: transparent; color: #667085; font-size: 22px; line-height: 1; padding: 0; }
 .notification-toast.success { border-color: #86efac; background: #f0fdf4; }
 .notification-toast.success strong { color: #047857; }
 .notification-toast.error { border-color: #fecaca; background: #fff1f2; }
@@ -242,5 +242,5 @@ tr:hover td { background: #fafcff; }
   th, td { padding: 8px; }
   td input, td select, td textarea, td input[type="file"] { min-width: 150px; }
   .login-card, .modal { width: min(100%, calc(100vw - 24px)); }
-  .notification-stack { top: 10px; right: 10px; left: 10px; width: auto; }
+  .notification-stack { width: min(360px, calc(100vw - 24px)); }
 }
