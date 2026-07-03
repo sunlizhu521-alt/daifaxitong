@@ -12,7 +12,7 @@ const statusText: Record<string, string> = {
   cancelled: "已取消"
 };
 
-const carrierOptions = ["顺丰快递", "圆通快递", "中通快递", "京东快递", "其他"];
+const carrierOptions = ["顺丰快递", "圆通快递", "中通快递", "申通快递", "京东快递", "其他"];
 
 function defaultShipTime(value?: string | null) {
   const date = value ? new Date(value) : new Date();
