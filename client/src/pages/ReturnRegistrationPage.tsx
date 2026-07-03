@@ -22,6 +22,7 @@ export function ReturnRegistrationPage() {
   const [endDate, setEndDate] = useState("");
   const [appliedEndDate, setAppliedEndDate] = useState("");
   const [returnActions, setReturnActions] = useState<Record<number, string>>({});
+  const [previewAttachment, setPreviewAttachment] = useState<{ url: string; title: string } | null>(null);
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
   const { data: rows = [] } = useQuery({
     queryKey: ["return-orders", appliedKeyword, appliedStoreName, appliedSupplierId, appliedSeries, appliedSku, appliedStartDate, appliedEndDate],
@@ -199,9 +200,13 @@ export function ReturnRegistrationPage() {
                 <td className="row-actions">
                   {row.attachments.length > 0 ? (
                     row.attachments.map((url, index) => (
-                      <a href={url} target="_blank" rel="noreferrer" key={url}>
+                      <button
+                        type="button"
+                        key={url}
+                        onClick={() => setPreviewAttachment({ url, title: `${row.orderNo} 附件${index + 1}` })}
+                      >
                         查看{index + 1}
-                      </a>
+                      </button>
                     ))
                   ) : "-"}
                 </td>
@@ -223,6 +228,19 @@ export function ReturnRegistrationPage() {
         {remove.error ? <div className="error">{remove.error.message}</div> : null}
         {saveReturn.error ? <div className="error">{saveReturn.error.message}</div> : null}
       </Panel>
+      {previewAttachment ? (
+        <div className="modal-backdrop" onClick={() => setPreviewAttachment(null)}>
+          <div className="modal attachment-preview-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="attachment-preview-header">
+              <h2>{previewAttachment.title}</h2>
+              <button type="button" className="ghost-button" onClick={() => setPreviewAttachment(null)}>
+                关闭
+              </button>
+            </div>
+            <img src={previewAttachment.url} alt={previewAttachment.title} />
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

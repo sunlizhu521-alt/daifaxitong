@@ -103,6 +103,7 @@ export type ReturnRecord = {
   id: number;
   storeName: string;
   operator?: string;
+  operationUser?: string;
   orderNo: string;
   model: string;
   customerName: string;

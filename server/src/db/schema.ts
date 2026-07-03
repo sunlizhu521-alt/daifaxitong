@@ -142,6 +142,7 @@ CREATE TABLE IF NOT EXISTS returns (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   storeName TEXT NOT NULL,
   operator TEXT,
+  operationUser TEXT,
   orderNo TEXT NOT NULL,
   model TEXT NOT NULL,
   customerName TEXT NOT NULL,

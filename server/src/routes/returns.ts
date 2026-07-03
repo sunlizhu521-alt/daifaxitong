@@ -254,12 +254,13 @@ returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
   const result = db
     .prepare(
       `INSERT INTO returns
-       (storeName, operator, orderNo, model, customerName, customerPhone, address, status, action, trackingNo, reason, note, attachmentJson, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       (storeName, operator, operationUser, orderNo, model, customerName, customerPhone, address, status, action, trackingNo, reason, note, attachmentJson, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       parsed.data.storeName,
       parsed.data.operator,
+      req.session.user?.username ?? "",
       parsed.data.orderNo,
       parsed.data.model,
       parsed.data.customerName,
@@ -321,8 +322,8 @@ returnsRouter.patch("/:id/status", (req, res) => {
     }
   }
   const result = getDb()
-    .prepare("UPDATE returns SET status = ?, trackingNo = CASE WHEN ? <> '' THEN ? ELSE trackingNo END, updatedAt = ? WHERE id = ?")
-    .run(parsed.data.status, trackingNo, trackingNo, nowIso(), id);
+    .prepare("UPDATE returns SET status = ?, trackingNo = CASE WHEN ? <> '' THEN ? ELSE trackingNo END, operationUser = ?, updatedAt = ? WHERE id = ?")
+    .run(parsed.data.status, trackingNo, trackingNo, req.session.user?.username ?? "", nowIso(), id);
   if (result.changes === 0) {
     res.status(404).json({ message: "退货记录不存在" });
     return;

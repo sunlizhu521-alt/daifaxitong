@@ -17,6 +17,7 @@ export function ReturnOperationPage() {
   const [keyword, setKeyword] = useState("");
   const [trackingNos, setTrackingNos] = useState<Record<number, string>>({});
   const [selectedReturnIds, setSelectedReturnIds] = useState<Set<number>>(() => new Set());
+  const [previewAttachment, setPreviewAttachment] = useState<{ url: string; title: string } | null>(null);
   const { data: returns = [] } = useQuery({
     queryKey: ["return-operations", keyword],
     queryFn: () => api<ReturnRecord[]>(`/returns?status=${encodeURIComponent("已提交退货")}&keyword=${encodeURIComponent(keyword)}`)
@@ -120,7 +121,7 @@ export function ReturnOperationPage() {
               <th>登记时间</th>
               <th>店铺</th>
               <th>供应商</th>
-              <th>运营</th>
+              <th>操作人</th>
               <th>订单号</th>
               <th>姓名</th>
               <th>电话</th>
@@ -133,7 +134,7 @@ export function ReturnOperationPage() {
               <th>退货理由</th>
               <th>状态</th>
               <th>备注</th>
-              <th>附件</th>
+              <th>查看附件</th>
               <th>处理</th>
             </tr>
           </thead>
@@ -155,7 +156,7 @@ export function ReturnOperationPage() {
                   <td>{new Date(row.createdAt).toLocaleString()}</td>
                   <td>{row.storeName || "-"}</td>
                   <td>{row.supplierName || "-"}</td>
-                  <td>{row.operator || "-"}</td>
+                  <td>{row.operationUser || "-"}</td>
                   <td>{row.orderNo}</td>
                   <td>{row.customerName}</td>
                   <td>{row.customerPhone || "-"}</td>
@@ -175,14 +176,18 @@ export function ReturnOperationPage() {
                   <td>{row.reason}</td>
                   <td>{row.status}</td>
                   <td>{row.note || "-"}</td>
-                  <td>
-                    <div className="attachment-list">
-                      {row.attachments.map((url) => (
-                        <a href={url} target="_blank" rel="noreferrer" key={url}>
-                          <img src={url} alt="附件" />
-                        </a>
-                      ))}
-                    </div>
+                  <td className="row-actions">
+                    {row.attachments.length > 0
+                      ? row.attachments.map((url, index) => (
+                          <button
+                            type="button"
+                            key={url}
+                            onClick={() => setPreviewAttachment({ url, title: `${row.orderNo} 附件${index + 1}` })}
+                          >
+                            查看{index + 1}
+                          </button>
+                        ))
+                      : "-"}
                   </td>
                   <td className="row-actions">
                     <button type="button" className="primary-button" onClick={() => confirmComplete(row)}>
@@ -197,6 +202,19 @@ export function ReturnOperationPage() {
         {returns.length === 0 ? <div className="success">暂无已提交退货</div> : null}
         {completeReturn.error ? <div className="error">{completeReturn.error.message}</div> : null}
       </Panel>
+      {previewAttachment ? (
+        <div className="modal-backdrop" onClick={() => setPreviewAttachment(null)}>
+          <div className="modal attachment-preview-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="attachment-preview-header">
+              <h2>{previewAttachment.title}</h2>
+              <button type="button" className="ghost-button" onClick={() => setPreviewAttachment(null)}>
+                关闭
+              </button>
+            </div>
+            <img src={previewAttachment.url} alt={previewAttachment.title} />
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
