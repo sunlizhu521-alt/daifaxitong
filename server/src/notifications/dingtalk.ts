@@ -25,6 +25,9 @@ type FeishuResponse = {
   StatusMessage?: string;
 };
 
+const dingtalkActions = new Set(["登记代发", "配件登记", "退货登记", "提交退货", "退货收货"]);
+const feishuActions = new Set(["发货单号", "填写发货单号", "退货操作"]);
+
 function appendDingtalkSignature(webhook: string) {
   if (!config.dingtalkSecret) return webhook;
   const timestamp = Date.now();
@@ -170,5 +173,8 @@ async function notifyFeishu(title: string, text: string) {
 
 export async function notifyBusinessAction(input: NotifyInput) {
   const { title, text } = buildNotification(input);
-  await Promise.all([notifyDingtalk(title, text), notifyFeishu(title, text)]);
+  const tasks: Array<Promise<void>> = [];
+  if (dingtalkActions.has(input.action)) tasks.push(notifyDingtalk(title, text));
+  if (feishuActions.has(input.action)) tasks.push(notifyFeishu(title, text));
+  await Promise.all(tasks);
 }

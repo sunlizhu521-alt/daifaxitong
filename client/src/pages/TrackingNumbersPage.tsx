@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { api, rowsFromListResponse, type Carrier, type ListResponse, type OrderListRow, type Product, type Store, type Supplier } from "../api";
 import { notifyApp } from "../ui/AppNotifications";
 import { PageHeader, Panel } from "../ui/Section";
@@ -11,7 +11,8 @@ const statusText: Record<string, string> = {
   purchased: "已下采购单",
   shipped: "已发货",
   exception: "异常",
-  cancelled: "已取消"
+  cancelled: "已取消",
+  customer_cancelled: "顾客不要了"
 };
 
 function defaultShipTime(value?: string | null) {
@@ -22,7 +23,6 @@ function defaultShipTime(value?: string | null) {
 
 export function TrackingNumbersPage() {
   const qc = useQueryClient();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [keyword, setKeyword] = useState(() => searchParams.get("keyword") ?? "");
   const [storeName, setStoreName] = useState("");
@@ -44,7 +44,15 @@ export function TrackingNumbersPage() {
         `/orders?orderType=dropship&keyword=${encodeURIComponent(keyword)}&storeName=${encodeURIComponent(storeName)}&supplierId=${encodeURIComponent(supplierId)}&series=${encodeURIComponent(series)}&sku=${encodeURIComponent(sku)}&hasTracking=${encodeURIComponent(hasTracking)}`
       )
   });
-  const orders = rowsFromListResponse(orderResponse);
+  const orders = rowsFromListResponse(orderResponse).filter((order) => order.status !== "customer_cancelled");
+  const defaultCarrierId =
+    carriers
+      .find((carrier) => carrier.name.trim() === "顺丰速运")
+      ?.id.toString() ??
+    carriers
+      .find((carrier) => carrier.name.includes("顺丰"))
+      ?.id.toString() ??
+    "";
   const selectedVisibleOrders = useMemo(() => orders.filter((order) => selectedOrderIds.has(order.id)), [orders, selectedOrderIds]);
   const allVisibleSelected = orders.length > 0 && orders.every((order) => selectedOrderIds.has(order.id));
   const ship = useMutation({
@@ -56,11 +64,11 @@ export function TrackingNumbersPage() {
       qc.invalidateQueries({ queryKey: ["summary"] });
     }
   });
-  const deleteShipment = useMutation({
-    mutationFn: (id: number) => api(`/orders/${id}/shipment`, { method: "DELETE", notify: true }),
+  const cancelOrder = useMutation({
+    mutationFn: (id: number) => api(`/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "customer_cancelled" }), notify: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tracking-orders"] });
-      qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
+      qc.invalidateQueries({ queryKey: ["dropship-summary"] });
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["summary"] });
     }
@@ -134,9 +142,9 @@ export function TrackingNumbersPage() {
     });
   }
 
-  function removeShipment(order: OrderListRow) {
-    if (!window.confirm(`确定删除订单 ${order.orderNo} 的发货单号吗？`)) return;
-    deleteShipment.mutate(order.id);
+  function markCustomerCancelled(order: OrderListRow) {
+    if (!window.confirm(`确认订单 ${order.orderNo} 顾客不要了吗？`)) return;
+    cancelOrder.mutate(order.id);
   }
 
   return (
@@ -212,7 +220,7 @@ export function TrackingNumbersPage() {
                     onChange={(event) => toggleOrderSelected(order.id, event.target.checked)}
                   />
                 </td>
-                <td>{order.storeName || "-"}</td>
+                <td>{order.storeShortName || order.storeName || "-"}</td>
                 <td>{order.orderNo}</td>
                 <td>{order.customerName}</td>
                 <td>{order.productSku || "-"}</td>
@@ -223,7 +231,7 @@ export function TrackingNumbersPage() {
                 </td>
                 <td>
                   <form id={`shipment-${order.id}`} className="inline-shipment-form" onSubmit={(event) => submitShipment(order, event)}>
-                    <select name="carrierId" defaultValue={order.carrierId ?? ""} required>
+                    <select name="carrierId" key={`${order.id}-${order.carrierId ?? defaultCarrierId}`} defaultValue={order.carrierId ?? defaultCarrierId} required>
                       <option value="">选择快递 *</option>
                       {carriers.map((carrier) => (
                         <option value={carrier.id} key={carrier.id}>{carrier.name}</option>
@@ -236,15 +244,16 @@ export function TrackingNumbersPage() {
                 </td>
                 <td className="row-actions">
                   <button type="submit" form={`shipment-${order.id}`} className="primary-button">提交</button>
-                  <button type="button" onClick={() => removeShipment(order)}>删除</button>
-                  <button type="button" onClick={() => navigate(`/returns?keyword=${encodeURIComponent(order.orderNo)}`)}>退货</button>
+                  <button type="button" onClick={() => markCustomerCancelled(order)} disabled={cancelOrder.isPending}>
+                    不要了
+                  </button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
         {ship.error ? <div className="error">{ship.error.message}</div> : null}
-        {deleteShipment.error ? <div className="error">{deleteShipment.error.message}</div> : null}
+        {cancelOrder.error ? <div className="error">{cancelOrder.error.message}</div> : null}
       </Panel>
     </>
   );

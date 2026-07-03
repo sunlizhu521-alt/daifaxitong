@@ -1,6 +1,5 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
 import { api, downloadFile, rowsFromListResponse, type ListResponse, type OrderListRow, type Product, type Supplier } from "../api";
 import { notifyApp } from "../ui/AppNotifications";
 import { PageHeader, Panel } from "../ui/Section";
@@ -11,7 +10,8 @@ const statusText: Record<string, string> = {
   purchased: "已下采购单",
   shipped: "已发货",
   exception: "异常",
-  cancelled: "已取消"
+  cancelled: "已取消",
+  customer_cancelled: "顾客不要了"
 };
 
 type OrderDetail = OrderListRow & {
@@ -25,7 +25,6 @@ type OrderDetail = OrderListRow & {
 
 export function ShippingSchedulePage() {
   const qc = useQueryClient();
-  const navigate = useNavigate();
   const [status, setStatus] = useState("filled");
   const [editing, setEditing] = useState<OrderDetail | null>(null);
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(() => new Set());
@@ -35,7 +34,7 @@ export function ShippingSchedulePage() {
   });
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: () => api<Product[]>("/products") });
   const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers"], queryFn: () => api<Supplier[]>("/suppliers") });
-  const orders = rowsFromListResponse(orderResponse);
+  const orders = rowsFromListResponse(orderResponse).filter((order) => order.status !== "customer_cancelled");
   const selectedVisibleOrders = useMemo(() => orders.filter((order) => selectedOrderIds.has(order.id)), [orders, selectedOrderIds]);
   const allVisibleSelected = orders.length > 0 && orders.every((order) => selectedOrderIds.has(order.id));
   const markShipped = useMutation({
@@ -99,6 +98,15 @@ export function ShippingSchedulePage() {
       qc.invalidateQueries({ queryKey: ["summary"] });
     }
   });
+  const cancelOrder = useMutation({
+    mutationFn: (id: number) => api(`/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "customer_cancelled" }), notify: true }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
+      qc.invalidateQueries({ queryKey: ["dropship-summary"] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["summary"] });
+    }
+  });
   const updateShipping = useMutation({
     mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}/shipping-edit`, { method: "PATCH", body: JSON.stringify(body), notify: true }),
     onSuccess: () => {
@@ -113,6 +121,11 @@ export function ShippingSchedulePage() {
 
   async function openEdit(order: OrderListRow) {
     setEditing(await api<OrderDetail>(`/orders/${order.id}`));
+  }
+
+  function markCustomerCancelled(order: OrderListRow) {
+    if (!window.confirm(`确认订单 ${order.orderNo} 顾客不要了吗？`)) return;
+    cancelOrder.mutate(order.id);
   }
 
   function submitEdit(event: FormEvent<HTMLFormElement>) {
@@ -197,7 +210,7 @@ export function ShippingSchedulePage() {
                 </td>
                 <td>{order.supplierName ?? "-"}</td>
                 <td>{order.orderType === "accessory" ? "配件" : "成品"}</td>
-                <td>{order.storeName || "-"}</td>
+                <td>{order.storeShortName || order.storeName || "-"}</td>
                 <td>{order.orderNo}</td>
                 <td>{order.customerName}</td>
                 <td>{order.customerPhone ?? "-"}</td>
@@ -216,8 +229,10 @@ export function ShippingSchedulePage() {
                   ) : (
                     <button type="button" onClick={() => markShipped.mutate(order.id)}>已提货</button>
                   )}
-                  <button type="button" onClick={() => openEdit(order)}>编辑</button>
-                  <button type="button" onClick={() => navigate(`/returns?keyword=${encodeURIComponent(order.orderNo)}`)}>退货</button>
+                  <button type="button" onClick={() => openEdit(order)}>换型号</button>
+                  <button type="button" onClick={() => markCustomerCancelled(order)} disabled={cancelOrder.isPending}>
+                    不要了
+                  </button>
                 </td>
                 <td>{order.note || order.shipmentNote || "-"}</td>
               </tr>
@@ -226,12 +241,13 @@ export function ShippingSchedulePage() {
         </table>
         {markShipped.error ? <div className="error">{markShipped.error.message}</div> : null}
         {markUnshipped.error ? <div className="error">{markUnshipped.error.message}</div> : null}
+        {cancelOrder.error ? <div className="error">{cancelOrder.error.message}</div> : null}
         {updateShipping.error ? <div className="error">{updateShipping.error.message}</div> : null}
       </Panel>
       {editing ? (
         <div className="modal-backdrop">
           <form className="modal summary-edit-modal" onSubmit={submitEdit}>
-            <h2>编辑发货信息</h2>
+            <h2>换型号</h2>
             <label className="modal-field">
               <span>供应商</span>
               <select name="supplierId" defaultValue={editing.supplierId ?? ""}>
@@ -264,7 +280,7 @@ export function ShippingSchedulePage() {
             </label>
             <div className="modal-actions">
               <button type="button" className="ghost-button" onClick={() => setEditing(null)}>取消</button>
-              <button className="primary-button" disabled={updateShipping.isPending}>保存修改</button>
+              <button className="primary-button" disabled={updateShipping.isPending}>保存换型号</button>
             </div>
           </form>
         </div>

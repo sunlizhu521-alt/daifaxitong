@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, downloadFile, Product, Store, Supplier, User } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
@@ -138,6 +138,10 @@ function parseReceiverInfo(raw: string) {
   return { name, phone, address };
 }
 
+function findDefaultSupplierId(suppliers: Supplier[]) {
+  return suppliers.find((supplier) => supplier.shortName?.trim() === "易乐" || supplier.name.trim() === "易乐")?.id.toString() ?? "";
+}
+
 type OrderEntryPageProps = {
   title?: string;
   description?: string;
@@ -164,10 +168,16 @@ export function OrderEntryPage({
   const qc = useQueryClient();
   const [receiverRaw, setReceiverRaw] = useState("");
   const [receiver, setReceiver] = useState({ customerName: "", customerPhone: "", address: "" });
+  const [supplierId, setSupplierId] = useState("");
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: () => api<Product[]>("/products") });
   const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers"], queryFn: () => api<Supplier[]>("/suppliers") });
   const { data: stores = [] } = useQuery({ queryKey: ["stores"], queryFn: () => api<Store[]>("/stores") });
+
+  useEffect(() => {
+    if (supplierId) return;
+    setSupplierId(findDefaultSupplierId(suppliers));
+  }, [suppliers, supplierId]);
 
   const createOrder = useMutation({
     mutationFn: (body: unknown) => api("/orders", { method: "POST", body: JSON.stringify(body), notify: true }),
@@ -322,7 +332,7 @@ export function OrderEntryPage({
               </label>
               <label className="field-block">
                 <span>选择供应商</span>
-                <select name="supplierId" required>
+                <select name="supplierId" value={supplierId} onChange={(event) => setSupplierId(event.target.value)} required>
                   <option value="">选择供应商</option>
                   {suppliers.map((supplier) => (
                     <option value={supplier.id} key={supplier.id}>

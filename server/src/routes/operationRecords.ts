@@ -14,10 +14,10 @@ operationRecordsRouter.get("/", (req, res) => {
 
   if (keyword) {
     filters.push(
-      "(oe.operator LIKE ? OR oe.action LIKE ? OR oe.detail LIKE ? OR o.orderNo LIKE ? OR o.purchaseOrderNo LIKE ? OR o.storeName LIKE ? OR o.customerName LIKE ? OR o.customerPhone LIKE ? OR o.address LIKE ? OR oi.productName LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ?)"
+      "(oe.operator LIKE ? OR oe.action LIKE ? OR oe.detail LIKE ? OR o.orderNo LIKE ? OR o.purchaseOrderNo LIKE ? OR o.storeName LIKE ? OR o.customerName LIKE ? OR o.customerPhone LIKE ? OR o.address LIKE ? OR oi.productName LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ? OR latestReturn.trackingNo LIKE ?)"
     );
     const like = `%${keyword}%`;
-    params.push(like, like, like, like, like, like, like, like, like, like, like, like);
+    params.push(like, like, like, like, like, like, like, like, like, like, like, like, like);
   }
   if (startDate) {
     filters.push("date(oe.createdAt) >= date(?)");
@@ -34,18 +34,25 @@ operationRecordsRouter.get("/", (req, res) => {
     LEFT JOIN orders o ON o.id = oe.orderId
     LEFT JOIN order_items oi ON oi.orderId = o.id
     LEFT JOIN products p ON p.id = oi.productId
+    LEFT JOIN returns latestReturn ON latestReturn.id = (
+      SELECT lr.id FROM returns lr WHERE lr.orderNo = o.orderNo ORDER BY lr.id DESC LIMIT 1
+    )
     ${whereSql}`;
   const { total } = getDb().prepare(countSql).get(...params) as { total: number };
 
   const rows = getDb()
     .prepare(
       `SELECT oe.id, oe.orderId, oe.action, oe.detail, oe.operator, oe.createdAt,
-        o.orderNo, o.purchaseOrderNo, o.orderType, o.storeName, o.customerName, o.customerPhone, o.address, o.status,
+        o.orderNo, o.purchaseOrderNo, o.orderType, o.storeName,
+        COALESCE((SELECT st.shortName FROM stores st WHERE st.name = o.storeName ORDER BY st.id DESC LIMIT 1), o.storeName) AS storeShortName,
+        o.customerName, o.customerPhone, o.address, o.status,
         GROUP_CONCAT(DISTINCT oi.productName) AS productName,
         GROUP_CONCAT(DISTINCT oi.productSku) AS productSku,
         GROUP_CONCAT(DISTINCT p.series) AS productSeries,
         latest.trackingNo AS trackingNo,
         latest.carrier AS carrier,
+        '' AS returnCarrier,
+        latestReturn.trackingNo AS returnTrackingNo,
         COALESCE(shipSupplier.shortName, shipSupplier.name, orderSupplier.shortName, orderSupplier.name) AS supplierName
        FROM order_events oe
        LEFT JOIN orders o ON o.id = oe.orderId
@@ -53,6 +60,9 @@ operationRecordsRouter.get("/", (req, res) => {
        LEFT JOIN products p ON p.id = oi.productId
        LEFT JOIN shipments latest ON latest.id = (
          SELECT sh.id FROM shipments sh WHERE sh.orderId = o.id ORDER BY sh.id DESC LIMIT 1
+       )
+       LEFT JOIN returns latestReturn ON latestReturn.id = (
+         SELECT lr.id FROM returns lr WHERE lr.orderNo = o.orderNo ORDER BY lr.id DESC LIMIT 1
        )
        LEFT JOIN suppliers shipSupplier ON shipSupplier.id = latest.supplierId
        LEFT JOIN suppliers orderSupplier ON orderSupplier.id = o.supplierId

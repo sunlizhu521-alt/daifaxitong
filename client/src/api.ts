@@ -53,10 +53,11 @@ export type OrderListRow = {
   address: string;
   supplierId?: number | null;
   storeName?: string | null;
+  storeShortName?: string | null;
   supplierName?: string | null;
   registrationSupplierName?: string | null;
   registrarName?: string | null;
-  status: "pending" | "filled" | "purchased" | "shipped" | "exception" | "cancelled";
+  status: "pending" | "filled" | "purchased" | "shipped" | "exception" | "cancelled" | "customer_cancelled";
   note?: string;
   itemCount: number;
   totalQuantity: number;
@@ -73,6 +74,8 @@ export type OrderListRow = {
   returnStatus?: string | null;
   returnAction?: string | null;
   returnReason?: string | null;
+  returnCarrier?: string | null;
+  returnTrackingNo?: string | null;
   createdAt: string;
 };
 
@@ -87,6 +90,7 @@ export type OperationRecord = {
   purchaseOrderNo?: string | null;
   orderType?: "dropship" | "accessory" | null;
   storeName?: string | null;
+  storeShortName?: string | null;
   customerName?: string | null;
   customerPhone?: string | null;
   address?: string | null;
@@ -97,6 +101,8 @@ export type OperationRecord = {
   trackingNo?: string | null;
   carrier?: string | null;
   supplierName?: string | null;
+  returnCarrier?: string | null;
+  returnTrackingNo?: string | null;
 };
 
 export type ReturnRecord = {

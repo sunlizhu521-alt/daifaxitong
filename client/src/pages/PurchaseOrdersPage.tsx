@@ -10,7 +10,8 @@ const statusText: Record<string, string> = {
   purchased: "已下采购单",
   shipped: "已发货",
   exception: "异常",
-  cancelled: "已取消"
+  cancelled: "已取消",
+  customer_cancelled: "顾客不要了"
 };
 
 export function PurchaseOrdersPage() {
@@ -24,7 +25,7 @@ export function PurchaseOrdersPage() {
     queryKey: ["purchase-orders", keyword, status, orderType],
     queryFn: () => api<ListResponse<OrderListRow>>(`/orders?keyword=${encodeURIComponent(keyword)}&status=${encodeURIComponent(status)}&orderType=${encodeURIComponent(orderType)}`)
   });
-  const orders = rowsFromListResponse(orderResponse);
+  const orders = rowsFromListResponse(orderResponse).filter((order) => order.status !== "customer_cancelled");
   const selectedVisibleOrders = useMemo(() => orders.filter((order) => selectedOrderIds.has(order.id)), [orders, selectedOrderIds]);
   const allVisibleSelected = orders.length > 0 && orders.every((order) => selectedOrderIds.has(order.id));
   const savePurchaseOrder = useMutation({
@@ -35,6 +36,16 @@ export function PurchaseOrdersPage() {
       qc.invalidateQueries({ queryKey: ["dropship-summary"] });
       qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
       qc.invalidateQueries({ queryKey: ["orders"] });
+    }
+  });
+  const cancelOrder = useMutation({
+    mutationFn: (id: number) => api(`/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "customer_cancelled" }), notify: true }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["purchase-orders"] });
+      qc.invalidateQueries({ queryKey: ["dropship-summary"] });
+      qc.invalidateQueries({ queryKey: ["accessory-summary"] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["summary"] });
     }
   });
 
@@ -104,6 +115,11 @@ export function PurchaseOrdersPage() {
     return order.orderType === "accessory" ? "配件" : "成品";
   }
 
+  function markCustomerCancelled(order: OrderListRow) {
+    if (!window.confirm(`确认订单 ${order.orderNo} 顾客不要了吗？`)) return;
+    cancelOrder.mutate(order.id);
+  }
+
   return (
     <>
       <PageHeader title="采购订单" description="从发货安排复制的订单视图，用于给代发订单填写采购订单号。" />
@@ -136,13 +152,16 @@ export function PurchaseOrdersPage() {
               </th>
               <th>供应商</th>
               <th>分类</th>
+              <th>店铺简称</th>
+              <th>订单编号</th>
               <th>物料编码=品号</th>
               <th>SKU</th>
               <th>名称</th>
               <th>数量</th>
-              <th>客户姓名</th>
+              <th>姓名</th>
               <th>电话</th>
               <th>收货地址</th>
+              <th>采购订单号</th>
               <th>状态</th>
               <th>备注</th>
               <th>操作</th>
@@ -161,6 +180,8 @@ export function PurchaseOrdersPage() {
                 </td>
                 <td>{order.supplierName ?? "-"}</td>
                 <td>{categoryText(order)}</td>
+                <td>{order.storeShortName || order.storeName || "-"}</td>
+                <td>{order.orderNo}</td>
                 <td>{order.materialCode || order.productSku || "-"}</td>
                 <td>{order.productSku || "-"}</td>
                 <td>{order.productName || "-"}</td>
@@ -168,20 +189,26 @@ export function PurchaseOrdersPage() {
                 <td>{order.customerName}</td>
                 <td>{order.customerPhone ?? "-"}</td>
                 <td>{order.address}</td>
+                <td>
+                  <input form={`purchase-order-${order.id}`} name="purchaseOrderNo" placeholder="采购订单号 *" defaultValue={order.purchaseOrderNo ?? ""} required />
+                </td>
                 <td><span className={`status ${order.status}`}>{order.returnStatus || statusText[order.status]}</span></td>
                 <td>{order.note || order.shipmentNote || "-"}</td>
                 <td className="row-actions">
                   <form id={`purchase-order-${order.id}`} className="inline-purchase-form" onSubmit={(event) => submitPurchaseOrder(order, event)}>
                     <input name="purchaseOrderUser" placeholder="采购下单人 *" defaultValue={order.purchaseOrderUser || me?.user?.username || ""} required />
-                    <input name="purchaseOrderNo" placeholder="采购订单号 *" defaultValue={order.purchaseOrderNo ?? ""} required />
                   </form>
                   <button type="submit" form={`purchase-order-${order.id}`} className="primary-button">{order.purchaseOrderNo ? "修改" : "提交"}</button>
+                  <button type="button" onClick={() => markCustomerCancelled(order)} disabled={cancelOrder.isPending}>
+                    不要了
+                  </button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
         {savePurchaseOrder.error ? <div className="error">{savePurchaseOrder.error.message}</div> : null}
+        {cancelOrder.error ? <div className="error">{cancelOrder.error.message}</div> : null}
       </Panel>
     </>
   );

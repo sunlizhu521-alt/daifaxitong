@@ -10,7 +10,8 @@ const statusText: Record<string, string> = {
   purchased: "已下采购单",
   shipped: "已提货",
   exception: "异常",
-  cancelled: "已取消"
+  cancelled: "已取消",
+  customer_cancelled: "顾客不要了"
 };
 
 function mergeNotes(order: OrderListRow) {
@@ -194,6 +195,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
             <option value="shipped">已发货</option>
             <option value="exception">异常</option>
             <option value="cancelled">已取消</option>
+            <option value="customer_cancelled">顾客不要了</option>
           </select>
           <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
           <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
@@ -232,6 +234,8 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
               <th>发货时间</th>
               <th>快递公司</th>
               <th>发货单号</th>
+              <th>退货快递公司</th>
+              <th>退货快递单号</th>
               <th>供应商</th>
               <th>采购订单号填写人</th>
               <th>采购订单号</th>
@@ -267,6 +271,8 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
                 <td>{order.shippedAt ? order.shippedAt.slice(0, 16).replace("T", " ") : "-"}</td>
                 <td>{order.carrier || "-"}</td>
                 <td>{order.trackingNo || "-"}</td>
+                <td>{order.returnCarrier || "-"}</td>
+                <td>{order.returnTrackingNo || "-"}</td>
                 <td>{order.supplierName ?? "-"}</td>
                 <td>{order.purchaseOrderUser || "-"}</td>
                 <td>{order.purchaseOrderNo || "-"}</td>
@@ -332,6 +338,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
                 <option value="shipped">已发货</option>
                 <option value="exception">异常</option>
                 <option value="cancelled">已取消</option>
+                <option value="customer_cancelled">顾客不要了</option>
               </select>
             </label>
             <label className="modal-field">

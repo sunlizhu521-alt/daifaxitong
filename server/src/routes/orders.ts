@@ -32,7 +32,7 @@ const orderSchema = z.object({
   customerName: z.string().trim().min(1, "客户姓名不能为空"),
   customerPhone: z.string().optional().default(""),
   address: z.string().trim().min(1, "收货地址不能为空"),
-  status: z.enum(["pending", "filled", "purchased", "shipped", "exception", "cancelled"]).default("pending"),
+  status: z.enum(["pending", "filled", "purchased", "shipped", "exception", "cancelled", "customer_cancelled"]).default("pending"),
   note: z.string().optional().default(""),
   items: z.array(orderItemSchema).min(1, "至少需要一个商品明细")
 });
@@ -53,7 +53,7 @@ const purchaseOrderSchema = z.object({
 });
 
 const statusSchema = z.object({
-  status: z.enum(["pending", "filled", "purchased", "shipped", "exception", "cancelled"])
+  status: z.enum(["pending", "filled", "purchased", "shipped", "exception", "cancelled", "customer_cancelled"])
 });
 
 const shippingEditSchema = z.object({
@@ -71,7 +71,8 @@ const statusText: Record<string, string> = {
   purchased: "已下采购单",
   shipped: "已发货",
   exception: "异常",
-  cancelled: "已取消"
+  cancelled: "已取消",
+  customer_cancelled: "顾客不要了"
 };
 
 function readOrder(id: number) {
@@ -204,9 +205,11 @@ ordersRouter.get("/", (req, res) => {
         GROUP_CONCAT(DISTINCT p.materialCode) AS materialCode,
         GROUP_CONCAT(DISTINCT oi.productSku) AS productSku,
         GROUP_CONCAT(DISTINCT p.supplierModel) AS supplierModel,
+        COALESCE((SELECT st.shortName FROM stores st WHERE st.name = o.storeName ORDER BY st.id DESC LIMIT 1), o.storeName) AS storeShortName,
         latest.carrierId AS carrierId, latest.carrier AS carrier, latest.trackingNo AS trackingNo, latest.shippedAt AS shippedAt,
         latest.note AS shipmentNote,
         latestReturn.status AS returnStatus, latestReturn.action AS returnAction, latestReturn.reason AS returnReason,
+        '' AS returnCarrier, latestReturn.trackingNo AS returnTrackingNo,
         COALESCE(shipSupplier.shortName, shipSupplier.name, orderSupplier.shortName, orderSupplier.name) AS supplierName,
         COALESCE(orderSupplier.shortName, orderSupplier.name) AS registrationSupplierName
        FROM orders o
@@ -302,6 +305,7 @@ ordersRouter.get("/shipping-export", async (req, res) => {
           WHEN 'shipped' THEN '已发货'
           WHEN 'exception' THEN '异常'
           WHEN 'cancelled' THEN '已取消'
+          WHEN 'customer_cancelled' THEN '顾客不要了'
           ELSE o.status
         END AS 状态,
         latest.carrier AS 快递公司, latest.trackingNo AS 发货单号, latest.shippedAt AS 发货时间,
@@ -470,7 +474,7 @@ ordersRouter.patch("/:id/status", (req, res) => {
     res.status(404).json({ message: "订单不存在" });
     return;
   }
-  const action = parsed.data.status === "shipped" ? "已提货" : parsed.data.status === "filled" ? "未发走" : "状态变更";
+  const action = parsed.data.status === "shipped" ? "已提货" : parsed.data.status === "filled" ? "未发走" : parsed.data.status === "customer_cancelled" ? "顾客不要了" : "状态变更";
   logOrderEvent(orderId, action, `${statusText[existing?.status ?? ""] ?? existing?.status ?? "-"} -> ${statusText[parsed.data.status]}`, req.session.user?.username);
   const order = readOrder(orderId) as Record<string, unknown> | null;
   void notifyBusinessAction({
