@@ -167,9 +167,9 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
               <th>采购订单号填写人</th>
               <th>采购订单号</th>
               <th>状态</th>
-              <th>操作记录</th>
               <th>备注</th>
               {canManage ? <th>操作</th> : null}
+              <th>操作记录</th>
             </tr>
           </thead>
           <tbody>
@@ -193,7 +193,6 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
                 <td>{order.purchaseOrderUser || "-"}</td>
                 <td>{order.purchaseOrderNo || "-"}</td>
                 <td><span className={`status ${order.status}`}>{statusText[order.status]}</span></td>
-                <td title={order.operationLogs || ""}>{order.operationLogs || "-"}</td>
                 <td>{mergeNotes(order)}</td>
                 {canManage ? (
                   <td className="row-actions">
@@ -201,6 +200,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
                     <button type="button" onClick={() => removeOrder(order)}>删除</button>
                   </td>
                 ) : null}
+                <td title={order.operationLogs || ""}>{order.operationLogs || "-"}</td>
               </tr>
             ))}
           </tbody>
