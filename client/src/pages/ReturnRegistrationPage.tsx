@@ -77,6 +77,11 @@ export function ReturnRegistrationPage() {
     saveReturn.mutate(form);
   }
 
+  function registrationStatus(row: ReturnOrderRow) {
+    if (row.returnStatus === "退货待接收") return "退货完成";
+    return row.returnStatus || row.orderStatus;
+  }
+
   return (
     <>
       <PageHeader title="退货登记" description="登记拦截、召回、寄回处理信息，提交后进入退货操作页面处理。" />
@@ -146,7 +151,7 @@ export function ReturnRegistrationPage() {
                 <td>{row.customerPhone || "-"}</td>
                 <td>{row.address}</td>
                 <td>{row.supplierModel || row.model || row.productName || row.productSku || "-"}</td>
-                <td>{row.returnStatus || row.orderStatus}</td>
+                <td>{registrationStatus(row)}</td>
                 <td>
                   <select
                     form={formId}
