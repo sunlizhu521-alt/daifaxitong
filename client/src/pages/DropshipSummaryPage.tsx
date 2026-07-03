@@ -56,7 +56,8 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
       )
   });
   const orders = rowsFromListResponse(orderResponse);
-  const canManage = me?.user?.username === "孙立柱";
+  const canEdit = me?.user?.role === "管理员";
+  const canDelete = me?.user?.username === "孙立柱";
   const deleteOrder = useMutation({
     mutationFn: (id: number) => api(`/orders/${id}`, { method: "DELETE", notify: true }),
     onSuccess: () => {
@@ -168,7 +169,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
               <th>采购订单号</th>
               <th>状态</th>
               <th>备注</th>
-              {canManage ? <th>操作</th> : null}
+              {canEdit || canDelete ? <th>操作</th> : null}
               <th>操作记录</th>
             </tr>
           </thead>
@@ -194,10 +195,10 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
                 <td>{order.purchaseOrderNo || "-"}</td>
                 <td><span className={`status ${order.status}`}>{statusText[order.status]}</span></td>
                 <td>{mergeNotes(order)}</td>
-                {canManage ? (
+                {canEdit || canDelete ? (
                   <td className="row-actions">
-                    <button type="button" className="primary-button" onClick={() => openEdit(order)}>修改</button>
-                    <button type="button" onClick={() => removeOrder(order)}>删除</button>
+                    {canEdit ? <button type="button" className="primary-button" onClick={() => openEdit(order)}>修改</button> : null}
+                    {canDelete ? <button type="button" onClick={() => removeOrder(order)}>删除</button> : null}
                   </td>
                 ) : null}
                 <td title={order.operationLogs || ""}>{order.operationLogs || "-"}</td>

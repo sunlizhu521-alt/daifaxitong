@@ -14,6 +14,7 @@ process.env.SESSION_SECRET = "test-secret";
 
 const { createApp } = await import("./http.js");
 const { closeDb } = await import("./db/index.js");
+const { createUser } = await import("./auth/users.js");
 
 function writeWorkbook(filename: string, rows: Record<string, unknown>[]) {
   const filePath = path.join(tempDir, filename);
@@ -206,6 +207,10 @@ test("registered users must be authorized before accessing pages", async () => {
 
   await member.delete(`/api/orders/${order.body.id}`).expect(403);
   await member.delete(`/api/products/${product.body.id}`).expect(403);
+  createUser("otherAdmin", "secret123", "管理员", []);
+  const otherAdmin = request.agent(app);
+  await otherAdmin.post("/api/auth/login").send({ username: "otherAdmin", password: "secret123" }).expect(200);
+  await otherAdmin.delete(`/api/orders/${order.body.id}`).expect(403);
   await admin.delete(`/api/orders/${order.body.id}`).expect(200);
 });
 
