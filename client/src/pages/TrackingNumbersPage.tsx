@@ -83,7 +83,7 @@ export function TrackingNumbersPage() {
       carrierId: data.get("carrierId"),
       carrier: carrier?.name ?? "",
       trackingNo: data.get("trackingNo"),
-      shippedAt: data.get("shippedAt"),
+      shippedAt: defaultShipTime(order.shippedAt),
       status: "filled",
       note: order.shipmentNote ?? ""
     };
@@ -189,14 +189,15 @@ export function TrackingNumbersPage() {
                   onChange={(event) => toggleAllVisible(event.target.checked)}
                 />
               </th>
+              <th>店铺</th>
               <th>订单号</th>
-              <th>客户</th>
+              <th>姓名</th>
+              <th>SKU</th>
+              <th>数量</th>
+              <th>地址</th>
+              <th>状态</th>
               <th>快递公司 *</th>
               <th>发货单号 *</th>
-              <th>供应商</th>
-              <th>数量</th>
-              <th>状态</th>
-              <th>发货时间 *</th>
               <th>操作</th>
             </tr>
           </thead>
@@ -211,8 +212,15 @@ export function TrackingNumbersPage() {
                     onChange={(event) => toggleOrderSelected(order.id, event.target.checked)}
                   />
                 </td>
+                <td>{order.storeName || "-"}</td>
                 <td>{order.orderNo}</td>
                 <td>{order.customerName}</td>
+                <td>{order.productSku || "-"}</td>
+                <td>{order.totalQuantity ?? 0}</td>
+                <td>{order.address}</td>
+                <td>
+                  <span className={`status ${order.status}`}>{statusText[order.status]}</span>
+                </td>
                 <td>
                   <form id={`shipment-${order.id}`} className="inline-shipment-form" onSubmit={(event) => submitShipment(order, event)}>
                     <select name="carrierId" defaultValue={order.carrierId ?? ""} required>
@@ -225,14 +233,6 @@ export function TrackingNumbersPage() {
                 </td>
                 <td>
                   <input form={`shipment-${order.id}`} name="trackingNo" placeholder="发货单号 *" defaultValue={order.trackingNo ?? ""} required />
-                </td>
-                <td>{order.supplierName ?? "-"}</td>
-                <td>{order.totalQuantity ?? 0}</td>
-                <td>
-                  <span className={`status ${order.status}`}>{statusText[order.status]}</span>
-                </td>
-                <td>
-                  <input form={`shipment-${order.id}`} name="shippedAt" type="datetime-local" defaultValue={defaultShipTime(order.shippedAt)} required />
                 </td>
                 <td className="row-actions">
                   <button type="submit" form={`shipment-${order.id}`} className="primary-button">提交</button>
