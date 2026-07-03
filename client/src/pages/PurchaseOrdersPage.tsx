@@ -106,9 +106,6 @@ export function PurchaseOrdersPage() {
         <div className="toolbar filter-toolbar">
           <input placeholder="搜索订单号/采购订单号/客户/商品" value={keyword} onChange={(event) => setKeyword(event.target.value)} />
           <select value={status} onChange={(event) => setStatus(event.target.value)}>
-            <option value="">全部状态</option>
-            <option value="pending">待发货</option>
-            <option value="filled">已填单号</option>
             <option value="purchased">已下采购单</option>
             <option value="shipped">已发货</option>
           </select>
