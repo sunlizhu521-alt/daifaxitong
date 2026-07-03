@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type OrderListRow, type Store, type Supplier, type User } from "../api";
+import { api, rowsFromListResponse, type ListResponse, type OrderListRow, type Store, type Supplier, type User } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
 const statusText: Record<string, string> = {
@@ -27,13 +27,6 @@ type OrderDetail = OrderListRow & {
   }>;
 };
 
-type OrderListResponse = OrderListRow[] | { rows: OrderListRow[] };
-
-function rowsFromResponse(data: OrderListResponse | undefined) {
-  if (!data) return [];
-  return Array.isArray(data) ? data : data.rows;
-}
-
 type SummaryPageProps = {
   title: string;
   description: string;
@@ -58,11 +51,11 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
   const { data: orderResponse } = useQuery({
     queryKey: [queryKey, keyword, status, supplierId, storeName, startDate, endDate],
     queryFn: () =>
-      api<OrderListResponse>(
+      api<ListResponse<OrderListRow>>(
         `/orders?orderType=${encodeURIComponent(orderType)}&keyword=${encodeURIComponent(keyword)}&status=${encodeURIComponent(status)}&supplierId=${encodeURIComponent(supplierId)}&storeName=${encodeURIComponent(storeName)}&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`
       )
   });
-  const orders = rowsFromResponse(orderResponse);
+  const orders = rowsFromListResponse(orderResponse);
   const canManage = me?.user?.username === "孙立柱";
   const deleteOrder = useMutation({
     mutationFn: (id: number) => api(`/orders/${id}`, { method: "DELETE" }),

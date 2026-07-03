@@ -14,7 +14,7 @@ export function ReturnOperationPage() {
 
   const completeReturn = useMutation({
     mutationFn: ({ id, trackingNo }: { id: number; trackingNo: string }) =>
-      api(`/returns/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "已安排退回", trackingNo }) }),
+      api(`/returns/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "退货待接收", trackingNo }) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["return-operations"] });
       qc.invalidateQueries({ queryKey: ["return-orders"] });
@@ -66,6 +66,7 @@ export function ReturnOperationPage() {
           <tbody>
             {returns.map((row) => {
               const trackingNo = row.action === "寄回" ? trackingNos[row.id] ?? row.trackingNo ?? "" : row.shipmentTrackingNo ?? row.trackingNo ?? "";
+              const trackingPlaceholder = row.action === "寄回" ? "可填写寄回快递单号" : "暂无发货单号";
               return (
                 <tr key={row.id}>
                   <td>{new Date(row.createdAt).toLocaleString()}</td>
@@ -84,7 +85,7 @@ export function ReturnOperationPage() {
                     <input
                       value={trackingNo}
                       onChange={(event) => setTrackingNos((current) => ({ ...current, [row.id]: event.target.value }))}
-                      placeholder={row.action === "寄回" ? "可填写寄回快递单号" : "自动带出发货单号"}
+                      placeholder={trackingPlaceholder}
                       readOnly={row.action !== "寄回"}
                     />
                   </td>

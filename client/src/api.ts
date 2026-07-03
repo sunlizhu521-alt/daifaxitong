@@ -156,12 +156,36 @@ export type User = {
   updatedAt?: string;
 };
 
+export type ListResponse<T> = T[] | { rows?: T[]; total?: number; page?: number; pageSize?: number };
+
+export function rowsFromListResponse<T>(data: ListResponse<T> | null | undefined): T[] {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.rows)) return data.rows;
+  return [];
+}
+
+function isWriteRequest(options: RequestInit) {
+  const method = String(options.method ?? "GET").toUpperCase();
+  return method !== "GET" && method !== "HEAD";
+}
+
+function notifyResult(variant: "success" | "error", message: string) {
+  window.dispatchEvent(new CustomEvent("app:notification", { detail: { variant, message } }));
+}
+
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`/api${path}`, {
-    credentials: "include",
-    headers: options.body instanceof FormData ? undefined : { "Content-Type": "application/json" },
-    ...options
-  });
+  const shouldNotify = isWriteRequest(options);
+  let response: Response;
+  try {
+    response = await fetch(`/api${path}`, {
+      credentials: "include",
+      headers: options.body instanceof FormData ? undefined : { "Content-Type": "application/json" },
+      ...options
+    });
+  } catch (error) {
+    if (shouldNotify) notifyResult("error", "请求失败，请检查网络后重试");
+    throw error;
+  }
   if (response.status === 401 && location.pathname !== "/login") {
     location.href = "/login";
   }
@@ -173,8 +197,11 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
           .map((item: { row?: number; message?: string }) => `第${item.row ?? "-"}行：${item.message ?? "解析失败"}`)
           .join("；")
       : "";
-    throw new Error(details ? `${body.message ?? "请求失败"}：${details}` : body.message ?? "请求失败");
+    const message = details ? `${body.message ?? "请求失败"}：${details}` : body.message ?? "请求失败";
+    if (shouldNotify) notifyResult("error", message);
+    throw new Error(message);
   }
+  if (shouldNotify) notifyResult("success", "操作成功");
   return response.json();
 }
 

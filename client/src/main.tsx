@@ -1,8 +1,9 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, Navigate, RouterProvider, useRouteError } from "react-router-dom";
 import { AppShell } from "./ui/AppShell";
+import { AppNotifications } from "./ui/AppNotifications";
 import { LoginPage } from "./pages/LoginPage";
 import { OrdersPage } from "./pages/OrdersPage";
 import { AccessoryRegistrationPage } from "./pages/AccessoryRegistrationPage";
@@ -23,11 +24,28 @@ import "./styles.css";
 
 const queryClient = new QueryClient();
 
+function RouteErrorFallback() {
+  const error = useRouteError() as Error | { message?: string } | unknown;
+  const message = error && typeof error === "object" && "message" in error ? String(error.message) : "页面加载失败";
+  return (
+    <div className="route-error-page">
+      <section className="route-error-card">
+        <h1>页面出现错误</h1>
+        <p>{message}</p>
+        <button type="button" className="primary-button" onClick={() => window.location.reload()}>
+          刷新页面
+        </button>
+      </section>
+    </div>
+  );
+}
+
 const router = createBrowserRouter([
-  { path: "/login", element: <LoginPage /> },
+  { path: "/login", element: <LoginPage />, errorElement: <RouteErrorFallback /> },
   {
     path: "/",
     element: <AppShell />,
+    errorElement: <RouteErrorFallback />,
     children: [
       { index: true, element: <Navigate to="/drop-shipping" replace /> },
       { path: "drop-shipping", element: <OrdersPage /> },
@@ -49,12 +67,13 @@ const router = createBrowserRouter([
       { path: "permissions", element: <PermissionsPage /> }
     ]
   },
-  { path: "*", element: <Navigate to="/drop-shipping" replace /> }
+  { path: "*", element: <Navigate to="/drop-shipping" replace />, errorElement: <RouteErrorFallback /> }
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
+      <AppNotifications />
       <RouterProvider router={router} />
     </QueryClientProvider>
   </React.StrictMode>

@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type OrderListRow, type User } from "../api";
+import { api, rowsFromListResponse, type ListResponse, type OrderListRow, type User } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
 const statusText: Record<string, string> = {
@@ -17,10 +17,11 @@ export function PurchaseOrdersPage() {
   const [keyword, setKeyword] = useState("");
   const [status, setStatus] = useState("shipped");
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
-  const { data: orders = [] } = useQuery({
+  const { data: orderResponse } = useQuery({
     queryKey: ["purchase-orders", keyword, status],
-    queryFn: () => api<OrderListRow[]>(`/orders?keyword=${encodeURIComponent(keyword)}&status=${encodeURIComponent(status)}`)
+    queryFn: () => api<ListResponse<OrderListRow>>(`/orders?keyword=${encodeURIComponent(keyword)}&status=${encodeURIComponent(status)}`)
   });
+  const orders = rowsFromListResponse(orderResponse);
   const savePurchaseOrder = useMutation({
     mutationFn: ({ id, purchaseOrderNo, purchaseOrderUser }: { id: number; purchaseOrderNo: string; purchaseOrderUser: string }) =>
       api(`/orders/${id}/purchase-order`, { method: "PATCH", body: JSON.stringify({ purchaseOrderNo, purchaseOrderUser }) }),

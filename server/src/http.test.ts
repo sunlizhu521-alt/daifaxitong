@@ -121,8 +121,8 @@ test("auth, supplier, product, order and shipment flow", async () => {
   assert.equal(returnsByStatus.body[0].orderNo, "DF001");
   const pendingReturns = await agent.get(`/api/returns?status=${encodeURIComponent("已提交退货")}`).expect(200);
   assert.equal(pendingReturns.body[0].id, returnRecord.body.id);
-  const arrangedReturn = await agent.patch(`/api/returns/${returnRecord.body.id}/status`).send({ status: "已安排退回" }).expect(200);
-  assert.equal(arrangedReturn.body.status, "已安排退回");
+  const arrangedReturn = await agent.patch(`/api/returns/${returnRecord.body.id}/status`).send({ status: "退货待接收" }).expect(200);
+  assert.equal(arrangedReturn.body.status, "退货待接收");
   assert.equal(arrangedReturn.body.trackingNo, "SF123");
   const receivedReturn = await agent.patch(`/api/returns/${returnRecord.body.id}/status`).send({ status: "已收到退货" }).expect(200);
   assert.equal(receivedReturn.body.status, "已收到退货");

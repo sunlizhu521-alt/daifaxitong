@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type OrderListRow } from "../api";
+import { api, rowsFromListResponse, type ListResponse, type OrderListRow } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
 const statusText: Record<string, string> = {
@@ -11,13 +11,6 @@ const statusText: Record<string, string> = {
   exception: "异常",
   cancelled: "已取消"
 };
-
-type OrderListResponse = OrderListRow[] | { rows: OrderListRow[] };
-
-function rowsFromResponse(data: OrderListResponse | undefined) {
-  if (!data) return [];
-  return Array.isArray(data) ? data : data.rows;
-}
 
 function defaultShipTime(value?: string | null) {
   const date = value ? new Date(value) : new Date();
@@ -32,11 +25,11 @@ export function AccessoryShippingPage() {
   const { data: orderResponse } = useQuery({
     queryKey: ["accessory-shipping", status, keyword],
     queryFn: () =>
-      api<OrderListResponse>(
+      api<ListResponse<OrderListRow>>(
         `/orders?orderType=accessory&status=${encodeURIComponent(status)}&keyword=${encodeURIComponent(keyword)}`
       )
   });
-  const orders = rowsFromResponse(orderResponse);
+  const orders = rowsFromListResponse(orderResponse);
 
   const ship = useMutation({
     mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}/ship`, { method: "POST", body: JSON.stringify(body) }),

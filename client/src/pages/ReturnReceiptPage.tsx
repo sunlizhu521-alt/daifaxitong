@@ -8,7 +8,7 @@ export function ReturnReceiptPage() {
   const [keyword, setKeyword] = useState("");
   const { data: returns = [] } = useQuery({
     queryKey: ["return-receipts", keyword],
-    queryFn: () => api<ReturnRecord[]>(`/returns?status=${encodeURIComponent("已安排退回")}&keyword=${encodeURIComponent(keyword)}`)
+    queryFn: () => api<ReturnRecord[]>(`/returns?status=${encodeURIComponent("退货待接收")}&keyword=${encodeURIComponent(keyword)}`)
   });
   const receiveReturn = useMutation({
     mutationFn: (id: number) => api(`/returns/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "已收到退货" }) }),
@@ -26,7 +26,7 @@ export function ReturnReceiptPage() {
 
   return (
     <>
-      <PageHeader title="退货收货" description="处理已经安排退回的退货记录，确认退货包裹是否已经收货。" />
+      <PageHeader title="退货收货" description="处理退货待接收的退货记录，确认退货包裹是否已经收货。" />
       <Panel title="待收货退货">
         <div className="toolbar filter-toolbar">
           <input

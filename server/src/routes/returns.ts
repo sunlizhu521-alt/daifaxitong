@@ -294,7 +294,7 @@ returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
 });
 
 const returnStatusSchema = z.object({
-  status: z.enum(["待处理", "已处理", "已提交退货", "已安排退回", "已收货", "已收到退货"]),
+  status: z.enum(["待处理", "已处理", "已提交退货", "已安排退回", "退货待接收", "已收货", "已收到退货"]),
   trackingNo: z.string().optional().default("")
 });
 
@@ -313,7 +313,7 @@ returnsRouter.patch("/:id/status", (req, res) => {
     return;
   }
   let trackingNo = parsed.data.trackingNo.trim();
-  if (parsed.data.status === "已安排退回") {
+  if (parsed.data.status === "已安排退回" || parsed.data.status === "退货待接收") {
     if (current.action !== "寄回" && !trackingNo) {
       trackingNo = latestTrackingNo(current.orderNo);
     }

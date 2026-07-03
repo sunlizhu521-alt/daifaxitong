@@ -1,7 +1,7 @@
 import { type FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { api, downloadFile, type OrderListRow, type Product, type Supplier } from "../api";
+import { api, downloadFile, rowsFromListResponse, type ListResponse, type OrderListRow, type Product, type Supplier } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
 const statusText: Record<string, string> = {
@@ -13,7 +13,6 @@ const statusText: Record<string, string> = {
   cancelled: "已取消"
 };
 
-type OrderListResponse = OrderListRow[] | { rows: OrderListRow[] };
 type OrderDetail = OrderListRow & {
   items: Array<{
     productId?: number | null;
@@ -23,11 +22,6 @@ type OrderDetail = OrderListRow & {
   }>;
 };
 
-function rowsFromResponse(data: OrderListResponse | undefined) {
-  if (!data) return [];
-  return Array.isArray(data) ? data : data.rows;
-}
-
 export function ShippingSchedulePage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -35,11 +29,11 @@ export function ShippingSchedulePage() {
   const [editing, setEditing] = useState<OrderDetail | null>(null);
   const { data: orderResponse } = useQuery({
     queryKey: ["shipping-schedule", status],
-    queryFn: () => api<OrderListResponse>(`/orders?status=${encodeURIComponent(status)}`)
+    queryFn: () => api<ListResponse<OrderListRow>>(`/orders?status=${encodeURIComponent(status)}`)
   });
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: () => api<Product[]>("/products") });
   const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers"], queryFn: () => api<Supplier[]>("/suppliers") });
-  const orders = rowsFromResponse(orderResponse);
+  const orders = rowsFromListResponse(orderResponse);
   const markShipped = useMutation({
     mutationFn: (id: number) => api(`/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "shipped" }) }),
     onSuccess: () => {

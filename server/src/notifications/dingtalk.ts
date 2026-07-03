@@ -77,7 +77,8 @@ export async function notifyBusinessAction(input: NotifyInput) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         msgtype: "markdown",
-        markdown: { title, text }
+        markdown: { title, text },
+        at: { isAtAll: true }
       })
     });
   } catch (error) {

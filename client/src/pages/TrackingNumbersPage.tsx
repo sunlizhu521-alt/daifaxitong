@@ -1,7 +1,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { api, type Carrier, type OrderListRow, type Product, type Store, type Supplier } from "../api";
+import { api, rowsFromListResponse, type Carrier, type ListResponse, type OrderListRow, type Product, type Store, type Supplier } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
 const statusText: Record<string, string> = {
@@ -35,13 +35,14 @@ export function TrackingNumbersPage() {
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: () => api<Product[]>("/products") });
   const seriesOptions = useMemo(() => [...new Set(products.map((product) => product.series).filter(Boolean))], [products]);
   const skuOptions = useMemo(() => [...new Set(products.map((product) => product.ssku ?? product.sku).filter(Boolean))], [products]);
-  const { data: orders = [] } = useQuery({
+  const { data: orderResponse } = useQuery({
     queryKey: ["tracking-orders", keyword, storeName, supplierId, series, sku, hasTracking],
     queryFn: () =>
-      api<OrderListRow[]>(
+      api<ListResponse<OrderListRow>>(
         `/orders?keyword=${encodeURIComponent(keyword)}&storeName=${encodeURIComponent(storeName)}&supplierId=${encodeURIComponent(supplierId)}&series=${encodeURIComponent(series)}&sku=${encodeURIComponent(sku)}&hasTracking=${encodeURIComponent(hasTracking)}`
       )
   });
+  const orders = rowsFromListResponse(orderResponse);
   const ship = useMutation({
     mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}/ship`, { method: "POST", body: JSON.stringify(body) }),
     onSuccess: () => {

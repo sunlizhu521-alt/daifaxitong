@@ -159,6 +159,21 @@ tr:hover td { background: #fafcff; }
 .success { color: #065f46; background: #d1fae5; }
 .loading-screen { min-height: 100vh; display: grid; place-items: center; color: var(--text-muted); }
 
+.route-error-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: #f6f7f9; }
+.route-error-card { width: min(460px, 100%); display: grid; gap: 12px; padding: 22px; border: 1px solid var(--line); border-radius: 8px; background: #fff; box-shadow: var(--shadow); }
+.route-error-card h1 { margin: 0; font-size: 22px; }
+.route-error-card p { margin: 0; color: var(--text-muted); line-height: 1.6; word-break: break-word; }
+
+.notification-stack { position: fixed; top: 16px; right: 16px; z-index: 50; display: grid; gap: 10px; width: min(360px, calc(100vw - 32px)); pointer-events: none; }
+.notification-toast { display: grid; grid-template-columns: auto 1fr auto; align-items: start; gap: 8px; padding: 12px; border-radius: 8px; border: 1px solid; box-shadow: 0 18px 44px rgba(15, 23, 42, 0.16); background: #fff; pointer-events: auto; }
+.notification-toast strong { font-size: 13px; line-height: 1.5; }
+.notification-toast span { font-size: 13px; line-height: 1.5; color: #344054; word-break: break-word; }
+.notification-toast button { min-width: 24px; height: 24px; border: 0; border-radius: 6px; background: transparent; color: #667085; font-size: 18px; line-height: 1; padding: 0; }
+.notification-toast.success { border-color: #86efac; background: #f0fdf4; }
+.notification-toast.success strong { color: #047857; }
+.notification-toast.error { border-color: #fecaca; background: #fff1f2; }
+.notification-toast.error strong { color: #b42318; }
+
 .upload-box { display: grid; gap: 10px; align-content: start; }
 .upload-box input[type="file"] { background: #f8fafc; }
 .modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.36); display: grid; place-items: center; padding: 24px; z-index: 10; }
@@ -227,4 +242,5 @@ tr:hover td { background: #fafcff; }
   th, td { padding: 8px; }
   td input, td select, td textarea, td input[type="file"] { min-width: 150px; }
   .login-card, .modal { width: min(100%, calc(100vw - 24px)); }
+  .notification-stack { top: 10px; right: 10px; left: 10px; width: auto; }
 }
