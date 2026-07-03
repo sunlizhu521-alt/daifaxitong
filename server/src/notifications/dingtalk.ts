@@ -13,6 +13,11 @@ type NotifyInput = {
   fields?: NotifyField[];
 };
 
+type DingtalkResponse = {
+  errcode?: number;
+  errmsg?: string;
+};
+
 function appendDingtalkSignature(webhook: string) {
   if (!config.dingtalkSecret) return webhook;
   const timestamp = Date.now();
@@ -40,6 +45,25 @@ function firstItem(order?: Record<string, unknown> | null) {
 function latestShipment(order?: Record<string, unknown> | null) {
   const shipments = order?.shipments;
   return Array.isArray(shipments) ? (shipments[0] as Record<string, unknown> | undefined) : undefined;
+}
+
+function encodeJsonPayload(payload: unknown) {
+  return Buffer.from(
+    JSON.stringify(payload).replace(/[^\x00-\x7F]/g, (char) =>
+      "\\u" + char.charCodeAt(0).toString(16).padStart(4, "0")
+    ),
+    "utf8"
+  );
+}
+
+async function sendDingtalkPayload(payload: unknown) {
+  const response = await fetch(appendDingtalkSignature(config.dingtalkWebhook), {
+    method: "POST",
+    headers: { "Content-Type": "application/json; charset=utf-8" },
+    body: encodeJsonPayload(payload)
+  });
+  const result = (await response.json().catch(() => null)) as DingtalkResponse | null;
+  return { response, result };
 }
 
 export async function notifyBusinessAction(input: NotifyInput) {
@@ -70,17 +94,24 @@ export async function notifyBusinessAction(input: NotifyInput) {
 
   const title = `一件代发系统：${input.action}`;
   const text = [`### ${title}`, "", ...fields.map((field) => `- **${field.label}**：${valueText(field.value)}`)].join("\n");
+  const payload = {
+    msgtype: "markdown",
+    markdown: { title, text }
+  };
 
   try {
-    await fetch(appendDingtalkSignature(config.dingtalkWebhook), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        msgtype: "markdown",
-        markdown: { title, text },
-        at: { isAtAll: true }
-      })
-    });
+    const atAllPayload = { ...payload, at: { isAtAll: true } };
+    const firstResult = await sendDingtalkPayload(atAllPayload);
+    if (firstResult.response.ok && !firstResult.result?.errcode) return;
+
+    if (firstResult.result?.errcode === 450103) {
+      const retryResult = await sendDingtalkPayload(payload);
+      if (retryResult.response.ok && !retryResult.result?.errcode) return;
+      console.warn("钉钉通知发送失败", retryResult.result ?? retryResult.response.statusText);
+      return;
+    }
+
+    console.warn("钉钉通知发送失败", firstResult.result ?? firstResult.response.statusText);
   } catch (error) {
     console.warn("钉钉通知发送失败", error);
   }
