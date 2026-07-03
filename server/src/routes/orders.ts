@@ -144,8 +144,8 @@ ordersRouter.get("/", (req, res) => {
   const filters: string[] = [];
   const params: unknown[] = [];
   if (keyword) {
-    filters.push("(o.orderNo LIKE ? OR o.purchaseOrderNo LIKE ? OR o.purchaseOrderUser LIKE ? OR o.storeName LIKE ? OR o.customerName LIKE ? OR o.customerPhone LIKE ? OR o.address LIKE ? OR oi.productName LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ? OR p.materialCode LIKE ?)");
-    params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
+    filters.push("(o.orderNo LIKE ? OR o.purchaseOrderNo LIKE ? OR o.purchaseOrderUser LIKE ? OR o.storeName LIKE ? OR o.customerName LIKE ? OR o.customerPhone LIKE ? OR o.address LIKE ? OR oi.productName LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ? OR p.materialCode LIKE ? OR latestReturn.status LIKE ? OR latestReturn.action LIKE ? OR latestReturn.reason LIKE ?)");
+    params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
   }
   if (status) {
     filters.push("o.status = ?");
@@ -191,6 +191,9 @@ ordersRouter.get("/", (req, res) => {
     LEFT JOIN shipments latest ON latest.id = (
       SELECT sh.id FROM shipments sh WHERE sh.orderId = o.id ORDER BY sh.id DESC LIMIT 1
     )
+    LEFT JOIN returns latestReturn ON latestReturn.id = (
+      SELECT lr.id FROM returns lr WHERE lr.orderNo = o.orderNo ORDER BY lr.id DESC LIMIT 1
+    )
     LEFT JOIN suppliers shipSupplier ON shipSupplier.id = latest.supplierId
     LEFT JOIN suppliers orderSupplier ON orderSupplier.id = o.supplierId
     ${filters.length ? `WHERE ${filters.join(" AND ")}` : ""}`;
@@ -205,6 +208,7 @@ ordersRouter.get("/", (req, res) => {
         GROUP_CONCAT(DISTINCT p.supplierModel) AS supplierModel,
         latest.carrierId AS carrierId, latest.carrier AS carrier, latest.trackingNo AS trackingNo, latest.shippedAt AS shippedAt,
         latest.note AS shipmentNote,
+        latestReturn.status AS returnStatus, latestReturn.action AS returnAction, latestReturn.reason AS returnReason,
         (
           SELECT GROUP_CONCAT(eventText, '；') FROM (
             SELECT oe.createdAt || ' ' || COALESCE(oe.operator, '') || ' ' || oe.action ||
@@ -222,6 +226,9 @@ ordersRouter.get("/", (req, res) => {
        LEFT JOIN products p ON p.id = oi.productId
        LEFT JOIN shipments latest ON latest.id = (
          SELECT sh.id FROM shipments sh WHERE sh.orderId = o.id ORDER BY sh.id DESC LIMIT 1
+       )
+       LEFT JOIN returns latestReturn ON latestReturn.id = (
+         SELECT lr.id FROM returns lr WHERE lr.orderNo = o.orderNo ORDER BY lr.id DESC LIMIT 1
        )
        LEFT JOIN suppliers shipSupplier ON shipSupplier.id = latest.supplierId
        LEFT JOIN suppliers orderSupplier ON orderSupplier.id = o.supplierId

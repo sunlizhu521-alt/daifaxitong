@@ -18,6 +18,8 @@ export function ReturnReceiptPage() {
       qc.invalidateQueries({ queryKey: ["return-receipts"] });
       qc.invalidateQueries({ queryKey: ["return-operations"] });
       qc.invalidateQueries({ queryKey: ["return-orders"] });
+      qc.invalidateQueries({ queryKey: ["dropship-summary"] });
+      qc.invalidateQueries({ queryKey: ["accessory-summary"] });
     }
   });
   const selectedVisibleReturns = useMemo(() => returns.filter((row) => selectedReturnIds.has(row.id)), [returns, selectedReturnIds]);

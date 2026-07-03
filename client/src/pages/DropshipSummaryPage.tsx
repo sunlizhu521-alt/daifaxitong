@@ -7,13 +7,17 @@ const statusText: Record<string, string> = {
   pending: "待发货",
   filled: "已填单号",
   purchased: "已下采购单",
-  shipped: "已发货",
+  shipped: "已提货",
   exception: "异常",
   cancelled: "已取消"
 };
 
 function mergeNotes(order: OrderListRow) {
   return [order.note, order.shipmentNote].map((item) => item?.trim()).filter(Boolean).join(" / ") || "-";
+}
+
+function currentStatusText(order: OrderListRow) {
+  return order.returnStatus || statusText[order.status] || order.status;
 }
 
 type OrderDetail = OrderListRow & {
@@ -193,7 +197,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
                 <td>{order.supplierName ?? "-"}</td>
                 <td>{order.purchaseOrderUser || "-"}</td>
                 <td>{order.purchaseOrderNo || "-"}</td>
-                <td><span className={`status ${order.status}`}>{statusText[order.status]}</span></td>
+                <td><span className={`status ${order.status}`}>{currentStatusText(order)}</span></td>
                 <td>{mergeNotes(order)}</td>
                 {canEdit || canDelete ? (
                   <td className="row-actions">
