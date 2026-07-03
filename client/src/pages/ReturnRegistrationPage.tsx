@@ -92,6 +92,9 @@ export function ReturnRegistrationPage() {
     <>
       <PageHeader title="退货登记" description="登记拦截、自行寄回、上门取件处理信息，提交后进入退货操作页面处理。" />
       <Panel title="退货登记">
+        <div className="helper-text">
+          操作说明：拦截是指顾客还没有签收的情况；自行寄回是顾客自己联系快递寄回；上门取件是物流部安排取件，其中包含原单号召回和重新下单。
+        </div>
         <div className="toolbar filter-toolbar">
           <select value={storeName} onChange={(event) => setStoreName(event.target.value)}>
             <option value="">全部店铺</option>
