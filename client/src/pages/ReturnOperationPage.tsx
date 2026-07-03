@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type ReturnRecord } from "../api";
+import { notifyApp } from "../ui/AppNotifications";
 import { PageHeader, Panel } from "../ui/Section";
 
 export function ReturnOperationPage() {
   const qc = useQueryClient();
   const [keyword, setKeyword] = useState("");
   const [trackingNos, setTrackingNos] = useState<Record<number, string>>({});
+  const [selectedReturnIds, setSelectedReturnIds] = useState<Set<number>>(() => new Set());
   const { data: returns = [] } = useQuery({
     queryKey: ["return-operations", keyword],
     queryFn: () => api<ReturnRecord[]>(`/returns?status=${encodeURIComponent("已提交退货")}&keyword=${encodeURIComponent(keyword)}`)
@@ -22,11 +24,60 @@ export function ReturnOperationPage() {
       qc.invalidateQueries({ queryKey: ["accessory-summary"] });
     }
   });
+  const selectedVisibleReturns = useMemo(() => returns.filter((row) => selectedReturnIds.has(row.id)), [returns, selectedReturnIds]);
+  const allVisibleSelected = returns.length > 0 && returns.every((row) => selectedReturnIds.has(row.id));
+
+  useEffect(() => {
+    setSelectedReturnIds((current) => {
+      const visibleIds = new Set(returns.map((row) => row.id));
+      const next = new Set([...current].filter((id) => visibleIds.has(id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [returns]);
+
+  function returnTrackingNo(row: ReturnRecord) {
+    return row.action === "寄回" ? (trackingNos[row.id] ?? row.trackingNo ?? "").trim() : row.shipmentTrackingNo ?? row.trackingNo ?? "";
+  }
 
   function confirmComplete(row: ReturnRecord) {
-    const trackingNo = row.action === "寄回" ? (trackingNos[row.id] ?? row.trackingNo ?? "").trim() : row.shipmentTrackingNo ?? row.trackingNo ?? "";
     if (!window.confirm(`确认订单 ${row.orderNo} 已经完成退货操作吗？`)) return;
-    completeReturn.mutate({ id: row.id, trackingNo });
+    completeReturn.mutate({ id: row.id, trackingNo: returnTrackingNo(row) });
+  }
+
+  async function completeSelectedReturns() {
+    if (selectedVisibleReturns.length === 0) {
+      notifyApp({ variant: "error", message: "请先选择要批量操作的退货记录" });
+      return;
+    }
+    if (!window.confirm(`确认批量完成 ${selectedVisibleReturns.length} 条退货操作吗？`)) return;
+    try {
+      for (const row of selectedVisibleReturns) {
+        await completeReturn.mutateAsync({ id: row.id, trackingNo: returnTrackingNo(row) });
+      }
+      setSelectedReturnIds(new Set());
+    } catch {
+      // api 层已经弹出失败原因，这里不重复提示。
+    }
+  }
+
+  function toggleReturnSelected(returnId: number, checked: boolean) {
+    setSelectedReturnIds((current) => {
+      const next = new Set(current);
+      if (checked) next.add(returnId);
+      else next.delete(returnId);
+      return next;
+    });
+  }
+
+  function toggleAllVisible(checked: boolean) {
+    setSelectedReturnIds((current) => {
+      const next = new Set(current);
+      for (const row of returns) {
+        if (checked) next.add(row.id);
+        else next.delete(row.id);
+      }
+      return next;
+    });
   }
 
   return (
@@ -39,10 +90,21 @@ export function ReturnOperationPage() {
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
           />
+          <button type="button" className="primary-button" onClick={completeSelectedReturns} disabled={completeReturn.isPending}>
+            批量操作
+          </button>
         </div>
         <table className="nowrap-table">
           <thead>
             <tr>
+              <th className="selection-cell">
+                <input
+                  type="checkbox"
+                  aria-label="选择当前列表全部退货记录"
+                  checked={allVisibleSelected}
+                  onChange={(event) => toggleAllVisible(event.target.checked)}
+                />
+              </th>
               <th>登记时间</th>
               <th>店铺</th>
               <th>供应商</th>
@@ -65,10 +127,18 @@ export function ReturnOperationPage() {
           </thead>
           <tbody>
             {returns.map((row) => {
-              const trackingNo = row.action === "寄回" ? trackingNos[row.id] ?? row.trackingNo ?? "" : row.shipmentTrackingNo ?? row.trackingNo ?? "";
+              const trackingNo = returnTrackingNo(row);
               const trackingPlaceholder = row.action === "寄回" ? "可填写寄回发货单号" : "暂无发货单号";
               return (
                 <tr key={row.id}>
+                  <td className="selection-cell">
+                    <input
+                      type="checkbox"
+                      aria-label={`选择退货记录 ${row.orderNo}`}
+                      checked={selectedReturnIds.has(row.id)}
+                      onChange={(event) => toggleReturnSelected(row.id, event.target.checked)}
+                    />
+                  </td>
                   <td>{new Date(row.createdAt).toLocaleString()}</td>
                   <td>{row.storeName || "-"}</td>
                   <td>{row.supplierName || "-"}</td>
