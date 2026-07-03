@@ -1,6 +1,7 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, rowsFromListResponse, type ListResponse, type OrderListRow, type Store, type Supplier, type User } from "../api";
+import { notifyApp } from "../ui/AppNotifications";
 import { PageHeader, Panel } from "../ui/Section";
 
 const statusText: Record<string, string> = {
@@ -49,6 +50,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [editing, setEditing] = useState<OrderDetail | null>(null);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(() => new Set());
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
   const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers"], queryFn: () => api<Supplier[]>("/suppliers") });
   const { data: stores = [] } = useQuery({ queryKey: ["stores"], queryFn: () => api<Store[]>("/stores") });
@@ -60,6 +62,8 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
       )
   });
   const orders = rowsFromListResponse(orderResponse);
+  const selectedVisibleOrders = useMemo(() => orders.filter((order) => selectedOrderIds.has(order.id)), [orders, selectedOrderIds]);
+  const allVisibleSelected = orders.length > 0 && orders.every((order) => selectedOrderIds.has(order.id));
   const canEdit = me?.user?.role === "管理员";
   const canDelete = me?.user?.username === "孙立柱";
   const deleteOrder = useMutation({
@@ -69,6 +73,14 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
       qc.invalidateQueries({ queryKey: ["summary"] });
     }
   });
+
+  useEffect(() => {
+    setSelectedOrderIds((current) => {
+      const visibleIds = new Set(orders.map((order) => order.id));
+      const next = new Set([...current].filter((id) => visibleIds.has(id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [orders]);
   const updateOrder = useMutation({
     mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}`, { method: "PUT", body: JSON.stringify(body), notify: true }),
     onSuccess: () => {
@@ -89,6 +101,43 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
   function removeOrder(order: OrderListRow) {
     if (!window.confirm(`确定删除订单 ${order.orderNo} 吗？删除后相关商品明细和发货信息也会删除。`)) return;
     deleteOrder.mutate(order.id);
+  }
+
+  async function removeSelectedOrders() {
+    if (!canDelete) return;
+    if (selectedVisibleOrders.length === 0) {
+      notifyApp({ variant: "error", message: "请先选择要批量删除的订单" });
+      return;
+    }
+    if (!window.confirm(`确定批量删除 ${selectedVisibleOrders.length} 条订单吗？删除后相关商品明细和发货信息也会删除。`)) return;
+    try {
+      for (const order of selectedVisibleOrders) {
+        await deleteOrder.mutateAsync(order.id);
+      }
+      setSelectedOrderIds(new Set());
+    } catch {
+      // api 层已经弹出失败原因，这里不重复提示。
+    }
+  }
+
+  function toggleOrderSelected(orderId: number, checked: boolean) {
+    setSelectedOrderIds((current) => {
+      const next = new Set(current);
+      if (checked) next.add(orderId);
+      else next.delete(orderId);
+      return next;
+    });
+  }
+
+  function toggleAllVisible(checked: boolean) {
+    setSelectedOrderIds((current) => {
+      const next = new Set(current);
+      for (const order of orders) {
+        if (checked) next.add(order.id);
+        else next.delete(order.id);
+      }
+      return next;
+    });
   }
 
   function submitEdit(event: FormEvent<HTMLFormElement>) {
@@ -148,12 +197,27 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
           </select>
           <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
           <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+          {canDelete ? (
+            <button type="button" className="primary-button" onClick={removeSelectedOrders} disabled={deleteOrder.isPending}>
+              批量删除
+            </button>
+          ) : null}
         </div>
       </Panel>
       <Panel title={panelTitle}>
         <table className="nowrap-table">
           <thead>
             <tr>
+              {canDelete ? (
+                <th className="selection-cell">
+                  <input
+                    type="checkbox"
+                    aria-label={`选择当前列表全部${panelTitle}订单`}
+                    checked={allVisibleSelected}
+                    onChange={(event) => toggleAllVisible(event.target.checked)}
+                  />
+                </th>
+              ) : null}
               <th>创建时间</th>
               <th>登记人</th>
               <th>店铺</th>
@@ -180,6 +244,16 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
           <tbody>
             {orders.map((order) => (
               <tr key={order.id}>
+                {canDelete ? (
+                  <td className="selection-cell">
+                    <input
+                      type="checkbox"
+                      aria-label={`选择订单 ${order.orderNo}`}
+                      checked={selectedOrderIds.has(order.id)}
+                      onChange={(event) => toggleOrderSelected(order.id, event.target.checked)}
+                    />
+                  </td>
+                ) : null}
                 <td>{order.createdAt?.slice(0, 10)}</td>
                 <td>{order.registrarName || "-"}</td>
                 <td>{order.storeName || "-"}</td>
