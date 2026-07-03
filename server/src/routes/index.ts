@@ -6,6 +6,7 @@ import { ordersRouter } from "./orders.js";
 import { storesRouter } from "./stores.js";
 import { returnsRouter } from "./returns.js";
 import { carriersRouter } from "./carriers.js";
+import { operationRecordsRouter } from "./operationRecords.js";
 
 export const apiRouter = Router();
 
@@ -18,3 +19,4 @@ apiRouter.use("/orders", requireAnyPage(["dropShippingRegistration", "accessoryR
 apiRouter.use("/carriers", requireAnyPage(["carrierLibrary", "accessoryShipping", "trackingNumbers", "shippingSchedule"]), carriersRouter);
 apiRouter.use("/stores", requireAnyPage(["storeLibrary", "dropShippingRegistration", "accessoryRegistration", "trackingNumbers", "returnRegistration", "dropshipSummary", "accessorySummary", "purchaseOrders"]), storesRouter);
 apiRouter.use("/returns", requireAnyPage(["returnRegistration", "returnOperation", "returnReceipt"]), returnsRouter);
+apiRouter.use("/operation-records", requireAnyPage(["operationRecords"]), operationRecordsRouter);

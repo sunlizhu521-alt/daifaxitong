@@ -6,6 +6,7 @@ import { z } from "zod";
 import { config } from "../config.js";
 import { getDb, nowIso } from "../db/index.js";
 import { notifyBusinessAction } from "../notifications/dingtalk.js";
+import { logOrderEventByOrderNo } from "../orderEvents.js";
 import { ROLE_ADMIN } from "../permissions.js";
 
 export const returnsRouter = Router();
@@ -274,6 +275,7 @@ returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
     );
   const row = db.prepare("SELECT * FROM returns WHERE id = ?").get(result.lastInsertRowid) as Record<string, unknown>;
   const payload = rowToReturn(row);
+  logOrderEventByOrderNo(parsed.data.orderNo, "提交退货", `${parsed.data.action} / ${parsed.data.reason}`, req.session.user?.username);
   void notifyBusinessAction({
     action: "提交退货",
     operator: req.session.user?.username,
@@ -327,6 +329,12 @@ returnsRouter.patch("/:id/status", (req, res) => {
   }
   const row = getDb().prepare("SELECT * FROM returns WHERE id = ?").get(id) as Record<string, unknown>;
   const payload = rowToReturn(row);
+  logOrderEventByOrderNo(
+    String(payload.orderNo),
+    parsed.data.status === "已收货" || parsed.data.status === "已收到退货" ? "退货收货" : "退货操作",
+    `${payload.status}${payload.trackingNo ? ` / ${payload.trackingNo}` : ""}`,
+    req.session.user?.username
+  );
   void notifyBusinessAction({
     action: parsed.data.status === "已收货" || parsed.data.status === "已收到退货" ? "退货收货" : "退货操作",
     operator: req.session.user?.username,
@@ -356,6 +364,9 @@ returnsRouter.delete("/:id", (req, res) => {
     return;
   }
   const payload = row ? rowToReturn(row) : null;
+  if (payload?.orderNo) {
+    logOrderEventByOrderNo(String(payload.orderNo), "撤销退货", `${payload.action ?? "-"} / ${payload.reason ?? "-"}`, req.session.user?.username);
+  }
   void notifyBusinessAction({
     action: "撤销退货",
     operator: req.session.user?.username,

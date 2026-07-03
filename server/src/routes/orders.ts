@@ -5,6 +5,7 @@ import { z } from "zod";
 import { config } from "../config.js";
 import { getDb, nowIso } from "../db/index.js";
 import { notifyBusinessAction } from "../notifications/dingtalk.js";
+import { logOrderEvent } from "../orderEvents.js";
 import { ROLE_ADMIN } from "../permissions.js";
 import { optionalId } from "../utils.js";
 
@@ -72,12 +73,6 @@ const statusText: Record<string, string> = {
   exception: "异常",
   cancelled: "已取消"
 };
-
-function logOrderEvent(orderId: number, action: string, detail: string, operator?: string) {
-  getDb()
-    .prepare("INSERT INTO order_events (orderId, action, detail, operator) VALUES (?, ?, ?, ?)")
-    .run(orderId, action, detail, operator ?? "");
-}
 
 function readOrder(id: number) {
   const db = getDb();
@@ -209,16 +204,6 @@ ordersRouter.get("/", (req, res) => {
         latest.carrierId AS carrierId, latest.carrier AS carrier, latest.trackingNo AS trackingNo, latest.shippedAt AS shippedAt,
         latest.note AS shipmentNote,
         latestReturn.status AS returnStatus, latestReturn.action AS returnAction, latestReturn.reason AS returnReason,
-        (
-          SELECT GROUP_CONCAT(eventText, '；') FROM (
-            SELECT oe.createdAt || ' ' || COALESCE(oe.operator, '') || ' ' || oe.action ||
-              CASE WHEN COALESCE(oe.detail, '') <> '' THEN '：' || oe.detail ELSE '' END AS eventText
-            FROM order_events oe
-            WHERE oe.orderId = o.id
-            ORDER BY oe.id DESC
-            LIMIT 6
-          )
-        ) AS operationLogs,
         COALESCE(shipSupplier.shortName, shipSupplier.name, orderSupplier.shortName, orderSupplier.name) AS supplierName,
         COALESCE(orderSupplier.shortName, orderSupplier.name) AS registrationSupplierName
        FROM orders o
@@ -356,6 +341,9 @@ ordersRouter.post("/", (req, res) => {
   }
   try {
     const order = saveOrder(parsed.data) as Record<string, unknown> | null;
+    if (order?.id) {
+      logOrderEvent(Number(order.id), parsed.data.orderType === "accessory" ? "配件登记" : "登记代发", `订单号：${parsed.data.orderNo}`, req.session.user?.username);
+    }
     void notifyBusinessAction({
       action: parsed.data.orderType === "accessory" ? "配件登记" : "登记代发",
       operator: req.session.user?.username,
@@ -421,6 +409,7 @@ ordersRouter.patch("/:id/purchase-order", (req, res) => {
       .prepare("UPDATE orders SET purchaseOrderNo = ?, status = 'purchased', updatedAt = ? WHERE id = ?")
       .run(parsed.data.purchaseOrderNo, nowIso(), orderId);
     const order = readOrder(orderId) as Record<string, unknown> | null;
+    logOrderEvent(orderId, "修改采购订单号", parsed.data.purchaseOrderNo, req.session.user?.username);
     void notifyBusinessAction({
       action: "修改采购订单号",
       operator: req.session.user?.username,
@@ -438,6 +427,7 @@ ordersRouter.patch("/:id/purchase-order", (req, res) => {
     return;
   }
   const order = readOrder(orderId) as Record<string, unknown> | null;
+  logOrderEvent(orderId, "填写采购订单号", parsed.data.purchaseOrderNo, req.session.user?.username);
   void notifyBusinessAction({
     action: "填写采购订单号",
     operator: req.session.user?.username,
@@ -457,6 +447,7 @@ ordersRouter.delete("/:id/purchase-order", (req, res) => {
     return;
   }
   const order = readOrder(orderId) as Record<string, unknown> | null;
+  logOrderEvent(orderId, "删除采购订单号", "清空采购订单号", req.session.user?.username);
   void notifyBusinessAction({ action: "删除采购订单号", operator: req.session.user?.username, order });
   res.json(order);
 });
@@ -602,6 +593,7 @@ ordersRouter.delete("/:id/shipment", (req, res) => {
     db.prepare("UPDATE orders SET status = ?, updatedAt = ? WHERE id = ?").run(remaining?.status ?? "pending", nowIso(), id);
   });
   tx();
+  logOrderEvent(id, "删除发货单号", "删除最新发货单号", req.session.user?.username);
   void notifyBusinessAction({
     action: "删除发货单号",
     operator: req.session.user?.username,

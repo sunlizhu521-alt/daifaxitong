@@ -238,7 +238,6 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
               <th>状态</th>
               <th>备注</th>
               {canEdit || canDelete ? <th>操作</th> : null}
-              <th>操作记录</th>
             </tr>
           </thead>
           <tbody>
@@ -279,7 +278,6 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
                     {canDelete ? <button type="button" onClick={() => removeOrder(order)}>删除</button> : null}
                   </td>
                 ) : null}
-                <td title={order.operationLogs || ""}>{order.operationLogs || "-"}</td>
               </tr>
             ))}
           </tbody>

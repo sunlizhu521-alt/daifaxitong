@@ -73,8 +73,30 @@ export type OrderListRow = {
   returnStatus?: string | null;
   returnAction?: string | null;
   returnReason?: string | null;
-  operationLogs?: string | null;
   createdAt: string;
+};
+
+export type OperationRecord = {
+  id: number;
+  orderId: number;
+  action: string;
+  detail?: string | null;
+  operator?: string | null;
+  createdAt: string;
+  orderNo?: string | null;
+  purchaseOrderNo?: string | null;
+  orderType?: "dropship" | "accessory" | null;
+  storeName?: string | null;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  address?: string | null;
+  status?: string | null;
+  productName?: string | null;
+  productSku?: string | null;
+  productSeries?: string | null;
+  trackingNo?: string | null;
+  carrier?: string | null;
+  supplierName?: string | null;
 };
 
 export type ReturnRecord = {
@@ -139,6 +161,7 @@ export type PageOption = {
     | "purchaseOrders"
     | "dropshipSummary"
     | "accessorySummary"
+    | "operationRecords"
     | "returnRegistration"
     | "returnOperation"
     | "returnReceipt"

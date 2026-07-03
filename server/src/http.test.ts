@@ -103,6 +103,13 @@ test("auth, supplier, product, order and shipment flow", async () => {
   assert.equal(detail.body.shipments[0].carrier, "顺丰速运");
   assert.equal(detail.body.shipments[0].carrierId, carrier.body.id);
   assert.equal(detail.body.shipments[0].trackingNo, "SF123");
+  const operationRecords = await agent.get("/api/operation-records?keyword=DF001").expect(200);
+  assert.ok(operationRecords.body.total >= 2);
+  assert.ok(operationRecords.body.rows.some((row: { action: string }) => row.action === "登记代发"));
+  assert.ok(operationRecords.body.rows.some((row: { action: string }) => row.action === "填写发货单号"));
+  await agent.delete(`/api/operation-records/${operationRecords.body.rows[0].id}`).expect(200);
+  const operationRecordsAfterDelete = await agent.get("/api/operation-records?keyword=DF001").expect(200);
+  assert.equal(operationRecordsAfterDelete.body.total, operationRecords.body.total - 1);
   const shippingExport = await agent.get("/api/orders/shipping-export?status=filled").expect(200);
   assert.match(shippingExport.headers["content-type"], /spreadsheetml\.sheet/);
   const returnOrdersBeforeReturn = await agent.get("/api/returns/orders?keyword=DF001").expect(200);
@@ -210,6 +217,9 @@ test("registered users must be authorized before accessing pages", async () => {
   createUser("otherAdmin", "secret123", "管理员", []);
   const otherAdmin = request.agent(app);
   await otherAdmin.post("/api/auth/login").send({ username: "otherAdmin", password: "secret123" }).expect(200);
+  const operationRecords = await otherAdmin.get("/api/operation-records?keyword=AUTH-DELETE-001").expect(200);
+  assert.ok(operationRecords.body.total >= 1);
+  await otherAdmin.delete(`/api/operation-records/${operationRecords.body.rows[0].id}`).expect(403);
   await otherAdmin.delete(`/api/orders/${order.body.id}`).expect(403);
   await admin.delete(`/api/orders/${order.body.id}`).expect(200);
 });

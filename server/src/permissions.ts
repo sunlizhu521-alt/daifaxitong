@@ -11,6 +11,7 @@ export const pageOptions = [
   { key: "purchaseOrders", label: "采购订单", path: "/purchase-orders" },
   { key: "dropshipSummary", label: "成品汇总", path: "/dropship-summary" },
   { key: "accessorySummary", label: "配件汇总", path: "/accessory-summary" },
+  { key: "operationRecords", label: "操作记录", path: "/operation-records" },
   { key: "returnRegistration", label: "退货登记", path: "/returns" },
   { key: "returnOperation", label: "退货操作", path: "/return-operations" },
   { key: "returnReceipt", label: "退货收货", path: "/return-receipts" },
