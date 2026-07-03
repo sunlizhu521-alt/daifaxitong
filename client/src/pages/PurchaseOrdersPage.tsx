@@ -1,6 +1,7 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, rowsFromListResponse, type ListResponse, type OrderListRow, type User } from "../api";
+import { notifyApp } from "../ui/AppNotifications";
 import { PageHeader, Panel } from "../ui/Section";
 
 const statusText: Record<string, string> = {
@@ -16,12 +17,15 @@ export function PurchaseOrdersPage() {
   const qc = useQueryClient();
   const [keyword, setKeyword] = useState("");
   const [status, setStatus] = useState("shipped");
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(() => new Set());
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
   const { data: orderResponse } = useQuery({
     queryKey: ["purchase-orders", keyword, status],
     queryFn: () => api<ListResponse<OrderListRow>>(`/orders?keyword=${encodeURIComponent(keyword)}&status=${encodeURIComponent(status)}`)
   });
   const orders = rowsFromListResponse(orderResponse);
+  const selectedVisibleOrders = useMemo(() => orders.filter((order) => selectedOrderIds.has(order.id)), [orders, selectedOrderIds]);
+  const allVisibleSelected = orders.length > 0 && orders.every((order) => selectedOrderIds.has(order.id));
   const savePurchaseOrder = useMutation({
     mutationFn: ({ id, purchaseOrderNo, purchaseOrderUser }: { id: number; purchaseOrderNo: string; purchaseOrderUser: string }) =>
       api(`/orders/${id}/purchase-order`, { method: "PATCH", body: JSON.stringify({ purchaseOrderNo, purchaseOrderUser }) }),
@@ -33,15 +37,65 @@ export function PurchaseOrdersPage() {
     }
   });
 
-  function submitPurchaseOrder(order: OrderListRow, event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    savePurchaseOrder.mutate({
+  useEffect(() => {
+    setSelectedOrderIds((current) => {
+      const visibleIds = new Set(orders.map((order) => order.id));
+      const next = new Set([...current].filter((id) => visibleIds.has(id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [orders]);
+
+  function buildPurchaseOrderBody(order: OrderListRow, form: HTMLFormElement) {
+    const data = new FormData(form);
+    return {
       id: order.id,
-      purchaseOrderNo: String(form.get("purchaseOrderNo") ?? "").trim(),
+      purchaseOrderNo: String(data.get("purchaseOrderNo") ?? "").trim(),
       purchaseOrderUser: order.purchaseOrderNo
         ? order.purchaseOrderUser || me?.user?.username || ""
-        : String(form.get("purchaseOrderUser") ?? me?.user?.username ?? "").trim()
+        : String(data.get("purchaseOrderUser") ?? me?.user?.username ?? "").trim()
+    };
+  }
+
+  function submitPurchaseOrder(order: OrderListRow, event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    savePurchaseOrder.mutate(buildPurchaseOrderBody(order, event.currentTarget));
+  }
+
+  async function submitSelectedPurchaseOrders() {
+    if (selectedVisibleOrders.length === 0) {
+      notifyApp({ variant: "error", message: "请先选择要批量提交的订单" });
+      return;
+    }
+    try {
+      for (const order of selectedVisibleOrders) {
+        const form = document.getElementById(`purchase-order-${order.id}`) as HTMLFormElement | null;
+        if (!form) continue;
+        if (!form.reportValidity()) return;
+        await savePurchaseOrder.mutateAsync(buildPurchaseOrderBody(order, form));
+      }
+      setSelectedOrderIds(new Set());
+    } catch {
+      // api 层已经弹出失败原因，这里不重复提示。
+    }
+  }
+
+  function toggleOrderSelected(orderId: number, checked: boolean) {
+    setSelectedOrderIds((current) => {
+      const next = new Set(current);
+      if (checked) next.add(orderId);
+      else next.delete(orderId);
+      return next;
+    });
+  }
+
+  function toggleAllVisible(checked: boolean) {
+    setSelectedOrderIds((current) => {
+      const next = new Set(current);
+      for (const order of orders) {
+        if (checked) next.add(order.id);
+        else next.delete(order.id);
+      }
+      return next;
     });
   }
 
@@ -58,10 +112,21 @@ export function PurchaseOrdersPage() {
             <option value="purchased">已下采购单</option>
             <option value="shipped">已发货</option>
           </select>
+          <button type="button" className="primary-button" onClick={submitSelectedPurchaseOrders} disabled={savePurchaseOrder.isPending}>
+            批量提交
+          </button>
         </div>
         <table>
           <thead>
             <tr>
+              <th className="selection-cell">
+                <input
+                  type="checkbox"
+                  aria-label="选择当前列表全部订单"
+                  checked={allVisibleSelected}
+                  onChange={(event) => toggleAllVisible(event.target.checked)}
+                />
+              </th>
               <th>采购下单人 *</th>
               <th>供应商</th>
               <th>店铺</th>
@@ -81,6 +146,14 @@ export function PurchaseOrdersPage() {
           <tbody>
             {orders.map((order) => (
               <tr key={order.id}>
+                <td className="selection-cell">
+                  <input
+                    type="checkbox"
+                    aria-label={`选择订单 ${order.orderNo}`}
+                    checked={selectedOrderIds.has(order.id)}
+                    onChange={(event) => toggleOrderSelected(order.id, event.target.checked)}
+                  />
+                </td>
                 <td>
                   <form id={`purchase-order-${order.id}`} onSubmit={(event) => submitPurchaseOrder(order, event)}>
                     <input name="purchaseOrderUser" placeholder="采购下单人 *" defaultValue={order.purchaseOrderUser || me?.user?.username || ""} required />
