@@ -98,12 +98,14 @@ jobs:
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
           DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
           DINGTALK_SECRET: ${{ secrets.DINGTALK_SECRET }}
+          FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
+          FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
         with:
           host: 129.211.9.242
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_SSH_PORT || 22 }}
-          envs: DEPLOY_PATH,DEPLOY_PACKAGE_DIR,DEPLOY_PORT,ADMIN_USERNAME,ADMIN_PASSWORD,SESSION_SECRET,DINGTALK_WEBHOOK,DINGTALK_SECRET
+          envs: DEPLOY_PATH,DEPLOY_PACKAGE_DIR,DEPLOY_PORT,ADMIN_USERNAME,ADMIN_PASSWORD,SESSION_SECRET,DINGTALK_WEBHOOK,DINGTALK_SECRET,FEISHU_WEBHOOK,FEISHU_SECRET
           script: |
             set -eu
 

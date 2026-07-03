@@ -15,6 +15,8 @@ export const config = {
   sessionSecret: process.env.SESSION_SECRET ?? "",
   dingtalkWebhook: process.env.DINGTALK_WEBHOOK ?? process.env.WEBHOOK ?? "",
   dingtalkSecret: process.env.DINGTALK_SECRET ?? process.env.SECRET ?? "",
+  feishuWebhook: process.env.FEISHU_WEBHOOK ?? "",
+  feishuSecret: process.env.FEISHU_SECRET ?? "",
   clientDist: path.resolve(rootDir, "server/dist/public")
 };
 

@@ -18,6 +18,13 @@ type DingtalkResponse = {
   errmsg?: string;
 };
 
+type FeishuResponse = {
+  code?: number;
+  msg?: string;
+  StatusCode?: number;
+  StatusMessage?: string;
+};
+
 function appendDingtalkSignature(webhook: string) {
   if (!config.dingtalkSecret) return webhook;
   const timestamp = Date.now();
@@ -66,9 +73,7 @@ async function sendDingtalkPayload(payload: unknown) {
   return { response, result };
 }
 
-export async function notifyBusinessAction(input: NotifyInput) {
-  if (!config.dingtalkWebhook) return;
-
+function buildNotification(input: NotifyInput) {
   const order = input.order ?? undefined;
   const item = firstItem(order);
   const shipment = latestShipment(order);
@@ -94,11 +99,15 @@ export async function notifyBusinessAction(input: NotifyInput) {
 
   const title = `一件代发系统：${input.action}`;
   const text = [`### ${title}`, "", ...fields.map((field) => `- **${field.label}**：${valueText(field.value)}`)].join("\n");
+  return { title, text, fields };
+}
+
+async function notifyDingtalk(title: string, text: string) {
+  if (!config.dingtalkWebhook) return;
   const payload = {
     msgtype: "markdown",
     markdown: { title, text }
   };
-
   try {
     const atAllPayload = { ...payload, at: { isAtAll: true } };
     const firstResult = await sendDingtalkPayload(atAllPayload);
@@ -115,4 +124,51 @@ export async function notifyBusinessAction(input: NotifyInput) {
   } catch (error) {
     console.warn("钉钉通知发送失败", error);
   }
+}
+
+function feishuSignature(timestamp: string) {
+  if (!config.feishuSecret) return "";
+  return crypto.createHmac("sha256", `${timestamp}\n${config.feishuSecret}`).update("").digest("base64");
+}
+
+async function notifyFeishu(title: string, text: string) {
+  if (!config.feishuWebhook) return;
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const payload = {
+    msg_type: "interactive",
+    card: {
+      header: {
+        title: {
+          tag: "plain_text",
+          content: title
+        }
+      },
+      elements: [
+        {
+          tag: "markdown",
+          content: text
+        }
+      ]
+    }
+  };
+  const signedPayload = config.feishuSecret ? { ...payload, timestamp, sign: feishuSignature(timestamp) } : payload;
+
+  try {
+    const response = await fetch(config.feishuWebhook, {
+      method: "POST",
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+      body: encodeJsonPayload(signedPayload)
+    });
+    const result = (await response.json().catch(() => null)) as FeishuResponse | null;
+    if (!response.ok || (result?.code ?? result?.StatusCode ?? 0) !== 0) {
+      console.warn("飞书通知发送失败", result ?? response.statusText);
+    }
+  } catch (error) {
+    console.warn("飞书通知发送失败", error);
+  }
+}
+
+export async function notifyBusinessAction(input: NotifyInput) {
+  const { title, text } = buildNotification(input);
+  await Promise.all([notifyDingtalk(title, text), notifyFeishu(title, text)]);
 }
