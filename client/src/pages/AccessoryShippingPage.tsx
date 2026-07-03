@@ -1,6 +1,7 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, rowsFromListResponse, type ListResponse, type OrderListRow } from "../api";
+import { notifyApp } from "../ui/AppNotifications";
 import { PageHeader, Panel } from "../ui/Section";
 
 const statusText: Record<string, string> = {
@@ -12,7 +13,7 @@ const statusText: Record<string, string> = {
   cancelled: "已取消"
 };
 
-const carrierOptions = ["顺丰快递", "圆通快递", "中通快递", "京东快递", "其他"];
+const carrierOptions = ["顺丰快递", "圆通快递", "中通快递", "申通快递", "京东快递", "其他"];
 
 function defaultShipTime(value?: string | null) {
   const date = value ? new Date(value) : new Date();
@@ -24,6 +25,7 @@ export function AccessoryShippingPage() {
   const qc = useQueryClient();
   const [status, setStatus] = useState("pending");
   const [keyword, setKeyword] = useState("");
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(() => new Set());
   const { data: orderResponse } = useQuery({
     queryKey: ["accessory-shipping", status, keyword],
     queryFn: () =>
@@ -32,6 +34,8 @@ export function AccessoryShippingPage() {
       )
   });
   const orders = rowsFromListResponse(orderResponse);
+  const selectedVisibleOrders = useMemo(() => orders.filter((order) => selectedOrderIds.has(order.id)), [orders, selectedOrderIds]);
+  const allVisibleSelected = orders.length > 0 && orders.every((order) => selectedOrderIds.has(order.id));
 
   const ship = useMutation({
     mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}/ship`, { method: "POST", body: JSON.stringify(body), notify: true }),
@@ -42,19 +46,72 @@ export function AccessoryShippingPage() {
     }
   });
 
+  useEffect(() => {
+    setSelectedOrderIds((current) => {
+      const visibleIds = new Set(orders.map((order) => order.id));
+      const next = new Set([...current].filter((id) => visibleIds.has(id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [orders]);
+
+  function buildShipmentBody(order: OrderListRow, form: HTMLFormElement) {
+    const data = new FormData(form);
+    return {
+      supplierId: order.supplierId ?? "",
+      carrier: String(data.get("carrier") ?? "").trim(),
+      trackingNo: String(data.get("trackingNo") ?? "").trim(),
+      shippedAt: data.get("shippedAt"),
+      status: "shipped",
+      note: order.shipmentNote ?? ""
+    };
+  }
+
   function submitShipment(order: OrderListRow, event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
     ship.mutate({
       id: order.id,
-      body: {
-        supplierId: order.supplierId ?? "",
-        carrier: String(form.get("carrier") ?? "").trim(),
-        trackingNo: String(form.get("trackingNo") ?? "").trim(),
-        shippedAt: form.get("shippedAt"),
-        status: "shipped",
-        note: order.shipmentNote ?? ""
+      body: buildShipmentBody(order, event.currentTarget)
+    });
+  }
+
+  async function submitSelectedShipments() {
+    if (selectedVisibleOrders.length === 0) {
+      notifyApp({ variant: "error", message: "请先选择要批量提交的配件订单" });
+      return;
+    }
+    try {
+      for (const order of selectedVisibleOrders) {
+        const form = document.getElementById(`accessory-shipment-${order.id}`) as HTMLFormElement | null;
+        if (!form) continue;
+        if (!form.reportValidity()) return;
+        await ship.mutateAsync({
+          id: order.id,
+          body: buildShipmentBody(order, form)
+        });
       }
+      setSelectedOrderIds(new Set());
+    } catch {
+      // api 层已经弹出失败原因，这里不重复提示。
+    }
+  }
+
+  function toggleOrderSelected(orderId: number, checked: boolean) {
+    setSelectedOrderIds((current) => {
+      const next = new Set(current);
+      if (checked) next.add(orderId);
+      else next.delete(orderId);
+      return next;
+    });
+  }
+
+  function toggleAllVisible(checked: boolean) {
+    setSelectedOrderIds((current) => {
+      const next = new Set(current);
+      for (const order of orders) {
+        if (checked) next.add(order.id);
+        else next.delete(order.id);
+      }
+      return next;
     });
   }
 
@@ -70,10 +127,21 @@ export function AccessoryShippingPage() {
             <option value="shipped">已发货</option>
           </select>
           <input placeholder="搜索订单号/姓名/电话/地址/品号/商品" value={keyword} onChange={(event) => setKeyword(event.target.value)} />
+          <button type="button" className="primary-button" onClick={submitSelectedShipments} disabled={ship.isPending}>
+            批量提交
+          </button>
         </div>
         <table>
           <thead>
             <tr>
+              <th className="selection-cell">
+                <input
+                  type="checkbox"
+                  aria-label="选择当前列表全部配件订单"
+                  checked={allVisibleSelected}
+                  onChange={(event) => toggleAllVisible(event.target.checked)}
+                />
+              </th>
               <th>店铺</th>
               <th>订单编号</th>
               <th>售后姓名</th>
@@ -94,6 +162,14 @@ export function AccessoryShippingPage() {
           <tbody>
             {orders.map((order) => (
               <tr key={order.id}>
+                <td className="selection-cell">
+                  <input
+                    type="checkbox"
+                    aria-label={`选择订单 ${order.orderNo}`}
+                    checked={selectedOrderIds.has(order.id)}
+                    onChange={(event) => toggleOrderSelected(order.id, event.target.checked)}
+                  />
+                </td>
                 <td>{order.storeName || "-"}</td>
                 <td>{order.orderNo}</td>
                 <td>{order.customerName}</td>
