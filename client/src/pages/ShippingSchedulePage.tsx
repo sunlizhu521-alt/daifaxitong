@@ -120,7 +120,7 @@ export function ShippingSchedulePage() {
               <th>数量</th>
               <th>状态</th>
               <th>快递公司</th>
-              <th>快递单号</th>
+              <th>发货单号</th>
               <th>操作</th>
               <th>备注</th>
             </tr>

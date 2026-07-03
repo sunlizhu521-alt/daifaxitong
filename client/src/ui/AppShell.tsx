@@ -8,7 +8,7 @@ const nav = [
   { key: "dropShippingRegistration", to: "/drop-shipping", label: "登记代发", icon: ClipboardList },
   { key: "accessoryRegistration", to: "/accessories", label: "配件登记", icon: PackagePlus },
   { key: "accessoryShipping", to: "/accessory-shipping", label: "配件发货", icon: PackageCheck },
-  { key: "trackingNumbers", to: "/tracking-numbers", label: "快递单号", icon: Truck },
+  { key: "trackingNumbers", to: "/tracking-numbers", label: "发货单号", icon: Truck },
   { key: "shippingSchedule", to: "/shipping-schedule", label: "发货安排", icon: CalendarClock },
   { key: "purchaseOrders", to: "/purchase-orders", label: "采购订单", icon: ClipboardCheck },
   { key: "dropshipSummary", to: "/dropship-summary", label: "成品汇总", icon: FileText },

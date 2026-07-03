@@ -62,7 +62,7 @@ export async function notifyBusinessAction(input: NotifyInput) {
     { label: "SKU/品号", value: item?.productSku },
     { label: "数量", value: item?.quantity },
     { label: "快递公司", value: shipment?.carrier },
-    { label: "快递单号", value: shipment?.trackingNo },
+    { label: "发货单号", value: shipment?.trackingNo },
     { label: "采购订单号填写人", value: order?.purchaseOrderUser },
     { label: "采购订单号", value: order?.purchaseOrderNo },
     ...(input.fields ?? [])

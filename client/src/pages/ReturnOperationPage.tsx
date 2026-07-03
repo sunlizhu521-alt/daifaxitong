@@ -35,7 +35,7 @@ export function ReturnOperationPage() {
       <Panel title="待操作退货">
         <div className="toolbar filter-toolbar">
           <input
-            placeholder="搜索订单号/姓名/电话/地址/型号/快递单号"
+            placeholder="搜索订单号/姓名/电话/地址/型号/发货单号"
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
           />
@@ -55,7 +55,7 @@ export function ReturnOperationPage() {
               <th>SKU</th>
               <th>型号</th>
               <th>退货操作</th>
-              <th>快递单号</th>
+              <th>发货单号</th>
               <th>退货理由</th>
               <th>状态</th>
               <th>备注</th>
@@ -66,7 +66,7 @@ export function ReturnOperationPage() {
           <tbody>
             {returns.map((row) => {
               const trackingNo = row.action === "寄回" ? trackingNos[row.id] ?? row.trackingNo ?? "" : row.shipmentTrackingNo ?? row.trackingNo ?? "";
-              const trackingPlaceholder = row.action === "寄回" ? "可填写寄回快递单号" : "暂无发货单号";
+              const trackingPlaceholder = row.action === "寄回" ? "可填写寄回发货单号" : "暂无发货单号";
               return (
                 <tr key={row.id}>
                   <td>{new Date(row.createdAt).toLocaleString()}</td>

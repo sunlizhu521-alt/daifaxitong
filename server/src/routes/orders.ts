@@ -40,7 +40,7 @@ const shipSchema = z.object({
   supplierId: optionalId,
   carrierId: optionalId,
   carrier: z.string().trim().min(1, "快递公司不能为空"),
-  trackingNo: z.string().trim().min(1, "物流单号不能为空"),
+  trackingNo: z.string().trim().min(1, "发货单号不能为空"),
   shippedAt: z.string().trim().min(1, "发货时间不能为空"),
   status: z.enum(["filled", "shipped", "exception"]).default("filled"),
   note: z.string().optional().default("")
@@ -267,7 +267,7 @@ ordersRouter.get("/export", async (req, res) => {
         o.purchaseOrderNo AS 采购订单号, o.purchaseOrderUser AS 采购订单号填写人,
         o.customerName AS 客户姓名, o.customerPhone AS 客户电话, o.address AS 收货地址,
         o.status AS 订单状态, oi.productName AS 商品名称, oi.productSku AS SKU规格, oi.quantity AS 数量,
-        sh.carrier AS 快递公司, sh.trackingNo AS 物流单号, sh.shippedAt AS 发货时间, o.note AS 备注
+        sh.carrier AS 快递公司, sh.trackingNo AS 发货单号, sh.shippedAt AS 发货时间, o.note AS 备注
        FROM orders o
        LEFT JOIN order_items oi ON oi.orderId = o.id
        LEFT JOIN shipments sh ON sh.orderId = o.id
@@ -308,7 +308,7 @@ ordersRouter.get("/shipping-export", async (req, res) => {
           WHEN 'cancelled' THEN '已取消'
           ELSE o.status
         END AS 状态,
-        latest.carrier AS 快递公司, latest.trackingNo AS 快递单号, latest.shippedAt AS 发货时间,
+        latest.carrier AS 快递公司, latest.trackingNo AS 发货单号, latest.shippedAt AS 发货时间,
         o.note AS 备注
        FROM orders o
        LEFT JOIN order_items oi ON oi.orderId = o.id
@@ -558,15 +558,15 @@ ordersRouter.post("/:id/ship", (req, res) => {
     "INSERT INTO shipments (orderId, supplierId, carrierId, carrier, trackingNo, shippedAt, status, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
   ).run(id, supplierId, parsed.data.carrierId ?? null, carrierName, parsed.data.trackingNo, parsed.data.shippedAt, parsed.data.status, parsed.data.note);
   db.prepare("UPDATE orders SET status = ?, updatedAt = ? WHERE id = ?").run(parsed.data.status, nowIso(), id);
-  logOrderEvent(id, "填写快递单号", `${carrierName} ${parsed.data.trackingNo}`, req.session.user?.username);
+  logOrderEvent(id, "填写发货单号", `${carrierName} ${parsed.data.trackingNo}`, req.session.user?.username);
   const updated = readOrder(id) as Record<string, unknown> | null;
   void notifyBusinessAction({
-    action: parsed.data.status === "shipped" ? "配件发货" : "填写快递单号",
+    action: parsed.data.status === "shipped" ? "配件发货" : "填写发货单号",
     operator: req.session.user?.username,
     order: updated,
     fields: [
       { label: "填写快递公司", value: carrierName },
-      { label: "填写快递单号", value: parsed.data.trackingNo },
+      { label: "填写发货单号", value: parsed.data.trackingNo },
       { label: "发货时间", value: parsed.data.shippedAt }
     ]
   });
@@ -583,7 +583,7 @@ ordersRouter.delete("/:id/shipment", (req, res) => {
   }
   const latest = db.prepare("SELECT id FROM shipments WHERE orderId = ? ORDER BY id DESC LIMIT 1").get(id) as { id: number } | undefined;
   if (!latest) {
-    res.status(404).json({ message: "没有可删除的快递单号" });
+    res.status(404).json({ message: "没有可删除的发货单号" });
     return;
   }
   const tx = db.transaction(() => {
@@ -595,7 +595,7 @@ ordersRouter.delete("/:id/shipment", (req, res) => {
   });
   tx();
   void notifyBusinessAction({
-    action: "删除快递单号",
+    action: "删除发货单号",
     operator: req.session.user?.username,
     order: readOrder(id) as Record<string, unknown> | null
   });
