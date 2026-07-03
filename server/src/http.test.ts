@@ -80,6 +80,11 @@ test("auth, supplier, product, order and shipment flow", async () => {
   await agent.patch(`/api/orders/${order.body.id}/status`).send({ status: "shipped" }).expect(200);
   const shippedDetail = await agent.get(`/api/orders/${order.body.id}`).expect(200);
   assert.equal(shippedDetail.body.status, "shipped");
+  await agent.patch(`/api/orders/${order.body.id}/purchase-order`).send({ purchaseOrderNo: "CG20260701003", purchaseOrderUser: "采购C" }).expect(200);
+  const purchaseAfterShipped = await agent.get(`/api/orders/${order.body.id}`).expect(200);
+  assert.equal(purchaseAfterShipped.body.purchaseOrderNo, "CG20260701003");
+  assert.equal(purchaseAfterShipped.body.purchaseOrderUser, "采购A");
+  assert.equal(purchaseAfterShipped.body.status, "purchased");
   await agent.patch(`/api/orders/${order.body.id}/status`).send({ status: "pending" }).expect(200);
   const filteredRows = await agent.get("/api/orders?series=基础&sku=默认规格").expect(200);
   assert.equal(filteredRows.body.rows[0].orderNo, "DF001");

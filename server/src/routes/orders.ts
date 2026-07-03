@@ -410,7 +410,7 @@ ordersRouter.patch("/:id/purchase-order", (req, res) => {
   }
   if (existing.purchaseOrderNo) {
     getDb()
-      .prepare("UPDATE orders SET purchaseOrderNo = ?, updatedAt = ? WHERE id = ?")
+      .prepare("UPDATE orders SET purchaseOrderNo = ?, status = 'purchased', updatedAt = ? WHERE id = ?")
       .run(parsed.data.purchaseOrderNo, nowIso(), orderId);
     const order = readOrder(orderId) as Record<string, unknown> | null;
     void notifyBusinessAction({
