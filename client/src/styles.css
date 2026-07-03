@@ -114,6 +114,8 @@ textarea { min-height: 68px; resize: vertical; }
 .filter-date-field { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 13px; }
 .filter-date-field input { width: 150px; }
 .inline-shipment-form { min-width: 150px; }
+.selection-cell { width: 48px; min-width: 48px; text-align: center; }
+.selection-cell input[type="checkbox"] { width: 18px; min-height: 18px; accent-color: var(--accent); }
 td input, td select { min-width: 140px; }
 td textarea { min-width: 180px; min-height: 44px; }
 td input[type="file"] { min-width: 190px; margin-top: 6px; }
@@ -126,6 +128,7 @@ td input[type="file"] { min-width: 190px; margin-top: 6px; }
 .primary-button, .ghost-button, .row-actions button { border-radius: 7px; border: 1px solid transparent; min-height: 36px; padding: 0 13px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-size: 14px; }
 .primary-button { background: var(--accent); color: #fff; }
 .primary-button:hover { background: var(--accent-strong); }
+.primary-button:disabled { opacity: 0.62; cursor: not-allowed; }
 .ghost-button, .row-actions button { background: #fff; color: #273244; border-color: #cfd6e2; }
 .ghost-button:hover, .row-actions button:hover { border-color: #9aa7b8; }
 .row-actions { display: flex; gap: 8px; white-space: nowrap; }
