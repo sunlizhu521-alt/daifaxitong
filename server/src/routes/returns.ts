@@ -207,7 +207,7 @@ returnsRouter.get("/orders", async (req, res) => {
   }
   const rows = getDb()
     .prepare(
-      `SELECT o.id AS orderId, o.orderNo, o.storeName, o.customerName, o.customerPhone, o.address, o.status AS orderStatus,
+      `SELECT o.id AS orderId, o.orderNo, o.orderType, o.storeName, o.customerName, o.customerPhone, o.address, o.status AS orderStatus,
         COALESCE(s.shortName, s.name) AS supplierName,
         GROUP_CONCAT(DISTINCT p.series) AS productSeries,
         GROUP_CONCAT(DISTINCT oi.productSku) AS productSku,

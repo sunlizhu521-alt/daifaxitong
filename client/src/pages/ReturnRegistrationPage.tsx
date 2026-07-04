@@ -112,6 +112,10 @@ export function ReturnRegistrationPage() {
     return row.logisticsStatus || "已揽件";
   }
 
+  function orderTypeText(row: ReturnOrderRow) {
+    return row.orderType === "accessory" ? "配件" : "成品";
+  }
+
   return (
     <>
       <PageHeader title="退货登记" description="登记拦截、自行寄回、上门取件处理信息，提交后进入退货操作页面处理。" />
@@ -162,6 +166,7 @@ export function ReturnRegistrationPage() {
         <table className="nowrap-table">
           <thead>
             <tr>
+              <th>分类</th>
               <th>客户</th>
               <th>电话</th>
               <th>地址</th>
@@ -183,6 +188,7 @@ export function ReturnRegistrationPage() {
               const actionValue = returnActions[row.orderId] ?? (row.returnId ? (row.action === "寄回" ? "自行寄回" : row.action ?? "") : "");
               return (
               <tr key={row.orderId}>
+                <td>{orderTypeText(row)}</td>
                 <td>{row.customerName}</td>
                 <td>{row.customerPhone || "-"}</td>
                 <td>{row.address}</td>

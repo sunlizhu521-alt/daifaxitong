@@ -137,6 +137,7 @@ export type ReturnRecord = {
 export type ReturnOrderRow = {
   orderId: number;
   orderNo: string;
+  orderType?: "dropship" | "accessory" | null;
   storeName?: string | null;
   supplierName?: string | null;
   operator?: string | null;
