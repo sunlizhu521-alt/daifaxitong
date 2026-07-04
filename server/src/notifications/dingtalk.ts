@@ -25,14 +25,15 @@ type FeishuResponse = {
   StatusMessage?: string;
 };
 
-const dingtalkActions = new Set(["登记代发", "配件登记", "退货登记", "提交退货", "退货收货"]);
+const dingtalkActions = new Set(["登记代发", "配件登记", "退货收货"]);
+const returnDingtalkActions = new Set(["退货登记", "提交退货"]);
 const feishuActions = new Set(["发货单号", "填写发货单号", "退货操作"]);
 
-function appendDingtalkSignature(webhook: string) {
-  if (!config.dingtalkSecret) return webhook;
+function appendDingtalkSignature(webhook: string, secret: string) {
+  if (!secret) return webhook;
   const timestamp = Date.now();
-  const signSource = `${timestamp}\n${config.dingtalkSecret}`;
-  const sign = crypto.createHmac("sha256", config.dingtalkSecret).update(signSource).digest("base64");
+  const signSource = `${timestamp}\n${secret}`;
+  const sign = crypto.createHmac("sha256", secret).update(signSource).digest("base64");
   const separator = webhook.includes("?") ? "&" : "?";
   return `${webhook}${separator}timestamp=${timestamp}&sign=${encodeURIComponent(sign)}`;
 }
@@ -66,8 +67,8 @@ function encodeJsonPayload(payload: unknown) {
   );
 }
 
-async function sendDingtalkPayload(payload: unknown) {
-  const response = await fetch(appendDingtalkSignature(config.dingtalkWebhook), {
+async function sendDingtalkPayload(payload: unknown, webhook: string, secret: string) {
+  const response = await fetch(appendDingtalkSignature(webhook, secret), {
     method: "POST",
     headers: { "Content-Type": "application/json; charset=utf-8" },
     body: encodeJsonPayload(payload)
@@ -105,27 +106,27 @@ function buildNotification(input: NotifyInput) {
   return { title, text, fields };
 }
 
-async function notifyDingtalk(title: string, text: string) {
-  if (!config.dingtalkWebhook) return;
+async function notifyDingtalk(title: string, text: string, webhook = config.dingtalkWebhook, secret = config.dingtalkSecret, errorLabel = "钉钉通知") {
+  if (!webhook) return;
   const payload = {
     msgtype: "markdown",
     markdown: { title, text }
   };
   try {
     const atAllPayload = { ...payload, at: { isAtAll: true } };
-    const firstResult = await sendDingtalkPayload(atAllPayload);
+    const firstResult = await sendDingtalkPayload(atAllPayload, webhook, secret);
     if (firstResult.response.ok && !firstResult.result?.errcode) return;
 
     if (firstResult.result?.errcode === 450103) {
-      const retryResult = await sendDingtalkPayload(payload);
+      const retryResult = await sendDingtalkPayload(payload, webhook, secret);
       if (retryResult.response.ok && !retryResult.result?.errcode) return;
-      console.warn("钉钉通知发送失败", retryResult.result ?? retryResult.response.statusText);
+      console.warn(`${errorLabel}发送失败`, retryResult.result ?? retryResult.response.statusText);
       return;
     }
 
-    console.warn("钉钉通知发送失败", firstResult.result ?? firstResult.response.statusText);
+    console.warn(`${errorLabel}发送失败`, firstResult.result ?? firstResult.response.statusText);
   } catch (error) {
-    console.warn("钉钉通知发送失败", error);
+    console.warn(`${errorLabel}发送失败`, error);
   }
 }
 
@@ -175,6 +176,9 @@ export async function notifyBusinessAction(input: NotifyInput) {
   const { title, text } = buildNotification(input);
   const tasks: Array<Promise<void>> = [];
   if (dingtalkActions.has(input.action)) tasks.push(notifyDingtalk(title, text));
+  if (returnDingtalkActions.has(input.action)) {
+    tasks.push(notifyDingtalk(title, text, config.returnDingtalkWebhook, config.returnDingtalkSecret, "退货登记钉钉通知"));
+  }
   if (feishuActions.has(input.action)) tasks.push(notifyFeishu(title, text));
   await Promise.all(tasks);
 }

@@ -15,6 +15,8 @@ export const config = {
   sessionSecret: process.env.SESSION_SECRET ?? "",
   dingtalkWebhook: process.env.DINGTALK_WEBHOOK ?? process.env.WEBHOOK ?? "",
   dingtalkSecret: process.env.DINGTALK_SECRET ?? process.env.SECRET ?? "",
+  returnDingtalkWebhook: process.env.RETURN_DINGTALK_WEBHOOK ?? "",
+  returnDingtalkSecret: process.env.RETURN_DINGTALK_SECRET ?? "",
   feishuWebhook: process.env.FEISHU_WEBHOOK ?? "",
   feishuSecret: process.env.FEISHU_SECRET ?? "",
   kuaidi100Customer: process.env.KUAIDI100_CUSTOMER ?? "",

@@ -326,7 +326,7 @@ returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
   const payload = rowToReturn(row);
   logOrderEvent(order.id, "提交退货", `${parsed.data.action} / ${parsed.data.reason}`, req.session.user?.username);
   void notifyBusinessAction({
-    action: "提交退货",
+    action: "退货登记",
     operator: req.session.user?.username,
     fields: [
       { label: "订单号", value: payload.orderNo },
