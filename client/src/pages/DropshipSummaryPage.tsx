@@ -370,9 +370,9 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
 export function DropshipSummaryPage() {
   return (
     <SummaryPage
-      title="成品汇总"
+      title="成品信息"
       description="汇总成品代发订单、采购订单、发货、供应商、店铺和备注信息。"
-      panelTitle="成品汇总"
+      panelTitle="成品信息"
       editTitle="修改成品订单"
       orderType="dropship"
       queryKey="dropship-summary"
@@ -383,9 +383,9 @@ export function DropshipSummaryPage() {
 export function AccessorySummaryPage() {
   return (
     <SummaryPage
-      title="配件汇总"
+      title="配件信息"
       description="汇总配件代发订单、配件发货、供应商、店铺和备注信息。"
-      panelTitle="配件汇总"
+      panelTitle="配件信息"
       editTitle="修改配件订单"
       orderType="accessory"
       queryKey="accessory-summary"
