@@ -17,6 +17,8 @@ export const config = {
   dingtalkSecret: process.env.DINGTALK_SECRET ?? process.env.SECRET ?? "",
   feishuWebhook: process.env.FEISHU_WEBHOOK ?? "",
   feishuSecret: process.env.FEISHU_SECRET ?? "",
+  kuaidi100Customer: process.env.KUAIDI100_CUSTOMER ?? "",
+  kuaidi100Key: process.env.KUAIDI100_KEY ?? "",
   clientDist: path.resolve(rootDir, "server/dist/public")
 };
 

@@ -115,6 +115,8 @@ test("auth, supplier, product, order and shipment flow", async () => {
   const returnOrdersBeforeReturn = await agent.get("/api/returns/orders?keyword=DF001").expect(200);
   assert.equal(returnOrdersBeforeReturn.body[0].orderNo, "DF001");
   assert.equal(returnOrdersBeforeReturn.body[0].returnId, null);
+  assert.equal(returnOrdersBeforeReturn.body[0].shipmentTrackingNo, "SF123");
+  assert.equal(returnOrdersBeforeReturn.body[0].logisticsStatus, "已揽件");
   const returnRecord = await agent
     .post("/api/returns")
     .field("storeName", "测试店铺")

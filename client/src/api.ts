@@ -150,7 +150,9 @@ export type ReturnOrderRow = {
   returnId?: number | null;
   returnStatus?: string | null;
   action?: string | null;
+  shipmentCarrier?: string | null;
   shipmentTrackingNo?: string | null;
+  logisticsStatus?: "已揽件" | "运输中" | "已签收" | "" | null;
   returnTrackingNo?: string | null;
   reason?: string | null;
   note?: string | null;

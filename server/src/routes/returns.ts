@@ -5,6 +5,7 @@ import multer from "multer";
 import { z } from "zod";
 import { config } from "../config.js";
 import { getDb, nowIso } from "../db/index.js";
+import { fallbackLogisticsStatus, queryKuaidi100Status } from "../logistics/kuaidi100.js";
 import { notifyBusinessAction } from "../notifications/dingtalk.js";
 import { logOrderEvent, logOrderEventByOrderNo } from "../orderEvents.js";
 import { ROLE_ADMIN } from "../permissions.js";
@@ -148,7 +149,7 @@ returnsRouter.get("/", (req, res) => {
   res.json(rows.map(rowToReturn));
 });
 
-returnsRouter.get("/orders", (req, res) => {
+returnsRouter.get("/orders", async (req, res) => {
   const keyword = String(req.query.keyword ?? "").trim();
   const storeName = String(req.query.storeName ?? "").trim();
   const supplierId = String(req.query.supplierId ?? "").trim();
@@ -213,6 +214,7 @@ returnsRouter.get("/orders", (req, res) => {
         GROUP_CONCAT(DISTINCT oi.productName) AS productName,
         GROUP_CONCAT(DISTINCT p.supplierModel) AS supplierModel,
         SUM(oi.quantity) AS totalQuantity,
+        sh.carrier AS shipmentCarrier,
         sh.trackingNo AS shipmentTrackingNo,
         latestReturn.id AS returnId, latestReturn.operator, latestReturn.model, latestReturn.status AS returnStatus,
         latestReturn.action, latestReturn.trackingNo AS returnTrackingNo, latestReturn.reason, latestReturn.note,
@@ -236,12 +238,26 @@ returnsRouter.get("/orders", (req, res) => {
        ORDER BY o.id DESC`
     )
     .all(...params) as Record<string, unknown>[];
-  res.json(
-    rows.map((row) => ({
+  const enrichedRows = await Promise.all(
+    rows.map(async (row) => {
+      const trackingNo = String(row.shipmentTrackingNo ?? "");
+      const fallbackStatus = fallbackLogisticsStatus(String(row.orderStatus ?? ""), trackingNo, String(row.returnStatus ?? ""));
+      const realStatus =
+        fallbackStatus === "已签收"
+          ? "已签收"
+          : await queryKuaidi100Status({
+              carrierName: String(row.shipmentCarrier ?? ""),
+              trackingNo,
+              phone: String(row.customerPhone ?? "")
+            });
+      return {
       ...row,
-      attachments: JSON.parse(String(row.attachmentJson ?? "[]")) as string[]
-    }))
+        logisticsStatus: realStatus ?? fallbackStatus,
+        attachments: JSON.parse(String(row.attachmentJson ?? "[]")) as string[]
+      };
+    })
   );
+  res.json(enrichedRows);
 });
 
 returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {

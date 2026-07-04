@@ -4,6 +4,16 @@ import { useSearchParams } from "react-router-dom";
 import { api, type Product, type ReturnOrderRow, type Store, type Supplier, type User } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
+const statusText: Record<string, string> = {
+  pending: "待发货",
+  filled: "已填单号",
+  purchased: "已下采购单",
+  shipped: "已提货",
+  exception: "异常",
+  cancelled: "已取消",
+  customer_cancelled: "顾客不要了"
+};
+
 export function ReturnRegistrationPage() {
   const qc = useQueryClient();
   const [searchParams] = useSearchParams();
@@ -94,7 +104,12 @@ export function ReturnRegistrationPage() {
   }
 
   function registrationStatus(row: ReturnOrderRow) {
-    return row.returnStatus || row.orderStatus;
+    return row.returnStatus || statusText[row.orderStatus] || row.orderStatus || "-";
+  }
+
+  function logisticsText(row: ReturnOrderRow) {
+    if (!row.shipmentTrackingNo) return "-";
+    return row.logisticsStatus || "已揽件";
   }
 
   return (
@@ -152,6 +167,8 @@ export function ReturnRegistrationPage() {
               <th>地址</th>
               <th>型号</th>
               <th>状态</th>
+              <th>发货单号</th>
+              <th>快递信息</th>
               <th>操作 *</th>
               <th>退货理由 *</th>
               <th>备注</th>
@@ -171,6 +188,8 @@ export function ReturnRegistrationPage() {
                 <td>{row.address}</td>
                 <td>{row.supplierModel || row.model || row.productName || row.productSku || "-"}</td>
                 <td>{registrationStatus(row)}</td>
+                <td>{row.shipmentTrackingNo || "-"}</td>
+                <td>{logisticsText(row)}</td>
                 <td>
                   <select
                     form={formId}
