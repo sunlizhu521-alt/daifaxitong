@@ -41,7 +41,7 @@ export function AppNotifications() {
     <div className="notification-stack" role="status" aria-live="polite">
       {items.map((item) => (
         <div className={`notification-toast ${item.variant}`} key={item.id}>
-          <strong>{item.variant === "success" ? "成功" : "失败"}</strong>
+          <strong>{item.variant === "success" ? "操作成功" : "操作失败"}</strong>
           <span>{item.message}</span>
           <button type="button" aria-label="关闭提示" onClick={() => setItems((current) => current.filter((entry) => entry.id !== item.id))}>
             ×

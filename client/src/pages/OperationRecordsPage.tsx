@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, rowsFromListResponse, type ListResponse, type OperationRecord, type User } from "../api";
+import { notifyApp } from "../ui/AppNotifications";
 import { PageHeader, Panel } from "../ui/Section";
 
 const statusText: Record<string, string> = {
@@ -41,7 +42,10 @@ export function OperationRecordsPage() {
   const allVisibleSelected = records.length > 0 && records.every((record) => selectedRecordIds.has(record.id));
 
   const deleteRecord = useMutation({
-    mutationFn: (id: number) => api(`/operation-records/${id}`, { method: "DELETE", notify: true }),
+    mutationFn: (input: number | { id: number; notify?: boolean }) => {
+      const payload = typeof input === "number" ? { id: input, notify: true } : input;
+      return api(`/operation-records/${payload.id}`, { method: "DELETE", notify: payload.notify ?? true });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["operation-records"] });
     }
@@ -64,17 +68,21 @@ export function OperationRecordsPage() {
   async function removeSelectedRecords() {
     if (!canDelete) return;
     if (selectedVisibleRecords.length === 0) {
-      window.dispatchEvent(new CustomEvent("app:notification", { detail: { variant: "error", message: "请先选择要批量删除的操作记录" } }));
+      notifyApp({ variant: "error", message: "请先选择要批量删除的操作记录" });
       return;
     }
     if (!window.confirm(`确定批量删除 ${selectedVisibleRecords.length} 条操作记录吗？`)) return;
+    let successCount = 0;
     try {
       for (const record of selectedVisibleRecords) {
-        await deleteRecord.mutateAsync(record.id);
+        await deleteRecord.mutateAsync({ id: record.id, notify: false });
+        successCount += 1;
       }
       setSelectedRecordIds(new Set());
-    } catch {
-      // api 层已经提示失败原因。
+      notifyApp({ variant: "success", message: `批量删除完成\n共选择 ${selectedVisibleRecords.length} 条，成功删除 ${successCount} 条。` });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "请求失败";
+      notifyApp({ variant: "error", message: `批量删除中断\n已成功 ${successCount} 条，第 ${successCount + 1} 条失败。\n失败原因：${message}` });
     }
   }
 

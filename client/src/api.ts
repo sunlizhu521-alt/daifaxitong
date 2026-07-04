@@ -107,6 +107,7 @@ export type OperationRecord = {
 
 export type ReturnRecord = {
   id: number;
+  orderId?: number | null;
   storeName: string;
   operator?: string;
   operationUser?: string;

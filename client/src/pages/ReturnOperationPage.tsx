@@ -24,8 +24,8 @@ export function ReturnOperationPage() {
   });
 
   const completeReturn = useMutation({
-    mutationFn: ({ id, trackingNo }: { id: number; trackingNo: string }) =>
-      api(`/returns/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "退回中", trackingNo }), notify: true }),
+    mutationFn: ({ id, trackingNo, notify = true }: { id: number; trackingNo: string; notify?: boolean }) =>
+      api(`/returns/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "退回中", trackingNo }), notify }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["return-operations"] });
       qc.invalidateQueries({ queryKey: ["return-orders"] });
@@ -63,13 +63,17 @@ export function ReturnOperationPage() {
       return;
     }
     if (!window.confirm(`确认批量完成 ${selectedVisibleReturns.length} 条退货操作吗？`)) return;
+    let successCount = 0;
     try {
       for (const row of selectedVisibleReturns) {
-        await completeReturn.mutateAsync({ id: row.id, trackingNo: returnTrackingNo(row) });
+        await completeReturn.mutateAsync({ id: row.id, trackingNo: returnTrackingNo(row), notify: false });
+        successCount += 1;
       }
       setSelectedReturnIds(new Set());
-    } catch {
-      // api 层已经弹出失败原因，这里不重复提示。
+      notifyApp({ variant: "success", message: `批量操作完成\n共选择 ${selectedVisibleReturns.length} 条，成功处理 ${successCount} 条。\n状态已更新为退回中。` });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "请求失败";
+      notifyApp({ variant: "error", message: `批量操作中断\n已成功 ${successCount} 条，第 ${successCount + 1} 条失败。\n失败原因：${message}` });
     }
   }
 

@@ -81,6 +81,7 @@ export function ReturnRegistrationPage() {
   function submitReturn(row: ReturnOrderRow, event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    form.set("orderId", String(row.orderId));
     form.set("storeName", row.storeName || "");
     form.set("operator", row.operator || "");
     form.set("orderNo", row.orderNo);

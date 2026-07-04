@@ -140,6 +140,7 @@ CREATE INDEX IF NOT EXISTS idx_order_events_order_id ON order_events(orderId, id
 
 CREATE TABLE IF NOT EXISTS returns (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  orderId INTEGER,
   storeName TEXT NOT NULL,
   operator TEXT,
   operationUser TEXT,
@@ -155,8 +156,12 @@ CREATE TABLE IF NOT EXISTS returns (
   note TEXT,
   attachmentJson TEXT NOT NULL DEFAULT '[]',
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
-  updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (orderId) REFERENCES orders(id) ON DELETE SET NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_returns_order_id ON returns(orderId, id);
+CREATE INDEX IF NOT EXISTS idx_returns_order_no_created_at ON returns(orderNo, createdAt, id);
 
 CREATE TABLE IF NOT EXISTS import_jobs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

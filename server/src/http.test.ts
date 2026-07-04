@@ -163,6 +163,33 @@ test("auth, supplier, product, order and shipment flow", async () => {
   const afterDeletePurchaseOrder = await agent.get(`/api/orders/${order.body.id}`).expect(200);
   assert.equal(afterDeletePurchaseOrder.body.purchaseOrderNo, "");
   assert.equal(afterDeletePurchaseOrder.body.purchaseOrderUser, "");
+  await agent.delete(`/api/orders/${order.body.id}`).expect(200);
+  const replacementOrder = await agent
+    .post("/api/orders")
+    .send({
+      orderNo: "DF001",
+      orderType: "accessory",
+      supplierId: supplier.body.id,
+      storeName: "测试店铺",
+      registrarName: "admin",
+      customerName: "新客户",
+      customerPhone: "13900000000",
+      address: "北京市",
+      items: [
+        {
+          productId: product.body.id,
+          productName: product.body.name,
+          productSku: product.body.sku,
+          quantity: 1,
+          unitCost: 10,
+          unitSalePrice: 18
+        }
+      ]
+    })
+    .expect(201);
+  const replacementRows = await agent.get("/api/orders?orderType=accessory&keyword=DF001").expect(200);
+  assert.equal(replacementRows.body.rows[0].id, replacementOrder.body.id);
+  assert.equal(replacementRows.body.rows[0].returnStatus, null);
   await agent.delete(`/api/products/${product.body.id}`).expect(409);
 });
 

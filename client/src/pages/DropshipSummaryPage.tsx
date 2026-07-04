@@ -68,7 +68,10 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
   const canEdit = me?.user?.role === "管理员";
   const canDelete = me?.user?.username === "孙立柱";
   const deleteOrder = useMutation({
-    mutationFn: (id: number) => api(`/orders/${id}`, { method: "DELETE", notify: true }),
+    mutationFn: (input: number | { id: number; notify?: boolean }) => {
+      const payload = typeof input === "number" ? { id: input, notify: true } : input;
+      return api(`/orders/${payload.id}`, { method: "DELETE", notify: payload.notify ?? true });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [queryKey] });
       qc.invalidateQueries({ queryKey: ["summary"] });
@@ -111,13 +114,17 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
       return;
     }
     if (!window.confirm(`确定批量删除 ${selectedVisibleOrders.length} 条订单吗？删除后相关商品明细和发货信息也会删除。`)) return;
+    let successCount = 0;
     try {
       for (const order of selectedVisibleOrders) {
-        await deleteOrder.mutateAsync(order.id);
+        await deleteOrder.mutateAsync({ id: order.id, notify: false });
+        successCount += 1;
       }
       setSelectedOrderIds(new Set());
-    } catch {
-      // api 层已经弹出失败原因，这里不重复提示。
+      notifyApp({ variant: "success", message: `批量删除完成\n共选择 ${selectedVisibleOrders.length} 条，成功删除 ${successCount} 条。` });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "请求失败";
+      notifyApp({ variant: "error", message: `批量删除中断\n已成功 ${successCount} 条，第 ${successCount + 1} 条失败。\n失败原因：${message}` });
     }
   }
 

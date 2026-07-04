@@ -32,7 +32,8 @@ export function AccessoryShippingPage() {
   const allVisibleSelected = orders.length > 0 && orders.every((order) => selectedOrderIds.has(order.id));
 
   const ship = useMutation({
-    mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}/ship`, { method: "POST", body: JSON.stringify(body), notify: true }),
+    mutationFn: ({ id, body, notify = true }: { id: number; body: unknown; notify?: boolean }) =>
+      api(`/orders/${id}/ship`, { method: "POST", body: JSON.stringify(body), notify }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["accessory-shipping"] });
       qc.invalidateQueries({ queryKey: ["accessory-summary"] });
@@ -86,19 +87,27 @@ export function AccessoryShippingPage() {
       notifyApp({ variant: "error", message: "请先选择要批量提交的配件订单" });
       return;
     }
+    const forms = selectedVisibleOrders
+      .map((order) => ({ order, form: document.getElementById(`accessory-shipment-${order.id}`) as HTMLFormElement | null }))
+      .filter((item): item is { order: OrderListRow; form: HTMLFormElement } => Boolean(item.form));
+    for (const { form } of forms) {
+      if (!form.reportValidity()) return;
+    }
+    let successCount = 0;
     try {
-      for (const order of selectedVisibleOrders) {
-        const form = document.getElementById(`accessory-shipment-${order.id}`) as HTMLFormElement | null;
-        if (!form) continue;
-        if (!form.reportValidity()) return;
+      for (const { order, form } of forms) {
         await ship.mutateAsync({
           id: order.id,
-          body: buildShipmentBody(order, form)
+          body: buildShipmentBody(order, form),
+          notify: false
         });
+        successCount += 1;
       }
       setSelectedOrderIds(new Set());
-    } catch {
-      // api 层已经弹出失败原因，这里不重复提示。
+      notifyApp({ variant: "success", message: `批量提交完成\n共选择 ${selectedVisibleOrders.length} 条，成功提交 ${successCount} 条。\n状态已更新为快递取走。` });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "请求失败";
+      notifyApp({ variant: "error", message: `批量提交中断\n已成功 ${successCount} 条，第 ${successCount + 1} 条失败。\n失败原因：${message}` });
     }
   }
 

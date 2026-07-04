@@ -37,11 +37,24 @@ function migrateDb(database: Database.Database) {
   ensureColumn(database, "orders", "registrarName", "TEXT");
   ensureColumn(database, "shipments", "carrierId", "INTEGER");
   ensureColumn(database, "carriers", "note", "TEXT");
+  ensureColumn(database, "returns", "orderId", "INTEGER");
   ensureColumn(database, "returns", "operationUser", "TEXT");
   database.exec(`
     UPDATE suppliers SET storeAddress = COALESCE(storeAddress, address);
     UPDATE products SET ssku = COALESCE(ssku, sku);
     UPDATE stores SET operator = COALESCE(operator, owner);
+    UPDATE returns
+       SET orderId = (
+         SELECT orders.id
+           FROM orders
+          WHERE orders.orderNo = returns.orderNo
+            AND datetime(returns.createdAt) >= datetime(orders.createdAt)
+          ORDER BY orders.id DESC
+          LIMIT 1
+       )
+     WHERE orderId IS NULL;
+    CREATE INDEX IF NOT EXISTS idx_returns_order_id ON returns(orderId, id);
+    CREATE INDEX IF NOT EXISTS idx_returns_order_no_created_at ON returns(orderNo, createdAt, id);
   `);
 }
 

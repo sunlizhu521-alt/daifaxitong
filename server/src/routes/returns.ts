@@ -6,7 +6,7 @@ import { z } from "zod";
 import { config } from "../config.js";
 import { getDb, nowIso } from "../db/index.js";
 import { notifyBusinessAction } from "../notifications/dingtalk.js";
-import { logOrderEventByOrderNo } from "../orderEvents.js";
+import { logOrderEvent, logOrderEventByOrderNo } from "../orderEvents.js";
 import { ROLE_ADMIN } from "../permissions.js";
 
 export const returnsRouter = Router();
@@ -27,6 +27,7 @@ const upload = multer({
 });
 
 const returnSchema = z.object({
+  orderId: z.coerce.number().int().positive().optional(),
   storeName: z.string().trim().min(1, "店铺不能为空"),
   operator: z.string().optional().default(""),
   orderNo: z.string().trim().min(1, "订单号不能为空"),
@@ -48,17 +49,17 @@ function rowToReturn(row: Record<string, unknown>) {
   } as Record<string, unknown> & { attachments: string[] };
 }
 
-function latestTrackingNo(orderNo: string) {
+function latestTrackingNo(orderNo: string, orderId?: number | null) {
   const row = getDb()
     .prepare(
       `SELECT sh.trackingNo
        FROM orders o
        JOIN shipments sh ON sh.orderId = o.id
-       WHERE o.orderNo = ?
+       WHERE ${orderId ? "o.id = ?" : "o.orderNo = ?"}
        ORDER BY sh.id DESC
        LIMIT 1`
     )
-    .get(orderNo) as { trackingNo?: string } | undefined;
+    .get(orderId ?? orderNo) as { trackingNo?: string } | undefined;
   return row?.trackingNo ?? "";
 }
 
@@ -132,7 +133,7 @@ returnsRouter.get("/", (req, res) => {
         SUM(oi.quantity) AS totalQuantity,
         sh.trackingNo AS shipmentTrackingNo
        FROM returns r
-       LEFT JOIN orders o ON o.orderNo = r.orderNo
+       LEFT JOIN orders o ON o.id = r.orderId
        LEFT JOIN shipments sh ON sh.id = (
          SELECT latest.id FROM shipments latest WHERE latest.orderId = o.id ORDER BY latest.id DESC LIMIT 1
        )
@@ -221,7 +222,11 @@ returnsRouter.get("/orders", (req, res) => {
          SELECT latestShipment.id FROM shipments latestShipment WHERE latestShipment.orderId = o.id ORDER BY latestShipment.id DESC LIMIT 1
        )
        LEFT JOIN returns latestReturn ON latestReturn.id = (
-         SELECT latest.id FROM returns latest WHERE latest.orderNo = o.orderNo ORDER BY latest.id DESC LIMIT 1
+         SELECT latest.id
+         FROM returns latest
+         WHERE latest.orderId = o.id
+         ORDER BY latest.id DESC
+         LIMIT 1
        )
        LEFT JOIN suppliers s ON s.id = COALESCE(sh.supplierId, o.supplierId)
        LEFT JOIN order_items oi ON oi.orderId = o.id
@@ -251,13 +256,22 @@ returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
   const files = (req.files as Express.Multer.File[] | undefined) ?? [];
   const attachments = files.map((file) => `/uploads/${file.filename}`);
   const db = getDb();
+  const order = parsed.data.orderId
+    ? (db.prepare("SELECT id, orderNo FROM orders WHERE id = ?").get(parsed.data.orderId) as { id: number; orderNo: string } | undefined)
+    : (db.prepare("SELECT id, orderNo FROM orders WHERE orderNo = ?").get(parsed.data.orderNo) as { id: number; orderNo: string } | undefined);
+  if (!order || order.orderNo !== parsed.data.orderNo) {
+    files.forEach((f) => fs.unlink(f.path, () => undefined));
+    res.status(400).json({ message: "退货订单不存在或订单编号不匹配" });
+    return;
+  }
   const result = db
     .prepare(
       `INSERT INTO returns
-       (storeName, operator, operationUser, orderNo, model, customerName, customerPhone, address, status, action, trackingNo, reason, note, attachmentJson, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       (orderId, storeName, operator, operationUser, orderNo, model, customerName, customerPhone, address, status, action, trackingNo, reason, note, attachmentJson, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
+      order.id,
       parsed.data.storeName,
       parsed.data.operator,
       req.session.user?.username ?? "",
@@ -276,7 +290,7 @@ returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
     );
   const row = db.prepare("SELECT * FROM returns WHERE id = ?").get(result.lastInsertRowid) as Record<string, unknown>;
   const payload = rowToReturn(row);
-  logOrderEventByOrderNo(parsed.data.orderNo, "提交退货", `${parsed.data.action} / ${parsed.data.reason}`, req.session.user?.username);
+  logOrderEvent(order.id, "提交退货", `${parsed.data.action} / ${parsed.data.reason}`, req.session.user?.username);
   void notifyBusinessAction({
     action: "提交退货",
     operator: req.session.user?.username,
@@ -309,7 +323,7 @@ returnsRouter.patch("/:id/status", (req, res) => {
   }
   const id = Number(req.params.id);
   const current = getDb().prepare("SELECT * FROM returns WHERE id = ?").get(id) as
-    | { id: number; orderNo: string; action: string }
+    | { id: number; orderId?: number | null; orderNo: string; action: string }
     | undefined;
   if (!current) {
     res.status(404).json({ message: "退货记录不存在" });
@@ -318,7 +332,7 @@ returnsRouter.patch("/:id/status", (req, res) => {
   let trackingNo = parsed.data.trackingNo.trim();
   if (parsed.data.status === "已安排退回" || parsed.data.status === "退货待接收" || parsed.data.status === "退回中") {
     if (current.action !== "自行寄回" && current.action !== "寄回" && current.action !== "上门取件" && !trackingNo) {
-      trackingNo = latestTrackingNo(current.orderNo);
+      trackingNo = latestTrackingNo(current.orderNo, current.orderId);
     }
   }
   const result = getDb()
@@ -330,12 +344,14 @@ returnsRouter.patch("/:id/status", (req, res) => {
   }
   const row = getDb().prepare("SELECT * FROM returns WHERE id = ?").get(id) as Record<string, unknown>;
   const payload = rowToReturn(row);
-  logOrderEventByOrderNo(
-    String(payload.orderNo),
-    parsed.data.status === "已收货" || parsed.data.status === "已收到退货" || parsed.data.status === "退货成功" ? "退货收货" : "退货操作",
-    `${payload.status}${payload.trackingNo ? ` / ${payload.trackingNo}` : ""}`,
-    req.session.user?.username
-  );
+  const eventAction = parsed.data.status === "已收货" || parsed.data.status === "已收到退货" || parsed.data.status === "退货成功" ? "退货收货" : "退货操作";
+  const eventDetail = `${payload.status}${payload.trackingNo ? ` / ${payload.trackingNo}` : ""}`;
+  const payloadOrderId = Number(payload.orderId);
+  if (Number.isFinite(payloadOrderId) && payloadOrderId > 0) {
+    logOrderEvent(payloadOrderId, eventAction, eventDetail, req.session.user?.username);
+  } else {
+    logOrderEventByOrderNo(String(payload.orderNo), eventAction, eventDetail, req.session.user?.username);
+  }
   void notifyBusinessAction({
     action: parsed.data.status === "已收货" || parsed.data.status === "已收到退货" || parsed.data.status === "退货成功" ? "退货收货" : "退货操作",
     operator: req.session.user?.username,
@@ -366,7 +382,12 @@ returnsRouter.delete("/:id", (req, res) => {
   }
   const payload = row ? rowToReturn(row) : null;
   if (payload?.orderNo) {
-    logOrderEventByOrderNo(String(payload.orderNo), "撤销退货", `${payload.action ?? "-"} / ${payload.reason ?? "-"}`, req.session.user?.username);
+    const payloadOrderId = Number(payload.orderId);
+    if (Number.isFinite(payloadOrderId) && payloadOrderId > 0) {
+      logOrderEvent(payloadOrderId, "撤销退货", `${payload.action ?? "-"} / ${payload.reason ?? "-"}`, req.session.user?.username);
+    } else {
+      logOrderEventByOrderNo(String(payload.orderNo), "撤销退货", `${payload.action ?? "-"} / ${payload.reason ?? "-"}`, req.session.user?.username);
+    }
   }
   void notifyBusinessAction({
     action: "撤销退货",

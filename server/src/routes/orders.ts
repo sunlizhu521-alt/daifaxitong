@@ -191,7 +191,11 @@ ordersRouter.get("/", (req, res) => {
       SELECT sh.id FROM shipments sh WHERE sh.orderId = o.id ORDER BY sh.id DESC LIMIT 1
     )
     LEFT JOIN returns latestReturn ON latestReturn.id = (
-      SELECT lr.id FROM returns lr WHERE lr.orderNo = o.orderNo ORDER BY lr.id DESC LIMIT 1
+      SELECT lr.id
+      FROM returns lr
+      WHERE lr.orderId = o.id
+      ORDER BY lr.id DESC
+      LIMIT 1
     )
     LEFT JOIN suppliers shipSupplier ON shipSupplier.id = latest.supplierId
     LEFT JOIN suppliers orderSupplier ON orderSupplier.id = o.supplierId
@@ -219,7 +223,11 @@ ordersRouter.get("/", (req, res) => {
          SELECT sh.id FROM shipments sh WHERE sh.orderId = o.id ORDER BY sh.id DESC LIMIT 1
        )
        LEFT JOIN returns latestReturn ON latestReturn.id = (
-         SELECT lr.id FROM returns lr WHERE lr.orderNo = o.orderNo ORDER BY lr.id DESC LIMIT 1
+         SELECT lr.id
+         FROM returns lr
+         WHERE lr.orderId = o.id
+         ORDER BY lr.id DESC
+         LIMIT 1
        )
        LEFT JOIN suppliers shipSupplier ON shipSupplier.id = latest.supplierId
        LEFT JOIN suppliers orderSupplier ON orderSupplier.id = o.supplierId

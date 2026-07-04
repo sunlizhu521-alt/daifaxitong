@@ -1,6 +1,6 @@
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, downloadFile, rowsFromListResponse, type ListResponse, type OrderListRow, type Product, type Supplier } from "../api";
+import { api, downloadFile, rowsFromListResponse, type ListResponse, type OrderListRow } from "../api";
 import { notifyApp } from "../ui/AppNotifications";
 import { PageHeader, Panel } from "../ui/Section";
 
@@ -14,31 +14,22 @@ const statusText: Record<string, string> = {
   customer_cancelled: "顾客不要了"
 };
 
-type OrderDetail = OrderListRow & {
-  items: Array<{
-    productId?: number | null;
-    productName: string;
-    productSku: string;
-    quantity: number;
-  }>;
-};
-
 export function ShippingSchedulePage() {
   const qc = useQueryClient();
   const [status, setStatus] = useState("filled");
-  const [editing, setEditing] = useState<OrderDetail | null>(null);
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(() => new Set());
   const { data: orderResponse } = useQuery({
     queryKey: ["shipping-schedule", status],
     queryFn: () => api<ListResponse<OrderListRow>>(`/orders?status=${encodeURIComponent(status)}&includeAccessoryPending=${status === "filled" ? "yes" : ""}`)
   });
-  const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: () => api<Product[]>("/products") });
-  const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers"], queryFn: () => api<Supplier[]>("/suppliers") });
   const orders = rowsFromListResponse(orderResponse).filter((order) => order.status !== "customer_cancelled");
   const selectedVisibleOrders = useMemo(() => orders.filter((order) => selectedOrderIds.has(order.id)), [orders, selectedOrderIds]);
   const allVisibleSelected = orders.length > 0 && orders.every((order) => selectedOrderIds.has(order.id));
   const markShipped = useMutation({
-    mutationFn: (id: number) => api(`/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "shipped" }), notify: true }),
+    mutationFn: (input: number | { id: number; notify?: boolean }) => {
+      const payload = typeof input === "number" ? { id: input, notify: true } : input;
+      return api(`/orders/${payload.id}/status`, { method: "PATCH", body: JSON.stringify({ status: "shipped" }), notify: payload.notify ?? true });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
       qc.invalidateQueries({ queryKey: ["dropship-summary"] });
@@ -60,13 +51,17 @@ export function ShippingSchedulePage() {
       notifyApp({ variant: "error", message: "请先选择要批量提交的订单" });
       return;
     }
+    let successCount = 0;
     try {
       for (const order of selectedVisibleOrders) {
-        await markShipped.mutateAsync(order.id);
+        await markShipped.mutateAsync({ id: order.id, notify: false });
+        successCount += 1;
       }
       setSelectedOrderIds(new Set());
-    } catch {
-      // api 层已经弹出失败原因，这里不重复提示。
+      notifyApp({ variant: "success", message: `批量提交完成\n共选择 ${selectedVisibleOrders.length} 条，成功提交 ${successCount} 条。\n状态已更新为已提货。` });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "请求失败";
+      notifyApp({ variant: "error", message: `批量提交中断\n已成功 ${successCount} 条，第 ${successCount + 1} 条失败。\n失败原因：${message}` });
     }
   }
 
@@ -107,44 +102,9 @@ export function ShippingSchedulePage() {
       qc.invalidateQueries({ queryKey: ["summary"] });
     }
   });
-  const updateShipping = useMutation({
-    mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}/shipping-edit`, { method: "PATCH", body: JSON.stringify(body), notify: true }),
-    onSuccess: () => {
-      setEditing(null);
-      qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
-      qc.invalidateQueries({ queryKey: ["dropship-summary"] });
-      qc.invalidateQueries({ queryKey: ["orders"] });
-      qc.invalidateQueries({ queryKey: ["return-orders"] });
-      qc.invalidateQueries({ queryKey: ["summary"] });
-    }
-  });
-
-  async function openEdit(order: OrderListRow) {
-    setEditing(await api<OrderDetail>(`/orders/${order.id}`));
-  }
-
   function markCustomerCancelled(order: OrderListRow) {
     if (!window.confirm(`确认订单 ${order.orderNo} 顾客不要了吗？`)) return;
     cancelOrder.mutate(order.id);
-  }
-
-  function submitEdit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!editing) return;
-    const form = new FormData(event.currentTarget);
-    const productId = Number(form.get("productId") || 0);
-    const product = products.find((item) => item.id === productId);
-    updateShipping.mutate({
-      id: editing.id,
-      body: {
-        supplierId: form.get("supplierId"),
-        productId: product?.id ?? null,
-        productName: product?.name ?? String(form.get("productName") ?? "").trim(),
-        productSku: product?.ssku || product?.sku || String(form.get("productSku") ?? "").trim(),
-        quantity: form.get("quantity"),
-        note: String(form.get("note") ?? "").trim()
-      }
-    });
   }
 
   return (
@@ -229,7 +189,6 @@ export function ShippingSchedulePage() {
                   ) : (
                     <button type="button" onClick={() => markShipped.mutate(order.id)}>已提货</button>
                   )}
-                  <button type="button" onClick={() => openEdit(order)}>换型号</button>
                   <button type="button" onClick={() => markCustomerCancelled(order)} disabled={cancelOrder.isPending}>
                     不要了
                   </button>
@@ -242,49 +201,7 @@ export function ShippingSchedulePage() {
         {markShipped.error ? <div className="error">{markShipped.error.message}</div> : null}
         {markUnshipped.error ? <div className="error">{markUnshipped.error.message}</div> : null}
         {cancelOrder.error ? <div className="error">{cancelOrder.error.message}</div> : null}
-        {updateShipping.error ? <div className="error">{updateShipping.error.message}</div> : null}
       </Panel>
-      {editing ? (
-        <div className="modal-backdrop">
-          <form className="modal summary-edit-modal" onSubmit={submitEdit}>
-            <h2>换型号</h2>
-            <label className="modal-field">
-              <span>供应商</span>
-              <select name="supplierId" defaultValue={editing.supplierId ?? ""}>
-                <option value="">无供应商</option>
-                {suppliers.map((supplier) => (
-                  <option value={supplier.id} key={supplier.id}>{supplier.shortName || supplier.name}</option>
-                ))}
-              </select>
-            </label>
-            <label className="modal-field">
-              <span>商品 / SKU / 供应商型号</span>
-              <select name="productId" defaultValue={editing.items[0]?.productId ?? ""} required>
-                <option value="">选择商品</option>
-                {products.map((product) => (
-                  <option value={product.id} key={product.id}>
-                    {product.name} / {product.ssku || product.sku} / {product.supplierModel || "-"}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <input type="hidden" name="productName" value={editing.items[0]?.productName ?? ""} readOnly />
-            <input type="hidden" name="productSku" value={editing.items[0]?.productSku ?? ""} readOnly />
-            <label className="modal-field">
-              <span>数量</span>
-              <input name="quantity" type="number" min="1" defaultValue={editing.items[0]?.quantity ?? 1} required />
-            </label>
-            <label className="modal-field">
-              <span>备注</span>
-              <textarea name="note" defaultValue={editing.note || ""} />
-            </label>
-            <div className="modal-actions">
-              <button type="button" className="ghost-button" onClick={() => setEditing(null)}>取消</button>
-              <button className="primary-button" disabled={updateShipping.isPending}>保存换型号</button>
-            </div>
-          </form>
-        </div>
-      ) : null}
     </>
   );
 }

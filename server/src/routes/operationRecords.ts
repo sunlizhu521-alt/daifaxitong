@@ -35,7 +35,11 @@ operationRecordsRouter.get("/", (req, res) => {
     LEFT JOIN order_items oi ON oi.orderId = o.id
     LEFT JOIN products p ON p.id = oi.productId
     LEFT JOIN returns latestReturn ON latestReturn.id = (
-      SELECT lr.id FROM returns lr WHERE lr.orderNo = o.orderNo ORDER BY lr.id DESC LIMIT 1
+      SELECT lr.id
+      FROM returns lr
+      WHERE lr.orderId = o.id
+      ORDER BY lr.id DESC
+      LIMIT 1
     )
     ${whereSql}`;
   const { total } = getDb().prepare(countSql).get(...params) as { total: number };
@@ -62,7 +66,11 @@ operationRecordsRouter.get("/", (req, res) => {
          SELECT sh.id FROM shipments sh WHERE sh.orderId = o.id ORDER BY sh.id DESC LIMIT 1
        )
        LEFT JOIN returns latestReturn ON latestReturn.id = (
-         SELECT lr.id FROM returns lr WHERE lr.orderNo = o.orderNo ORDER BY lr.id DESC LIMIT 1
+         SELECT lr.id
+         FROM returns lr
+         WHERE lr.orderId = o.id
+         ORDER BY lr.id DESC
+         LIMIT 1
        )
        LEFT JOIN suppliers shipSupplier ON shipSupplier.id = latest.supplierId
        LEFT JOIN suppliers orderSupplier ON orderSupplier.id = o.supplierId

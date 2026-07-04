@@ -56,7 +56,8 @@ export function TrackingNumbersPage() {
   const selectedVisibleOrders = useMemo(() => orders.filter((order) => selectedOrderIds.has(order.id)), [orders, selectedOrderIds]);
   const allVisibleSelected = orders.length > 0 && orders.every((order) => selectedOrderIds.has(order.id));
   const ship = useMutation({
-    mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}/ship`, { method: "POST", body: JSON.stringify(body), notify: true }),
+    mutationFn: ({ id, body, notify = true }: { id: number; body: unknown; notify?: boolean }) =>
+      api(`/orders/${id}/ship`, { method: "POST", body: JSON.stringify(body), notify }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tracking-orders"] });
       qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
@@ -110,16 +111,28 @@ export function TrackingNumbersPage() {
       notifyApp({ variant: "error", message: "请先选择要批量提交的订单" });
       return;
     }
-    for (const order of selectedVisibleOrders) {
-      const form = document.getElementById(`shipment-${order.id}`) as HTMLFormElement | null;
-      if (!form) continue;
+    const forms = selectedVisibleOrders
+      .map((order) => ({ order, form: document.getElementById(`shipment-${order.id}`) as HTMLFormElement | null }))
+      .filter((item): item is { order: OrderListRow; form: HTMLFormElement } => Boolean(item.form));
+    for (const { form } of forms) {
       if (!form.reportValidity()) return;
-      await ship.mutateAsync({
-        id: order.id,
-        body: buildShipmentBody(order, form)
-      });
     }
-    setSelectedOrderIds(new Set());
+    let successCount = 0;
+    try {
+      for (const { order, form } of forms) {
+        await ship.mutateAsync({
+          id: order.id,
+          body: buildShipmentBody(order, form),
+          notify: false
+        });
+        successCount += 1;
+      }
+      setSelectedOrderIds(new Set());
+      notifyApp({ variant: "success", message: `批量提交完成\n共选择 ${selectedVisibleOrders.length} 条，成功提交 ${successCount} 条。` });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "请求失败";
+      notifyApp({ variant: "error", message: `批量提交中断\n已成功 ${successCount} 条，第 ${successCount + 1} 条失败。\n失败原因：${message}` });
+    }
   }
 
   function toggleOrderSelected(orderId: number, checked: boolean) {
