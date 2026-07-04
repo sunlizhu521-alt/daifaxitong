@@ -8,6 +8,12 @@ type CacheEntry = {
   expiresAt: number;
 };
 
+type InfoCacheEntry = {
+  carrierName: string;
+  status: SimpleLogisticsStatus | null;
+  expiresAt: number;
+};
+
 type Kuaidi100Response = {
   message?: string;
   state?: string;
@@ -20,7 +26,16 @@ type Kuaidi100Response = {
   }>;
 };
 
+type Kuaidi100AutoResponse = {
+  auto?: Array<{
+    comCode?: string;
+    id?: string;
+    name?: string;
+  }>;
+};
+
 const cache = new Map<string, CacheEntry>();
+const infoCache = new Map<string, InfoCacheEntry>();
 const CACHE_TTL = 1000 * 60 * 30;
 
 const carrierCodeMap: Array<[RegExp, string]> = [
@@ -36,9 +51,27 @@ const carrierCodeMap: Array<[RegExp, string]> = [
   [/德邦/i, "debangwuliu"]
 ];
 
+const carrierNameByCode: Record<string, string> = {
+  shunfeng: "顺丰速运",
+  yuantong: "圆通速递",
+  zhongtong: "中通快递",
+  shentong: "申通快递",
+  jd: "京东快递",
+  ems: "邮政EMS",
+  yunda: "韵达快递",
+  jtexpress: "极兔速递",
+  huitongkuaidi: "百世快递",
+  debangwuliu: "德邦快递"
+};
+
 export function carrierCodeFromName(name?: string | null) {
   const value = String(name ?? "").trim();
   return carrierCodeMap.find(([pattern]) => pattern.test(value))?.[1] ?? "";
+}
+
+function carrierNameFromCode(code?: string | null) {
+  const value = String(code ?? "").trim();
+  return carrierNameByCode[value] ?? "";
 }
 
 export function fallbackLogisticsStatus(orderStatus?: string | null, trackingNo?: string | null, returnStatus?: string | null): SimpleLogisticsStatus | "" {
@@ -79,13 +112,47 @@ function phoneTail(value?: string | null) {
   return digits.length >= 4 ? digits.slice(-4) : digits;
 }
 
-export async function queryKuaidi100Status(options: {
+async function detectCarrierByTrackingNo(trackingNo: string) {
+  if (!config.kuaidi100Key || !trackingNo) return null;
+  const params = new URLSearchParams({ key: config.kuaidi100Key, text: trackingNo, resultv2: "1" });
+  const response = await fetch(`https://www.kuaidi100.com/autonumber/autoComNum?${params.toString()}`);
+  if (!response.ok) return null;
+  const data = (await response.json().catch(() => null)) as Kuaidi100AutoResponse | null;
+  const first = data?.auto?.find((item) => String(item.comCode ?? item.id ?? "").trim());
+  const code = String(first?.comCode ?? first?.id ?? "").trim();
+  if (!code) return null;
+  return {
+    code,
+    name: String(first?.name ?? "").trim() || carrierNameFromCode(code)
+  };
+}
+
+export async function queryKuaidi100Info(options: {
   carrierName?: string | null;
   trackingNo?: string | null;
   phone?: string | null;
-}): Promise<SimpleLogisticsStatus | null> {
+}): Promise<{ status: SimpleLogisticsStatus | null; carrierName: string } | null> {
   const trackingNo = String(options.trackingNo ?? "").trim();
-  const com = carrierCodeFromName(options.carrierName);
+  if (!trackingNo) return null;
+
+  const infoCached = infoCache.get(trackingNo);
+  if (infoCached && infoCached.expiresAt > Date.now()) {
+    return { status: infoCached.status, carrierName: infoCached.carrierName };
+  }
+
+  const detected = await detectCarrierByTrackingNo(trackingNo).catch(() => null);
+  const com = detected?.code || carrierCodeFromName(options.carrierName);
+  const carrierName = detected?.name || carrierNameFromCode(com) || String(options.carrierName ?? "").trim();
+  if (!config.kuaidi100Customer || !config.kuaidi100Key || !com) {
+    return carrierName ? { status: null, carrierName } : null;
+  }
+
+  const status = await queryKuaidi100StatusByCode(com, trackingNo, options.phone);
+  infoCache.set(trackingNo, { status, carrierName, expiresAt: Date.now() + CACHE_TTL });
+  return carrierName ? { status, carrierName } : null;
+}
+
+async function queryKuaidi100StatusByCode(com: string, trackingNo: string, phone?: string | null): Promise<SimpleLogisticsStatus | null> {
   if (!config.kuaidi100Customer || !config.kuaidi100Key || !trackingNo || !com) return null;
 
   const cacheKey = `${com}:${trackingNo}`;
@@ -95,7 +162,7 @@ export async function queryKuaidi100Status(options: {
   const param = JSON.stringify({
     com,
     num: trackingNo,
-    phone: phoneTail(options.phone),
+    phone: phoneTail(phone),
     resultv2: "4",
     show: "0",
     order: "desc"
@@ -111,4 +178,14 @@ export async function queryKuaidi100Status(options: {
   if (!status) return null;
   cache.set(cacheKey, { status, expiresAt: Date.now() + CACHE_TTL });
   return status;
+}
+
+export async function queryKuaidi100Status(options: {
+  carrierName?: string | null;
+  trackingNo?: string | null;
+  phone?: string | null;
+}): Promise<SimpleLogisticsStatus | null> {
+  const trackingNo = String(options.trackingNo ?? "").trim();
+  const com = carrierCodeFromName(options.carrierName);
+  return queryKuaidi100StatusByCode(com, trackingNo, options.phone);
 }

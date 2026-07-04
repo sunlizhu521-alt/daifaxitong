@@ -4,7 +4,7 @@ import multer from "multer";
 import { z } from "zod";
 import { config } from "../config.js";
 import { getDb, nowIso } from "../db/index.js";
-import { fallbackLogisticsStatus, queryKuaidi100Status } from "../logistics/kuaidi100.js";
+import { fallbackLogisticsStatus, queryKuaidi100Info, queryKuaidi100Status } from "../logistics/kuaidi100.js";
 import { notifyBusinessAction } from "../notifications/dingtalk.js";
 import { logOrderEvent } from "../orderEvents.js";
 import { ROLE_ADMIN } from "../permissions.js";
@@ -259,22 +259,27 @@ ordersRouter.get("/", async (req, res) => {
       const returnTrackingNo = String(row.returnTrackingNo ?? "");
       const shipmentFallback = fallbackLogisticsStatus(String(row.status ?? ""), shipmentTrackingNo, String(row.returnStatus ?? ""));
       const returnFallback = fallbackLogisticsStatus(String(row.status ?? ""), returnTrackingNo, String(row.returnStatus ?? ""));
-      const [shipmentLogisticsStatus, returnLogisticsStatus] = await Promise.all([
+      const [shipmentLogisticsStatus, returnLogisticsInfo] = await Promise.all([
         queryKuaidi100Status({
           carrierName: String(row.carrier ?? ""),
           trackingNo: shipmentTrackingNo,
           phone: String(row.customerPhone ?? "")
         }).catch(() => null),
-        queryKuaidi100Status({
-          carrierName: String(row.returnCarrier ?? row.carrier ?? ""),
+        queryKuaidi100Info({
+          carrierName: String(row.returnCarrier ?? ""),
           trackingNo: returnTrackingNo,
           phone: String(row.customerPhone ?? "")
         }).catch(() => null)
       ]);
+      const returnCarrier =
+        String(row.returnCarrier ?? "").trim() ||
+        returnLogisticsInfo?.carrierName ||
+        (returnTrackingNo && returnTrackingNo === shipmentTrackingNo ? String(row.carrier ?? "").trim() : "");
       return {
         ...row,
+        returnCarrier,
         shipmentLogisticsStatus: shipmentLogisticsStatus ?? shipmentFallback,
-        returnLogisticsStatus: returnLogisticsStatus ?? returnFallback
+        returnLogisticsStatus: returnLogisticsInfo?.status ?? returnFallback
       };
     })
   );
@@ -404,18 +409,22 @@ ordersRouter.get("/summary-export", async (req, res) => {
       const returnTrackingNo = String(row.returnTrackingNo ?? "");
       const shipmentFallback = fallbackLogisticsStatus(String(row.status ?? ""), shipmentTrackingNo, String(row.returnStatus ?? ""));
       const returnFallback = fallbackLogisticsStatus(String(row.status ?? ""), returnTrackingNo, String(row.returnStatus ?? ""));
-      const [shipmentLogisticsStatus, returnLogisticsStatus] = await Promise.all([
+      const [shipmentLogisticsStatus, returnLogisticsInfo] = await Promise.all([
         queryKuaidi100Status({
           carrierName: String(row.carrier ?? ""),
           trackingNo: shipmentTrackingNo,
           phone: String(row.customerPhone ?? "")
         }).catch(() => null),
-        queryKuaidi100Status({
-          carrierName: String(row.returnCarrier ?? row.carrier ?? ""),
+        queryKuaidi100Info({
+          carrierName: String(row.returnCarrier ?? ""),
           trackingNo: returnTrackingNo,
           phone: String(row.customerPhone ?? "")
         }).catch(() => null)
       ]);
+      const returnCarrier =
+        String(row.returnCarrier ?? "").trim() ||
+        returnLogisticsInfo?.carrierName ||
+        (returnTrackingNo && returnTrackingNo === shipmentTrackingNo ? String(row.carrier ?? "").trim() : "");
       return {
         创建时间: String(row.createdAt ?? "").slice(0, 10),
         登记人: row.registrarName ?? "",
@@ -432,9 +441,9 @@ ordersRouter.get("/summary-export", async (req, res) => {
         快递公司: row.carrier ?? "",
         发货单号: shipmentTrackingNo,
         快递状态: shipmentLogisticsStatus ?? shipmentFallback,
-        退货快递公司: row.returnCarrier ?? "",
+        退货快递公司: returnCarrier,
         退货快递单号: returnTrackingNo,
-        退货快递状态: returnLogisticsStatus ?? returnFallback,
+        退货快递状态: returnLogisticsInfo?.status ?? returnFallback,
         供应商: row.supplierName ?? "",
         采购订单号填写人: row.purchaseOrderUser ?? "",
         采购订单号: row.purchaseOrderNo ?? "",
