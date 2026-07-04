@@ -8,6 +8,7 @@ export function ReturnReceiptPage() {
   const qc = useQueryClient();
   const [keyword, setKeyword] = useState("");
   const [selectedReturnIds, setSelectedReturnIds] = useState<Set<number>>(() => new Set());
+  const [previewAttachment, setPreviewAttachment] = useState<{ url: string; title: string } | null>(null);
   const { data: returns = [] } = useQuery({
     queryKey: ["return-receipts", keyword],
     queryFn: () => api<ReturnRecord[]>(`/returns?status=${encodeURIComponent("退回中")}&keyword=${encodeURIComponent(keyword)}`)
@@ -155,10 +156,10 @@ export function ReturnReceiptPage() {
                 <td>{row.note || "-"}</td>
                 <td>
                   <div className="attachment-list">
-                    {row.attachments.map((url) => (
-                      <a href={url} target="_blank" rel="noreferrer" key={url}>
+                    {row.attachments.map((url, index) => (
+                      <button type="button" className="attachment-thumb-button" key={url} onClick={() => setPreviewAttachment({ url, title: `${row.orderNo} 附件${index + 1}` })}>
                         <img src={url} alt="附件" />
-                      </a>
+                      </button>
                     ))}
                   </div>
                 </td>
@@ -174,6 +175,19 @@ export function ReturnReceiptPage() {
         {returns.length === 0 ? <div className="success">暂无待收货退货</div> : null}
         {receiveReturn.error ? <div className="error">{receiveReturn.error.message}</div> : null}
       </Panel>
+      {previewAttachment ? (
+        <div className="modal-backdrop" onClick={() => setPreviewAttachment(null)}>
+          <div className="modal attachment-preview-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="attachment-preview-header">
+              <h2>{previewAttachment.title}</h2>
+              <button type="button" className="ghost-button" onClick={() => setPreviewAttachment(null)}>
+                关闭
+              </button>
+            </div>
+            <img src={previewAttachment.url} alt={previewAttachment.title} />
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
