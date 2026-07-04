@@ -316,6 +316,127 @@ ordersRouter.get("/export", async (req, res) => {
   res.send(buffer);
 });
 
+ordersRouter.get("/summary-export", async (req, res) => {
+  const XLSX = (await import("xlsx")).default;
+  const { keyword = "", status = "", supplierId = "", storeName = "", startDate = "", endDate = "", orderType = "" } = req.query;
+  const filters: string[] = [];
+  const params: unknown[] = [];
+  if (keyword) {
+    filters.push("(o.orderNo LIKE ? OR o.purchaseOrderNo LIKE ? OR o.purchaseOrderUser LIKE ? OR o.storeName LIKE ? OR o.customerName LIKE ? OR o.customerPhone LIKE ? OR o.address LIKE ? OR oi.productName LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ? OR p.materialCode LIKE ? OR latestReturn.status LIKE ? OR latestReturn.action LIKE ? OR latestReturn.reason LIKE ?)");
+    params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
+  }
+  if (status) {
+    filters.push("o.status = ?");
+    params.push(status);
+  }
+  if (orderType) {
+    filters.push("o.orderType = ?");
+    params.push(orderType);
+  }
+  if (supplierId) {
+    filters.push("(o.supplierId = ? OR EXISTS (SELECT 1 FROM shipments sh WHERE sh.orderId = o.id AND sh.supplierId = ?))");
+    params.push(Number(supplierId), Number(supplierId));
+  }
+  if (storeName) {
+    filters.push("o.storeName = ?");
+    params.push(storeName);
+  }
+  if (startDate) {
+    filters.push("date(o.createdAt) >= date(?)");
+    params.push(startDate);
+  }
+  if (endDate) {
+    filters.push("date(o.createdAt) <= date(?)");
+    params.push(endDate);
+  }
+
+  const rows = getDb()
+    .prepare(
+      `SELECT o.*, SUM(oi.quantity) AS totalQuantity,
+        GROUP_CONCAT(DISTINCT oi.productName) AS productName,
+        GROUP_CONCAT(DISTINCT p.series) AS productSeries,
+        GROUP_CONCAT(DISTINCT oi.productSku) AS productSku,
+        COALESCE((SELECT st.shortName FROM stores st WHERE st.name = o.storeName ORDER BY st.id DESC LIMIT 1), o.storeName) AS storeShortName,
+        latest.carrier AS carrier, latest.trackingNo AS trackingNo, latest.shippedAt AS shippedAt,
+        latest.note AS shipmentNote,
+        latestReturn.status AS returnStatus, latestReturn.trackingNo AS returnTrackingNo,
+        '' AS returnCarrier,
+        COALESCE(shipSupplier.shortName, shipSupplier.name, orderSupplier.shortName, orderSupplier.name) AS supplierName
+       FROM orders o
+       LEFT JOIN order_items oi ON oi.orderId = o.id
+       LEFT JOIN products p ON p.id = oi.productId
+       LEFT JOIN shipments latest ON latest.id = (
+         SELECT sh.id FROM shipments sh WHERE sh.orderId = o.id ORDER BY sh.id DESC LIMIT 1
+       )
+       LEFT JOIN returns latestReturn ON latestReturn.id = (
+         SELECT lr.id
+         FROM returns lr
+         WHERE lr.orderId = o.id
+         ORDER BY lr.id DESC
+         LIMIT 1
+       )
+       LEFT JOIN suppliers shipSupplier ON shipSupplier.id = latest.supplierId
+       LEFT JOIN suppliers orderSupplier ON orderSupplier.id = o.supplierId
+       ${filters.length ? `WHERE ${filters.join(" AND ")}` : ""}
+       GROUP BY o.id
+       ORDER BY o.id DESC`
+    )
+    .all(...params) as Array<Record<string, unknown>>;
+
+  const exportRows = await Promise.all(
+    rows.map(async (row) => {
+      const shipmentTrackingNo = String(row.trackingNo ?? "");
+      const returnTrackingNo = String(row.returnTrackingNo ?? "");
+      const shipmentFallback = fallbackLogisticsStatus(String(row.status ?? ""), shipmentTrackingNo, String(row.returnStatus ?? ""));
+      const returnFallback = fallbackLogisticsStatus(String(row.status ?? ""), returnTrackingNo, String(row.returnStatus ?? ""));
+      const [shipmentLogisticsStatus, returnLogisticsStatus] = await Promise.all([
+        queryKuaidi100Status({
+          carrierName: String(row.carrier ?? ""),
+          trackingNo: shipmentTrackingNo,
+          phone: String(row.customerPhone ?? "")
+        }).catch(() => null),
+        queryKuaidi100Status({
+          carrierName: String(row.returnCarrier ?? row.carrier ?? ""),
+          trackingNo: returnTrackingNo,
+          phone: String(row.customerPhone ?? "")
+        }).catch(() => null)
+      ]);
+      return {
+        创建时间: String(row.createdAt ?? "").slice(0, 10),
+        登记人: row.registrarName ?? "",
+        店铺: row.storeShortName ?? row.storeName ?? "",
+        订单编号: row.orderNo ?? "",
+        客户姓名: row.customerName ?? "",
+        电话: row.customerPhone ?? "",
+        地址: row.address ?? "",
+        商品: row.productName ?? "",
+        系列: row.productSeries ?? "",
+        SKU: row.productSku ?? "",
+        数量: row.totalQuantity ?? 0,
+        发货时间: row.shippedAt ?? "",
+        快递公司: row.carrier ?? "",
+        发货单号: shipmentTrackingNo,
+        快递状态: shipmentLogisticsStatus ?? shipmentFallback,
+        退货快递公司: row.returnCarrier ?? "",
+        退货快递单号: returnTrackingNo,
+        退货快递状态: returnLogisticsStatus ?? returnFallback,
+        供应商: row.supplierName ?? "",
+        采购订单号填写人: row.purchaseOrderUser ?? "",
+        采购订单号: row.purchaseOrderNo ?? "",
+        状态: row.returnStatus ?? statusText[String(row.status ?? "")] ?? row.status ?? "",
+        备注: [String(row.note ?? "").trim(), String(row.shipmentNote ?? "").trim()].filter(Boolean).join(" / ")
+      };
+    })
+  );
+  const workbook = XLSX.utils.book_new();
+  const sheetName = orderType === "accessory" ? "配件信息" : "成品信息";
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(exportRows), sheetName);
+  const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition", "attachment; filename*=UTF-8''" + encodeURIComponent(`${sheetName}导出.xlsx`));
+  res.send(buffer);
+});
+
 ordersRouter.get("/shipping-export", async (req, res) => {
   const XLSX = (await import("xlsx")).default;
   const status = String(req.query.status ?? "").trim();

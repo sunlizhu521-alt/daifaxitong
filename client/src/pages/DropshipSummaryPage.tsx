@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, rowsFromListResponse, type ListResponse, type OrderListRow, type Store, type Supplier, type User } from "../api";
+import { api, downloadFile, rowsFromListResponse, type ListResponse, type OrderListRow, type Store, type Supplier, type User } from "../api";
 import { notifyApp } from "../ui/AppNotifications";
 import { PageHeader, Panel } from "../ui/Section";
 
@@ -107,6 +107,19 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
     deleteOrder.mutate(order.id);
   }
 
+  function exportFilteredOrders() {
+    const params = new URLSearchParams({
+      orderType,
+      keyword,
+      status,
+      supplierId,
+      storeName,
+      startDate,
+      endDate
+    });
+    downloadFile(`/orders/summary-export?${params.toString()}`);
+  }
+
   async function removeSelectedOrders() {
     if (!canDelete) return;
     if (selectedVisibleOrders.length === 0) {
@@ -206,6 +219,9 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
           </select>
           <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
           <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+          <button type="button" className="primary-button" onClick={exportFilteredOrders}>
+            导出文件
+          </button>
           {canDelete ? (
             <button type="button" className="primary-button" onClick={removeSelectedOrders} disabled={deleteOrder.isPending}>
               批量删除
