@@ -61,7 +61,28 @@ test("auth, supplier, product, order and shipment flow", async () => {
       ]
     })
     .expect(201);
-  await agent.post("/api/orders").send(order.body).expect(409);
+  const duplicatePayload = {
+    orderNo: "DF-DUP",
+    supplierId: supplier.body.id,
+    storeName: "测试店铺",
+    registrarName: "admin",
+    customerName: "重复客户",
+    customerPhone: "13800000001",
+    address: "上海市重复地址",
+    items: [
+      {
+        productId: product.body.id,
+        productName: product.body.name,
+        productSku: product.body.sku,
+        quantity: 1,
+        unitCost: 10,
+        unitSalePrice: 18
+      }
+    ]
+  };
+  await agent.post("/api/orders").send(duplicatePayload).expect(201);
+  const duplicateOrder = await agent.post("/api/orders").send(duplicatePayload).expect(201);
+  assert.match(duplicateOrder.body.duplicateWarning, /已存在/);
 
   await agent.patch(`/api/orders/${order.body.id}/purchase-order`).send({ purchaseOrderNo: "CG20260701001", purchaseOrderUser: "采购A" }).expect(200);
   const purchaseRows = await agent.get("/api/orders?keyword=CG20260701001").expect(200);
@@ -88,7 +109,7 @@ test("auth, supplier, product, order and shipment flow", async () => {
   assert.equal(purchaseAfterShipped.body.status, "purchased");
   await agent.patch(`/api/orders/${order.body.id}/status`).send({ status: "pending" }).expect(200);
   const filteredRows = await agent.get("/api/orders?series=基础&sku=默认规格").expect(200);
-  assert.equal(filteredRows.body.rows[0].orderNo, "DF001");
+  assert.ok(filteredRows.body.rows.some((row: { orderNo: string }) => row.orderNo === "DF001"));
 
   await agent
     .post(`/api/orders/${order.body.id}/ship`)

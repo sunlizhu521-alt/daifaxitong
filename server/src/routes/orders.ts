@@ -94,6 +94,21 @@ function readOrder(id: number) {
   return { ...(order as object), items, shipments };
 }
 
+function duplicateOrderWarning(orderNo: string, storeName?: string) {
+  const trimmedOrderNo = orderNo.trim();
+  const trimmedStoreName = String(storeName ?? "").trim();
+  if (!trimmedOrderNo) return "";
+  const row = trimmedStoreName
+    ? (getDb()
+        .prepare("SELECT COUNT(*) AS count FROM orders WHERE orderNo = ? AND COALESCE(storeName, '') = ?")
+        .get(trimmedOrderNo, trimmedStoreName) as { count: number })
+    : (getDb().prepare("SELECT COUNT(*) AS count FROM orders WHERE orderNo = ?").get(trimmedOrderNo) as { count: number });
+  if (!row.count) return "";
+  return trimmedStoreName
+    ? `店铺「${trimmedStoreName}」的订单编号「${trimmedOrderNo}」已存在，本次仍已保存，请确认是否重复登记。`
+    : `订单编号「${trimmedOrderNo}」已存在，本次仍已保存，请确认是否重复登记。`;
+}
+
 function saveOrder(data: z.infer<typeof orderSchema>, id?: number) {
   const db = getDb();
   const tx = db.transaction(() => {
@@ -502,6 +517,7 @@ ordersRouter.post("/", (req, res) => {
     return;
   }
   try {
+    const warning = duplicateOrderWarning(parsed.data.orderNo, parsed.data.storeName);
     const order = saveOrder(parsed.data) as Record<string, unknown> | null;
     if (order?.id) {
       logOrderEvent(Number(order.id), parsed.data.orderType === "accessory" ? "配件登记" : "登记代发", `订单号：${parsed.data.orderNo}`, req.session.user?.username);
@@ -511,7 +527,7 @@ ordersRouter.post("/", (req, res) => {
       operator: req.session.user?.username,
       order
     });
-    res.status(201).json(order);
+    res.status(201).json(warning && order ? { ...order, duplicateWarning: warning } : order);
   } catch (error) {
     res.status(409).json({ message: error instanceof Error && error.message === "NOT_FOUND" ? "订单不存在" : "订单号已存在" });
   }

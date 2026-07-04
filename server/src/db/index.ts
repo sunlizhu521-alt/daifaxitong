@@ -35,6 +35,7 @@ function migrateDb(database: Database.Database) {
   ensureColumn(database, "orders", "orderType", "TEXT NOT NULL DEFAULT 'dropship'");
   ensureColumn(database, "orders", "storeName", "TEXT");
   ensureColumn(database, "orders", "registrarName", "TEXT");
+  allowDuplicateOrderNo(database);
   ensureColumn(database, "shipments", "carrierId", "INTEGER");
   ensureColumn(database, "carriers", "note", "TEXT");
   ensureColumn(database, "returns", "orderId", "INTEGER");
@@ -56,6 +57,57 @@ function migrateDb(database: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_returns_order_id ON returns(orderId, id);
     CREATE INDEX IF NOT EXISTS idx_returns_order_no_created_at ON returns(orderNo, createdAt, id);
   `);
+}
+
+function allowDuplicateOrderNo(database: Database.Database) {
+  const indexes = database.prepare("PRAGMA index_list(orders)").all() as Array<{ name: string; unique: number; origin: string }>;
+  const hasOrderNoUniqueConstraint = indexes.some((index) => index.unique === 1 && index.origin === "u");
+  if (!hasOrderNoUniqueConstraint) {
+    database.exec("CREATE INDEX IF NOT EXISTS idx_orders_order_no ON orders(orderNo)");
+    return;
+  }
+
+  database.pragma("foreign_keys = OFF");
+  try {
+    database.exec(`
+      BEGIN;
+      CREATE TABLE orders_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        orderNo TEXT NOT NULL,
+        purchaseOrderNo TEXT,
+        purchaseOrderUser TEXT,
+        orderType TEXT NOT NULL DEFAULT 'dropship',
+        supplierId INTEGER,
+        storeName TEXT,
+        registrarName TEXT,
+        customerName TEXT NOT NULL,
+        customerPhone TEXT,
+        address TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        note TEXT,
+        createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+        updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (supplierId) REFERENCES suppliers(id)
+      );
+      INSERT INTO orders_new (
+        id, orderNo, purchaseOrderNo, purchaseOrderUser, orderType, supplierId, storeName, registrarName,
+        customerName, customerPhone, address, status, note, createdAt, updatedAt
+      )
+      SELECT
+        id, orderNo, purchaseOrderNo, purchaseOrderUser, orderType, supplierId, storeName, registrarName,
+        customerName, customerPhone, address, status, note, createdAt, updatedAt
+      FROM orders;
+      DROP TABLE orders;
+      ALTER TABLE orders_new RENAME TO orders;
+      CREATE INDEX IF NOT EXISTS idx_orders_order_no ON orders(orderNo);
+      COMMIT;
+    `);
+  } catch (error) {
+    database.exec("ROLLBACK;");
+    throw error;
+  } finally {
+    database.pragma("foreign_keys = ON");
+  }
 }
 
 function ensureColumn(database: Database.Database, table: string, column: string, definition: string) {

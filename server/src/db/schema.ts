@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS carriers (
 
 CREATE TABLE IF NOT EXISTS orders (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  orderNo TEXT NOT NULL UNIQUE,
+  orderNo TEXT NOT NULL,
   purchaseOrderNo TEXT,
   purchaseOrderUser TEXT,
   orderType TEXT NOT NULL DEFAULT 'dropship',
@@ -96,6 +96,8 @@ CREATE TABLE IF NOT EXISTS orders (
   updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (supplierId) REFERENCES suppliers(id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_orders_order_no ON orders(orderNo);
 
 CREATE TABLE IF NOT EXISTS order_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

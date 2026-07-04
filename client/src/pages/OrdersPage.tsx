@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, downloadFile, Product, Store, Supplier, User } from "../api";
+import { notifyApp } from "../ui/AppNotifications";
 import { PageHeader, Panel } from "../ui/Section";
 
 const addressStartPattern =
@@ -180,13 +181,11 @@ export function OrderEntryPage({
   }, [suppliers, supplierId]);
 
   const createOrder = useMutation({
-    mutationFn: (body: unknown) => api("/orders", { method: "POST", body: JSON.stringify(body), notify: true }),
+    mutationFn: (body: unknown) => api<{ duplicateWarning?: string }>("/orders", { method: "POST", body: JSON.stringify(body), notify: false }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: [orderType === "accessory" ? "accessory-summary" : "dropship-summary"] });
       qc.invalidateQueries({ queryKey: ["summary"] });
-      setReceiverRaw("");
-      setReceiver({ customerName: "", customerPhone: "", address: "" });
     }
   });
   const importOrders = useMutation({
@@ -208,33 +207,50 @@ export function OrderEntryPage({
 
   function submitOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formElement = event.currentTarget;
     const form = new FormData(event.currentTarget);
     const product = itemInputMode === "select" ? products.find((item) => item.id === Number(form.get("productId"))) : undefined;
     if (itemInputMode === "select" && !product) return;
     const manualProductSku = String(form.get("productSku") ?? "").trim();
     const manualProductName = String(form.get("productName") ?? "").trim();
-    createOrder.mutate({
-      orderNo: form.get("orderNo"),
-      orderType,
-      supplierId: form.get("supplierId"),
-      storeName: form.get("storeName"),
-      registrarName: form.get("registrarName"),
-      customerName: form.get("customerName"),
-      customerPhone: form.get("customerPhone"),
-      address: form.get("address"),
-      note: form.get("note"),
-      items: [
-        {
-          productId: product?.id ?? null,
-          productName: product?.name ?? manualProductName,
-          productSku: product?.ssku ?? product?.sku ?? manualProductSku,
-          quantity: form.get("quantity"),
-          unitCost: product?.costPrice ?? 0,
-          unitSalePrice: product?.salePrice ?? 0
+    createOrder.mutate(
+      {
+        orderNo: form.get("orderNo"),
+        orderType,
+        supplierId: form.get("supplierId"),
+        storeName: form.get("storeName"),
+        registrarName: form.get("registrarName"),
+        customerName: form.get("customerName"),
+        customerPhone: form.get("customerPhone"),
+        address: form.get("address"),
+        note: form.get("note"),
+        items: [
+          {
+            productId: product?.id ?? null,
+            productName: product?.name ?? manualProductName,
+            productSku: product?.ssku ?? product?.sku ?? manualProductSku,
+            quantity: form.get("quantity"),
+            unitCost: product?.costPrice ?? 0,
+            unitSalePrice: product?.salePrice ?? 0
+          }
+        ]
+      },
+      {
+        onSuccess: (data) => {
+          if (data.duplicateWarning) {
+            notifyApp({ variant: "success", message: data.duplicateWarning });
+            return;
+          }
+          notifyApp({ variant: "success", message: "登记成功" });
+          formElement.reset();
+          setReceiverRaw("");
+          setReceiver({ customerName: "", customerPhone: "", address: "" });
+        },
+        onError: (error) => {
+          notifyApp({ variant: "error", message: error instanceof Error ? error.message : "登记失败，请检查填写内容" });
         }
-      ]
-    });
-    event.currentTarget.reset();
+      }
+    );
   }
 
   function uploadFile(event: FormEvent<HTMLFormElement>) {
