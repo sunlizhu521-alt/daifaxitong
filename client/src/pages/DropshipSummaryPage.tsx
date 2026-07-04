@@ -241,8 +241,10 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
               <th>发货时间</th>
               <th>快递公司</th>
               <th>发货单号</th>
+              <th>快递状态</th>
               <th>退货快递公司</th>
               <th>退货快递单号</th>
+              <th>快递状态</th>
               <th>供应商</th>
               <th>采购订单号填写人</th>
               <th>采购订单号</th>
@@ -278,8 +280,10 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
                 <td>{order.shippedAt ? order.shippedAt.slice(0, 16).replace("T", " ") : "-"}</td>
                 <td>{order.carrier || "-"}</td>
                 <td>{order.trackingNo || "-"}</td>
+                <td>{order.shipmentLogisticsStatus || "-"}</td>
                 <td>{order.returnCarrier || "-"}</td>
                 <td>{order.returnTrackingNo || "-"}</td>
+                <td>{order.returnLogisticsStatus || "-"}</td>
                 <td>{order.supplierName ?? "-"}</td>
                 <td>{order.purchaseOrderUser || "-"}</td>
                 <td>{order.purchaseOrderNo || "-"}</td>

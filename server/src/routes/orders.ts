@@ -4,6 +4,7 @@ import multer from "multer";
 import { z } from "zod";
 import { config } from "../config.js";
 import { getDb, nowIso } from "../db/index.js";
+import { fallbackLogisticsStatus, queryKuaidi100Status } from "../logistics/kuaidi100.js";
 import { notifyBusinessAction } from "../notifications/dingtalk.js";
 import { logOrderEvent } from "../orderEvents.js";
 import { ROLE_ADMIN } from "../permissions.js";
@@ -132,7 +133,7 @@ function saveOrder(data: z.infer<typeof orderSchema>, id?: number) {
   return readOrder(tx());
 }
 
-ordersRouter.get("/", (req, res) => {
+ordersRouter.get("/", async (req, res) => {
   const { keyword = "", status = "", supplierId = "", storeName = "", series = "", sku = "", startDate = "", endDate = "", hasTracking = "", orderType = "", includeAccessoryPending = "", page = "1", pageSize = "50" } = req.query;
   const pageNum = Math.max(1, Number(page) || 1);
   const pageSizeNum = Math.min(200, Math.max(1, Number(pageSize) || 50));
@@ -236,8 +237,33 @@ ordersRouter.get("/", (req, res) => {
        ORDER BY o.id DESC
        LIMIT ? OFFSET ?`
     )
-    .all(...params, pageSizeNum, offset);
-  res.json({ rows, total, page: pageNum, pageSize: pageSizeNum });
+    .all(...params, pageSizeNum, offset) as Array<Record<string, unknown>>;
+  const enrichedRows = await Promise.all(
+    rows.map(async (row) => {
+      const shipmentTrackingNo = String(row.trackingNo ?? "");
+      const returnTrackingNo = String(row.returnTrackingNo ?? "");
+      const shipmentFallback = fallbackLogisticsStatus(String(row.status ?? ""), shipmentTrackingNo, String(row.returnStatus ?? ""));
+      const returnFallback = fallbackLogisticsStatus(String(row.status ?? ""), returnTrackingNo, String(row.returnStatus ?? ""));
+      const [shipmentLogisticsStatus, returnLogisticsStatus] = await Promise.all([
+        queryKuaidi100Status({
+          carrierName: String(row.carrier ?? ""),
+          trackingNo: shipmentTrackingNo,
+          phone: String(row.customerPhone ?? "")
+        }).catch(() => null),
+        queryKuaidi100Status({
+          carrierName: String(row.returnCarrier ?? row.carrier ?? ""),
+          trackingNo: returnTrackingNo,
+          phone: String(row.customerPhone ?? "")
+        }).catch(() => null)
+      ]);
+      return {
+        ...row,
+        shipmentLogisticsStatus: shipmentLogisticsStatus ?? shipmentFallback,
+        returnLogisticsStatus: returnLogisticsStatus ?? returnFallback
+      };
+    })
+  );
+  res.json({ rows: enrichedRows, total, page: pageNum, pageSize: pageSizeNum });
 });
 
 ordersRouter.get("/template", async (_req, res) => {

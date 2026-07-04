@@ -69,6 +69,7 @@ export type OrderListRow = {
   carrierId?: number | null;
   carrier?: string | null;
   trackingNo?: string | null;
+  shipmentLogisticsStatus?: string | null;
   shippedAt?: string | null;
   shipmentNote?: string | null;
   returnStatus?: string | null;
@@ -76,6 +77,7 @@ export type OrderListRow = {
   returnReason?: string | null;
   returnCarrier?: string | null;
   returnTrackingNo?: string | null;
+  returnLogisticsStatus?: string | null;
   createdAt: string;
 };
 
