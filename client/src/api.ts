@@ -128,7 +128,10 @@ export type ReturnRecord = {
   productSku?: string | null;
   productName?: string | null;
   totalQuantity?: number | null;
+  shipmentCarrier?: string | null;
   shipmentTrackingNo?: string | null;
+  returnCarrier?: string | null;
+  returnLogisticsStatus?: string | null;
   attachments: string[];
   createdAt: string;
   updatedAt?: string;

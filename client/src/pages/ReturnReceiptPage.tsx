@@ -91,7 +91,7 @@ export function ReturnReceiptPage() {
       <Panel title="待收货退货">
         <div className="toolbar filter-toolbar">
           <input
-            placeholder="搜索订单号/姓名/电话/地址/SKU/发货单号"
+            placeholder="搜索订单号/姓名/电话/地址/SKU/退货单号"
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
           />
@@ -118,7 +118,9 @@ export function ReturnReceiptPage() {
               <th>地址</th>
               <th>SKU</th>
               <th>数量</th>
-              <th>发货单号</th>
+              <th>快递公司</th>
+              <th>退货单号</th>
+              <th>快递单号状态</th>
               <th>退货原因</th>
               <th>状态</th>
               <th>备注</th>
@@ -145,7 +147,9 @@ export function ReturnReceiptPage() {
                 <td>{row.address}</td>
                 <td>{row.productSku || "-"}</td>
                 <td>{row.totalQuantity ?? "-"}</td>
+                <td>{row.returnCarrier || row.shipmentCarrier || "-"}</td>
                 <td>{row.trackingNo || "-"}</td>
+                <td>{row.returnLogisticsStatus || "-"}</td>
                 <td>{row.reason}</td>
                 <td>{row.status}</td>
                 <td>{row.note || "-"}</td>

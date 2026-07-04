@@ -64,7 +64,7 @@ function latestTrackingNo(orderNo: string, orderId?: number | null) {
   return row?.trackingNo ?? "";
 }
 
-returnsRouter.get("/", (req, res) => {
+returnsRouter.get("/", async (req, res) => {
   const keyword = String(req.query.keyword ?? "").trim();
   const status = String(req.query.status ?? "").trim();
   const storeName = String(req.query.storeName ?? "").trim();
@@ -132,6 +132,8 @@ returnsRouter.get("/", (req, res) => {
         GROUP_CONCAT(DISTINCT oi.productSku) AS productSku,
         GROUP_CONCAT(DISTINCT oi.productName) AS productName,
         SUM(oi.quantity) AS totalQuantity,
+        sh.carrier AS shipmentCarrier,
+        sh.carrier AS returnCarrier,
         sh.trackingNo AS shipmentTrackingNo
        FROM returns r
        LEFT JOIN orders o ON o.id = r.orderId
@@ -146,7 +148,23 @@ returnsRouter.get("/", (req, res) => {
        ORDER BY r.id DESC`
     )
     .all(...params) as Record<string, unknown>[];
-  res.json(rows.map(rowToReturn));
+  const enrichedRows = await Promise.all(
+    rows.map(async (row) => {
+      const payload = rowToReturn(row);
+      const trackingNo = String(payload.trackingNo ?? "");
+      const carrierName = String(payload.returnCarrier ?? payload.shipmentCarrier ?? "");
+      const realStatus = await queryKuaidi100Status({
+        carrierName,
+        trackingNo,
+        phone: String(payload.customerPhone ?? "")
+      }).catch(() => null);
+      return {
+        ...payload,
+        returnLogisticsStatus: realStatus ?? fallbackLogisticsStatus("", trackingNo, String(payload.status ?? ""))
+      };
+    })
+  );
+  res.json(enrichedRows);
 });
 
 returnsRouter.get("/orders", async (req, res) => {
@@ -391,6 +409,14 @@ returnsRouter.delete("/:id", (req, res) => {
   }
   const id = Number(req.params.id);
   const row = getDb().prepare("SELECT * FROM returns WHERE id = ?").get(id) as Record<string, unknown> | undefined;
+  if (!row) {
+    res.status(404).json({ message: "退货记录不存在" });
+    return;
+  }
+  if (String(row.status ?? "") !== "已提交退货") {
+    res.status(409).json({ message: "退货已操作，不能撤销" });
+    return;
+  }
   const result = getDb().prepare("DELETE FROM returns WHERE id = ?").run(id);
   if (result.changes === 0) {
     res.status(404).json({ message: "退货记录不存在" });

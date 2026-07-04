@@ -73,7 +73,7 @@ export function ReturnRegistrationPage() {
   });
 
   function deleteRecord(row: ReturnOrderRow) {
-    if (!row.returnId) return;
+    if (!row.returnId || !canCancelReturn(row)) return;
     if (!window.confirm(`确定撤销退货 ${row.orderNo} 吗？`)) return;
     remove.mutate(row.returnId);
   }
@@ -114,6 +114,10 @@ export function ReturnRegistrationPage() {
 
   function orderTypeText(row: ReturnOrderRow) {
     return row.orderType === "accessory" ? "配件" : "成品";
+  }
+
+  function canCancelReturn(row: ReturnOrderRow) {
+    return row.returnStatus === "已提交退货";
   }
 
   return (
@@ -242,9 +246,10 @@ export function ReturnRegistrationPage() {
                       提交退货
                     </button>
                   </form>
-                  {isAdmin && row.returnId ? (
+                  {isAdmin && row.returnId && canCancelReturn(row) ? (
                     <button type="button" onClick={() => deleteRecord(row)}>撤销退货</button>
                   ) : null}
+                  {isAdmin && row.returnId && !canCancelReturn(row) ? <span className="muted-text">已操作不可撤销</span> : null}
                 </td>
               </tr>
               );
