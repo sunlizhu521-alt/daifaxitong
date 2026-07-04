@@ -160,9 +160,6 @@ CREATE TABLE IF NOT EXISTS returns (
   FOREIGN KEY (orderId) REFERENCES orders(id) ON DELETE SET NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_returns_order_id ON returns(orderId, id);
-CREATE INDEX IF NOT EXISTS idx_returns_order_no_created_at ON returns(orderNo, createdAt, id);
-
 CREATE TABLE IF NOT EXISTS import_jobs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   type TEXT NOT NULL,
