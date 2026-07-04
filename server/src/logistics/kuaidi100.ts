@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { config } from "../config.js";
 
-export type SimpleLogisticsStatus = "已揽件" | "运输中" | "已签收";
+export type SimpleLogisticsStatus = string;
 
 type CacheEntry = {
   status: SimpleLogisticsStatus;
@@ -14,6 +14,10 @@ type Kuaidi100Response = {
   ischeck?: string | number;
   status?: string;
   result?: boolean;
+  data?: Array<{
+    context?: string;
+    status?: string;
+  }>;
 };
 
 const cache = new Map<string, CacheEntry>();
@@ -40,14 +44,33 @@ export function carrierCodeFromName(name?: string | null) {
 export function fallbackLogisticsStatus(orderStatus?: string | null, trackingNo?: string | null, returnStatus?: string | null): SimpleLogisticsStatus | "" {
   if (!trackingNo) return "";
   if (returnStatus === "退货成功" || returnStatus === "已收到退货" || returnStatus === "已收货") return "已签收";
-  if (orderStatus === "shipped") return "运输中";
+  if (orderStatus === "shipped") return "已发货";
   return "已揽件";
 }
 
 function mapKuaidi100State(data: Kuaidi100Response): SimpleLogisticsStatus | null {
+  const latestTrace = data.data?.find((item) => String(item.status ?? item.context ?? "").trim());
+  const latestStatus = String(latestTrace?.status ?? "").trim();
+  if (latestStatus) return latestStatus;
+  const latestContext = String(latestTrace?.context ?? "").trim();
+  if (latestContext) return latestContext;
+
   if (String(data.ischeck ?? "") === "1" || data.state === "3") return "已签收";
-  if (data.state === "1") return "已揽件";
-  if (data.state) return "运输中";
+  const stateText: Record<string, string> = {
+    "0": "在途中",
+    "1": "已揽收",
+    "2": "疑难件",
+    "4": "退签",
+    "5": "派件中",
+    "6": "退回中",
+    "7": "转单",
+    "10": "待清关",
+    "11": "清关中",
+    "12": "已清关",
+    "13": "清关异常",
+    "14": "拒签"
+  };
+  if (data.state) return stateText[data.state] ?? `快递状态${data.state}`;
   return null;
 }
 

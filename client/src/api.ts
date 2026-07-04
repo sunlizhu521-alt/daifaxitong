@@ -158,7 +158,7 @@ export type ReturnOrderRow = {
   action?: string | null;
   shipmentCarrier?: string | null;
   shipmentTrackingNo?: string | null;
-  logisticsStatus?: "已揽件" | "运输中" | "已签收" | "" | null;
+  logisticsStatus?: string | null;
   returnTrackingNo?: string | null;
   reason?: string | null;
   note?: string | null;
