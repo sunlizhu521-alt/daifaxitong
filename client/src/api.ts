@@ -174,6 +174,7 @@ export type PageOption = {
     | "dropshipSummary"
     | "accessorySummary"
     | "operationRecords"
+    | "operationFlow"
     | "returnRegistration"
     | "returnOperation"
     | "returnReceipt"

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Boxes, CalendarClock, CheckCircle2, ClipboardCheck, ClipboardList, FileText, History, LogOut, Package, PackageCheck, PackagePlus, RotateCcw, ShieldCheck, Store, Truck, Undo2, Warehouse } from "lucide-react";
+import { Boxes, CalendarClock, CheckCircle2, ClipboardCheck, ClipboardList, FileText, GitBranch, History, LogOut, Package, PackageCheck, PackagePlus, RotateCcw, ShieldCheck, Store, Truck, Undo2, Warehouse } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api, type User } from "../api";
 
@@ -14,6 +14,7 @@ const nav = [
   { key: "dropshipSummary", to: "/dropship-summary", label: "成品信息", icon: FileText },
   { key: "accessorySummary", to: "/accessory-summary", label: "配件信息", icon: FileText },
   { key: "operationRecords", to: "/operation-records", label: "操作记录", icon: History },
+  { key: "operationFlow", to: "/operation-flow", label: "操作流程", icon: GitBranch },
   { key: "returnRegistration", to: "/returns", label: "退货登记", icon: RotateCcw },
   { key: "returnOperation", to: "/return-operations", label: "退货操作", icon: CheckCircle2 },
   { key: "returnReceipt", to: "/return-receipts", label: "退货收货", icon: Undo2 },

@@ -12,6 +12,7 @@ export const pageOptions = [
   { key: "dropshipSummary", label: "成品信息", path: "/dropship-summary" },
   { key: "accessorySummary", label: "配件信息", path: "/accessory-summary" },
   { key: "operationRecords", label: "操作记录", path: "/operation-records" },
+  { key: "operationFlow", label: "操作流程", path: "/operation-flow" },
   { key: "returnRegistration", label: "退货登记", path: "/returns" },
   { key: "returnOperation", label: "退货操作", path: "/return-operations" },
   { key: "returnReceipt", label: "退货收货", path: "/return-receipts" },

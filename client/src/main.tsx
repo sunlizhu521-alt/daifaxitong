@@ -17,6 +17,7 @@ import { ReturnRegistrationPage } from "./pages/ReturnRegistrationPage";
 import { ReturnOperationPage } from "./pages/ReturnOperationPage";
 import { ReturnReceiptPage } from "./pages/ReturnReceiptPage";
 import { OperationRecordsPage } from "./pages/OperationRecordsPage";
+import { OperationFlowPage } from "./pages/OperationFlowPage";
 import { SuppliersPage } from "./pages/SuppliersPage";
 import { ProductsPage } from "./pages/ProductsPage";
 import { StoreLibraryPage } from "./pages/StoreLibraryPage";
@@ -59,6 +60,7 @@ const router = createBrowserRouter([
       { path: "dropship-summary", element: <DropshipSummaryPage /> },
       { path: "accessory-summary", element: <AccessorySummaryPage /> },
       { path: "operation-records", element: <OperationRecordsPage /> },
+      { path: "operation-flow", element: <OperationFlowPage /> },
       { path: "returns", element: <ReturnRegistrationPage /> },
       { path: "return-operations", element: <ReturnOperationPage /> },
       { path: "return-receipts", element: <ReturnReceiptPage /> },

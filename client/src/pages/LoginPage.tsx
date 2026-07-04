@@ -13,6 +13,7 @@ const orderedPaths = [
   { key: "dropshipSummary", path: "/dropship-summary" },
   { key: "accessorySummary", path: "/accessory-summary" },
   { key: "operationRecords", path: "/operation-records" },
+  { key: "operationFlow", path: "/operation-flow" },
   { key: "returnRegistration", path: "/returns" },
   { key: "returnOperation", path: "/return-operations" },
   { key: "returnReceipt", path: "/return-receipts" },
