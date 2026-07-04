@@ -133,6 +133,8 @@ export function ReturnOperationPage() {
               <th>系列</th>
               <th>SKU</th>
               <th>型号</th>
+              <th>发货快递公司</th>
+              <th>发货快递单号</th>
               <th>退货操作</th>
               <th>退回快递单号</th>
               <th>退货理由</th>
@@ -168,6 +170,8 @@ export function ReturnOperationPage() {
                   <td>{row.productSeries || "-"}</td>
                   <td>{row.productSku || "-"}</td>
                   <td>{row.model || "-"}</td>
+                  <td>{row.shipmentCarrier || "-"}</td>
+                  <td>{row.shipmentTrackingNo || "-"}</td>
                   <td>{actionText(row.action)}</td>
                   <td>
                     <input
