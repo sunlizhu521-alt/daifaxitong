@@ -179,6 +179,7 @@ export type PageOption = {
     | "accessorySummary"
     | "operationRecords"
     | "operationFlow"
+    | "backupCenter"
     | "returnRegistration"
     | "returnOperation"
     | "returnReceipt"
@@ -210,6 +211,18 @@ export function rowsFromListResponse<T>(data: ListResponse<T> | null | undefined
 
 type ApiOptions = RequestInit & {
   notify?: boolean;
+};
+
+export type BackupStatus = {
+  exists?: boolean;
+  ok?: true;
+  triggeredBy?: "auto" | "manual";
+  createdAt?: string;
+  databaseFile?: string;
+  uploadsCopied?: boolean;
+  fileCount?: number;
+  totalBytes?: number;
+  nextRunAt?: string;
 };
 
 function notifyResult(variant: "success" | "error", message: string) {

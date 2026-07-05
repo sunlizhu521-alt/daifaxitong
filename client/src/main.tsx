@@ -18,6 +18,7 @@ import { ReturnOperationPage } from "./pages/ReturnOperationPage";
 import { ReturnReceiptPage } from "./pages/ReturnReceiptPage";
 import { OperationRecordsPage } from "./pages/OperationRecordsPage";
 import { OperationFlowPage } from "./pages/OperationFlowPage";
+import { BackupCenterPage } from "./pages/BackupCenterPage";
 import { SuppliersPage } from "./pages/SuppliersPage";
 import { ProductsPage } from "./pages/ProductsPage";
 import { StoreLibraryPage } from "./pages/StoreLibraryPage";
@@ -61,6 +62,7 @@ const router = createBrowserRouter([
       { path: "accessory-summary", element: <AccessorySummaryPage /> },
       { path: "operation-records", element: <OperationRecordsPage /> },
       { path: "operation-flow", element: <OperationFlowPage /> },
+      { path: "backups", element: <BackupCenterPage /> },
       { path: "returns", element: <ReturnRegistrationPage /> },
       { path: "return-operations", element: <ReturnOperationPage /> },
       { path: "return-receipts", element: <ReturnReceiptPage /> },
