@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type ReturnRecord } from "../api";
+import { api, type ReturnRecord, type User } from "../api";
 import { notifyApp } from "../ui/AppNotifications";
 import { PageHeader, Panel } from "../ui/Section";
 
@@ -18,14 +18,29 @@ export function ReturnOperationPage() {
   const [trackingNos, setTrackingNos] = useState<Record<number, string>>({});
   const [selectedReturnIds, setSelectedReturnIds] = useState<Set<number>>(() => new Set());
   const [previewAttachment, setPreviewAttachment] = useState<{ url: string; title: string } | null>(null);
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
   const { data: returns = [] } = useQuery({
     queryKey: ["return-operations", keyword],
     queryFn: () => api<ReturnRecord[]>(`/returns?status=${encodeURIComponent("已提交退货")}&keyword=${encodeURIComponent(keyword)}`)
   });
+  const canDeleteReturn = me?.user?.role === "管理员" && me.user.username === "孙立柱";
 
   const completeReturn = useMutation({
     mutationFn: ({ id, trackingNo, notify = true }: { id: number; trackingNo: string; notify?: boolean }) =>
       api(`/returns/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "退回中", trackingNo }), notify }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["return-operations"] });
+      qc.invalidateQueries({ queryKey: ["return-orders"] });
+      qc.invalidateQueries({ queryKey: ["dropship-summary"] });
+      qc.invalidateQueries({ queryKey: ["accessory-summary"] });
+      qc.invalidateQueries({ queryKey: ["tracking-orders"] });
+      qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
+      qc.invalidateQueries({ queryKey: ["accessory-shipping"] });
+      qc.invalidateQueries({ queryKey: ["purchase-orders"] });
+    }
+  });
+  const deleteReturn = useMutation({
+    mutationFn: (id: number) => api(`/returns/${id}`, { method: "DELETE", notify: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["return-operations"] });
       qc.invalidateQueries({ queryKey: ["return-orders"] });
@@ -55,6 +70,11 @@ export function ReturnOperationPage() {
   function confirmComplete(row: ReturnRecord) {
     if (!window.confirm(`确认订单 ${row.orderNo} 已经完成退货操作吗？`)) return;
     completeReturn.mutate({ id: row.id, trackingNo: returnTrackingNo(row) });
+  }
+
+  function confirmDelete(row: ReturnRecord) {
+    if (!window.confirm(`确定删除订单 ${row.orderNo} 的退货操作记录吗？删除后不可恢复。`)) return;
+    deleteReturn.mutate(row.id);
   }
 
   async function completeSelectedReturns() {
@@ -201,6 +221,11 @@ export function ReturnOperationPage() {
                     <button type="button" className="primary-button" onClick={() => confirmComplete(row)}>
                       确定操作
                     </button>
+                    {canDeleteReturn ? (
+                      <button type="button" onClick={() => confirmDelete(row)} disabled={deleteReturn.isPending}>
+                        删除
+                      </button>
+                    ) : null}
                   </td>
                 </tr>
               );
@@ -209,6 +234,7 @@ export function ReturnOperationPage() {
         </table>
         {returns.length === 0 ? <div className="success">暂无已提交退货</div> : null}
         {completeReturn.error ? <div className="error">{completeReturn.error.message}</div> : null}
+        {deleteReturn.error ? <div className="error">{deleteReturn.error.message}</div> : null}
       </Panel>
       {previewAttachment ? (
         <div className="modal-backdrop" onClick={() => setPreviewAttachment(null)}>

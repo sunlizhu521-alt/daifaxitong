@@ -403,8 +403,8 @@ returnsRouter.patch("/:id/status", (req, res) => {
 });
 
 returnsRouter.delete("/:id", (req, res) => {
-  if (req.session.user?.role !== ROLE_ADMIN) {
-    res.status(403).json({ message: "只有管理员可以删除记录" });
+  if (req.session.user?.role !== ROLE_ADMIN || req.session.user?.username !== config.adminUsername) {
+    res.status(403).json({ message: "只有孙立柱管理员可以删除退货记录" });
     return;
   }
   const id = Number(req.params.id);
