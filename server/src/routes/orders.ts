@@ -593,8 +593,8 @@ ordersRouter.patch("/:id/purchase-order", (req, res) => {
   }
   if (existing.purchaseOrderNo) {
     getDb()
-      .prepare("UPDATE orders SET purchaseOrderNo = ?, status = 'purchased', updatedAt = ? WHERE id = ?")
-      .run(parsed.data.purchaseOrderNo, nowIso(), orderId);
+      .prepare("UPDATE orders SET purchaseOrderNo = ?, purchaseOrderUser = ?, status = 'purchased', updatedAt = ? WHERE id = ?")
+      .run(parsed.data.purchaseOrderNo, parsed.data.purchaseOrderUser || req.session.user?.username || "", nowIso(), orderId);
     const order = readOrder(orderId) as Record<string, unknown> | null;
     logOrderEvent(orderId, "修改采购订单号", parsed.data.purchaseOrderNo, req.session.user?.username);
     void notifyBusinessAction({
