@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "db:init": "tsx src/db/init.ts",
+    "db:backup": "tsx src/db/backup.ts",
     "test": "tsx --test src/**/*.test.ts"
   },
   "dependencies": {
