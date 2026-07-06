@@ -13,6 +13,11 @@ type NotifyInput = {
   fields?: NotifyField[];
 };
 
+type DingtalkResponse = {
+  errcode?: number;
+  errmsg?: string;
+};
+
 type FeishuResponse = {
   code?: number;
   msg?: string;
@@ -20,16 +25,18 @@ type FeishuResponse = {
   StatusMessage?: string;
 };
 
-const feishuActions = new Set([
-  "登记代发",
-  "配件登记",
-  "退货登记",
-  "提交退货",
-  "退货收货",
-  "发货单号",
-  "填写发货单号",
-  "退货操作"
-]);
+const mainDingtalkActions = new Set(["登记代发", "配件登记", "填写发货单号", "发货单号", "已提货", "发货安排修改", "配件发货"]);
+const returnDingtalkActions = new Set(["退货登记", "提交退货"]);
+const feishuActions = new Set(["填写发货单号", "发货单号", "退货操作"]);
+
+function appendDingtalkSignature(webhook: string, secret: string) {
+  if (!secret) return webhook;
+  const timestamp = Date.now();
+  const signSource = `${timestamp}\n${secret}`;
+  const sign = crypto.createHmac("sha256", secret).update(signSource).digest("base64");
+  const separator = webhook.includes("?") ? "&" : "?";
+  return `${webhook}${separator}timestamp=${timestamp}&sign=${encodeURIComponent(sign)}`;
+}
 
 function valueText(value: unknown): string {
   if (value === undefined || value === null || value === "") return "-";
@@ -81,8 +88,29 @@ function buildNotification(input: NotifyInput) {
   ].filter((field) => valueText(field.value) !== "-");
 
   const title = `一件代发系统：${input.action}`;
-  const text = [`**${title}**`, "", ...fields.map((field) => `- **${field.label}**：${valueText(field.value)}`)].join("\n");
+  const text = [`### ${title}`, "", ...fields.map((field) => `- **${field.label}**：${valueText(field.value)}`)].join("\n");
   return { title, text };
+}
+
+async function notifyDingtalk(title: string, text: string, webhook: string, secret: string, errorLabel: string) {
+  if (!webhook) return;
+  try {
+    const response = await fetch(appendDingtalkSignature(webhook, secret), {
+      method: "POST",
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+      body: JSON.stringify({
+        msgtype: "markdown",
+        markdown: { title, text },
+        at: { isAtAll: true }
+      })
+    });
+    const result = (await response.json().catch(() => null)) as DingtalkResponse | null;
+    if (!response.ok || result?.errcode) {
+      console.warn(`${errorLabel}发送失败`, result ?? response.statusText);
+    }
+  } catch (error) {
+    console.warn(`${errorLabel}发送失败`, error);
+  }
 }
 
 async function notifyFeishu(title: string, text: string) {
@@ -127,7 +155,18 @@ async function notifyFeishu(title: string, text: string) {
 }
 
 export async function notifyBusinessAction(input: NotifyInput) {
-  if (!feishuActions.has(input.action)) return;
   const { title, text } = buildNotification(input);
-  await notifyFeishu(title, text);
+  const tasks: Array<Promise<void>> = [];
+
+  if (mainDingtalkActions.has(input.action)) {
+    tasks.push(notifyDingtalk(title, text, config.dingtalkWebhook, config.dingtalkSecret, "主钉钉通知"));
+  }
+  if (returnDingtalkActions.has(input.action)) {
+    tasks.push(notifyDingtalk(title, text, config.returnDingtalkWebhook, config.returnDingtalkSecret, "退货钉钉通知"));
+  }
+  if (feishuActions.has(input.action)) {
+    tasks.push(notifyFeishu(title, text));
+  }
+
+  await Promise.all(tasks);
 }
