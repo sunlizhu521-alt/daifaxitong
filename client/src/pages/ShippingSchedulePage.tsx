@@ -112,7 +112,6 @@ export function ShippingSchedulePage() {
       <PageHeader
         title="发货安排"
         description="查看待发货订单，登记供应商发货信息并确认已提货。"
-        actions={<button className="primary-button" onClick={() => downloadFile(`/orders/shipping-export?status=${encodeURIComponent(status)}`)}>导出发货安排</button>}
       />
       <Panel title="发货信息">
         <div className="toolbar">
@@ -123,6 +122,7 @@ export function ShippingSchedulePage() {
             <option value="purchased">已下采购单</option>
             <option value="shipped">已发货</option>
           </select>
+          <button type="button" className="primary-button" onClick={() => downloadFile(`/orders/shipping-export?status=${encodeURIComponent(status)}`)}>导出发货</button>
           <button type="button" className="primary-button" onClick={submitSelectedOrders} disabled={markShipped.isPending}>
             批量提交
           </button>
