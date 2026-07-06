@@ -100,8 +100,7 @@ async function notifyDingtalk(title: string, text: string, webhook: string, secr
       headers: { "Content-Type": "application/json; charset=utf-8" },
       body: JSON.stringify({
         msgtype: "markdown",
-        markdown: { title, text },
-        at: { isAtAll: true }
+        markdown: { title, text }
       })
     });
     const result = (await response.json().catch(() => null)) as DingtalkResponse | null;
