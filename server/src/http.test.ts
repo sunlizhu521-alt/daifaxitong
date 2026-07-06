@@ -11,6 +11,14 @@ process.env.DATABASE_PATH = path.join(tempDir, "test.sqlite");
 process.env.ADMIN_USERNAME = "admin";
 process.env.ADMIN_PASSWORD = "secret";
 process.env.SESSION_SECRET = "test-secret";
+process.env.WEBHOOK = "";
+process.env.SECRET = "";
+process.env.DINGTALK_WEBHOOK = "";
+process.env.DINGTALK_SECRET = "";
+process.env.RETURN_DINGTALK_WEBHOOK = "";
+process.env.RETURN_DINGTALK_SECRET = "";
+process.env.FEISHU_WEBHOOK = "";
+process.env.FEISHU_SECRET = "";
 
 const { createApp } = await import("./http.js");
 const { closeDb } = await import("./db/index.js");
