@@ -6,6 +6,7 @@ import { ordersRouter } from "./orders.js";
 import { storesRouter } from "./stores.js";
 import { returnsRouter } from "./returns.js";
 import { carriersRouter } from "./carriers.js";
+import { kuaidi100Router } from "./kuaidi100.js";
 import { operationRecordsRouter } from "./operationRecords.js";
 import { backupsRouter } from "./backups.js";
 
@@ -20,5 +21,6 @@ apiRouter.use("/orders", requireAnyPage(["dropShippingRegistration", "accessoryR
 apiRouter.use("/carriers", requireAnyPage(["carrierLibrary", "accessoryShipping", "trackingNumbers", "shippingSchedule"]), carriersRouter);
 apiRouter.use("/stores", requireAnyPage(["storeLibrary", "dropShippingRegistration", "accessoryRegistration", "trackingNumbers", "returnRegistration", "dropshipSummary", "accessorySummary", "purchaseOrders"]), storesRouter);
 apiRouter.use("/returns", requireAnyPage(["returnRegistration", "returnOperation", "returnReceipt"]), returnsRouter);
+apiRouter.use("/kuaidi100", requireAnyPage(["trackingNumbers", "shippingSchedule", "dropShippingRegistration", "accessoryRegistration"]), kuaidi100Router);
 apiRouter.use("/operation-records", requireAnyPage(["operationRecords"]), operationRecordsRouter);
 apiRouter.use("/backups", requireAnyPage(["backupCenter"]), backupsRouter);
