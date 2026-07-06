@@ -16,10 +16,10 @@ export const config = {
   sessionSecret: process.env.SESSION_SECRET ?? "",
   dingtalkWebhook: process.env.DINGTALK_WEBHOOK ?? process.env.WEBHOOK ?? "",
   dingtalkSecret: process.env.DINGTALK_SECRET ?? process.env.SECRET ?? "",
+  feishuWebhook: process.env.FEISHU_WEBHOOK ?? "https://open.feishu.cn/open-apis/bot/v2/hook/9d1ddc5e-9931-48e0-afa9-32ad19f9fd38",
+  feishuSecret: process.env.FEISHU_SECRET ?? "5ErgxrKDawDN8n53uDokme",
   returnDingtalkWebhook: process.env.RETURN_DINGTALK_WEBHOOK ?? "",
   returnDingtalkSecret: process.env.RETURN_DINGTALK_SECRET ?? "",
-  feishuWebhook: process.env.FEISHU_WEBHOOK ?? "",
-  feishuSecret: process.env.FEISHU_SECRET ?? "",
   kuaidi100Customer: process.env.KUAIDI100_CUSTOMER ?? "",
   kuaidi100Key: process.env.KUAIDI100_KEY ?? "",
   clientDist: path.resolve(rootDir, "server/dist/public")
