@@ -22,6 +22,11 @@ function currentStatusText(order: OrderListRow) {
   return order.returnStatus || statusText[order.status] || order.status;
 }
 
+function formatCreatedAt(value?: string) {
+  if (!value) return "-";
+  return value.slice(0, 19).replace("T", " ");
+}
+
 type OrderDetail = OrderListRow & {
   items: Array<{
     productId?: number | null;
@@ -313,7 +318,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
                     />
                   </td>
                 ) : null}
-                <td>{order.createdAt?.slice(0, 10)}</td>
+                <td>{formatCreatedAt(order.createdAt)}</td>
                 <td>{order.registrarName || "-"}</td>
                 <td>{order.storeName || "-"}</td>
                 <td>{order.orderNo}</td>
