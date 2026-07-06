@@ -27,7 +27,7 @@ type FeishuResponse = {
 
 const mainDingtalkActions = new Set(["登记代发", "配件登记", "填写发货单号", "发货单号", "已提货", "发货安排修改", "配件发货"]);
 const returnDingtalkActions = new Set(["退货登记", "提交退货"]);
-const feishuActions = new Set(["填写发货单号", "发货单号", "退货操作"]);
+const feishuActions = new Set(["填写发货单号", "发货单号", "退货操作", "发货安排修改"]);
 
 function appendDingtalkSignature(webhook: string, secret: string) {
   if (!secret) return webhook;
