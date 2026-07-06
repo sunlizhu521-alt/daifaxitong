@@ -51,6 +51,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [editing, setEditing] = useState<OrderDetail | null>(null);
+  const [accessoryEditing, setAccessoryEditing] = useState<OrderListRow | null>(null);
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(() => new Set());
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
   const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers"], queryFn: () => api<Supplier[]>("/suppliers") });
@@ -91,6 +92,19 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
       setEditing(null);
       qc.invalidateQueries({ queryKey: [queryKey] });
       qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
+      qc.invalidateQueries({ queryKey: ["purchase-orders"] });
+      qc.invalidateQueries({ queryKey: ["return-orders"] });
+      qc.invalidateQueries({ queryKey: ["summary"] });
+    }
+  });
+  const changeAccessory = useMutation({
+    mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}/shipping-edit`, { method: "PATCH", body: JSON.stringify(body), notify: true }),
+    onSuccess: () => {
+      setAccessoryEditing(null);
+      qc.invalidateQueries({ queryKey: [queryKey] });
+      qc.invalidateQueries({ queryKey: ["accessory-summary"] });
+      qc.invalidateQueries({ queryKey: ["accessory-shipping"] });
       qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
       qc.invalidateQueries({ queryKey: ["purchase-orders"] });
       qc.invalidateQueries({ queryKey: ["return-orders"] });
@@ -189,6 +203,22 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
     });
   }
 
+  function submitAccessoryChange(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!accessoryEditing) return;
+    const form = new FormData(event.currentTarget);
+    changeAccessory.mutate({
+      id: accessoryEditing.id,
+      body: {
+        supplierId: form.get("supplierId"),
+        productName: String(form.get("productName") ?? "").trim(),
+        productSku: String(form.get("productSku") ?? "").trim(),
+        quantity: Number(form.get("quantity") ?? 0),
+        note: String(form.get("note") ?? "").trim()
+      }
+    });
+  }
+
   return (
     <>
       <PageHeader title={title} description={description} />
@@ -253,6 +283,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
               <th>商品</th>
               <th>系列</th>
               <th>SKU</th>
+              {orderType === "accessory" ? <th>更换配件</th> : null}
               <th>数量</th>
               <th>发货时间</th>
               <th>快递公司</th>
@@ -292,6 +323,17 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
                 <td>{order.productName || "-"}</td>
                 <td>{order.productSeries || "-"}</td>
                 <td>{order.productSku || "-"}</td>
+                {orderType === "accessory" ? (
+                  <td>
+                    {canEdit ? (
+                      <button type="button" className="primary-button" onClick={() => setAccessoryEditing(order)}>
+                        更换配件
+                      </button>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
+                ) : null}
                 <td>{order.totalQuantity ?? 0}</td>
                 <td>{order.shippedAt ? order.shippedAt.slice(0, 16).replace("T", " ") : "-"}</td>
                 <td>{order.carrier || "-"}</td>
@@ -317,7 +359,48 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
         </table>
         {deleteOrder.error ? <div className="error">{deleteOrder.error.message}</div> : null}
         {updateOrder.error ? <div className="error">{updateOrder.error.message}</div> : null}
+        {changeAccessory.error ? <div className="error">{changeAccessory.error.message}</div> : null}
       </Panel>
+      {accessoryEditing ? (
+        <div className="modal-backdrop">
+          <form className="modal summary-edit-modal" onSubmit={submitAccessoryChange}>
+            <h2>更换配件</h2>
+            <label className="modal-field">
+              <span>订单编号</span>
+              <input value={accessoryEditing.orderNo} disabled />
+            </label>
+            <label className="modal-field">
+              <span>供应商</span>
+              <select name="supplierId" defaultValue={accessoryEditing.supplierId ?? ""}>
+                <option value="">无供应商</option>
+                {suppliers.map((supplier) => (
+                  <option value={supplier.id} key={supplier.id}>{supplier.shortName || supplier.name}</option>
+                ))}
+              </select>
+            </label>
+            <label className="modal-field">
+              <span>品号/SKU</span>
+              <input name="productSku" defaultValue={accessoryEditing.productSku || ""} required />
+            </label>
+            <label className="modal-field">
+              <span>商品名称</span>
+              <input name="productName" defaultValue={accessoryEditing.productName || ""} required />
+            </label>
+            <label className="modal-field">
+              <span>数量</span>
+              <input name="quantity" type="number" min="1" defaultValue={accessoryEditing.totalQuantity || 1} required />
+            </label>
+            <label className="modal-field">
+              <span>备注</span>
+              <textarea name="note" defaultValue={accessoryEditing.note || ""} />
+            </label>
+            <div className="modal-actions">
+              <button type="button" className="ghost-button" onClick={() => setAccessoryEditing(null)}>取消</button>
+              <button className="primary-button" disabled={changeAccessory.isPending}>保存更换</button>
+            </div>
+          </form>
+        </div>
+      ) : null}
       {editing ? (
         <div className="modal-backdrop">
           <form className="modal summary-edit-modal" onSubmit={submitEdit}>
