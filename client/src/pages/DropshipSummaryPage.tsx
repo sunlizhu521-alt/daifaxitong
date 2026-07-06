@@ -325,13 +325,9 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
                 <td>{order.productSku || "-"}</td>
                 {orderType === "accessory" ? (
                   <td>
-                    {canEdit ? (
-                      <button type="button" className="primary-button" onClick={() => setAccessoryEditing(order)}>
-                        更换配件
-                      </button>
-                    ) : (
-                      "-"
-                    )}
+                    <button type="button" className="primary-button" onClick={() => setAccessoryEditing(order)}>
+                      更换配件
+                    </button>
                   </td>
                 ) : null}
                 <td>{order.totalQuantity ?? 0}</td>
