@@ -316,7 +316,7 @@ returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
       parsed.data.address,
       parsed.data.status,
       parsed.data.action,
-      "",
+      parsed.data.trackingNo,
       parsed.data.reason,
       parsed.data.note,
       JSON.stringify(attachments),
