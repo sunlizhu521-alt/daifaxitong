@@ -15,13 +15,11 @@ export function getDb() {
     db.pragma("busy_timeout = 5000");
     db.exec(schema);
     migrateDb(db);
-    try {
+    if (!process.argv.some((arg) => arg.includes("src/db/init.ts") || arg.includes("dist/db/init"))) {
       const backupDir = path.resolve(config.rootDir, "server", "backups");
       fs.mkdirSync(backupDir, { recursive: true });
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      db.backup(path.join(backupDir, `daifa-startup-${timestamp}.sqlite`));
-    } catch {
-      // 备份失败不影响主流程
+      void db.backup(path.join(backupDir, `daifa-startup-${timestamp}.sqlite`)).catch(() => undefined);
     }
   }
   return db;
