@@ -17,6 +17,7 @@ const supplierSchema = z.object({
   contact: z.string().optional().default(""),
   phone: z.string().optional().default(""),
   storeAddress: z.string().optional().default(""),
+  address: z.string().optional().default(""),
   note: z.string().optional().default("")
 });
 
@@ -50,7 +51,7 @@ suppliersRouter.post("/", (req, res) => {
         parsed.data.shortName,
         parsed.data.contact,
         parsed.data.phone,
-        parsed.data.storeAddress,
+        parsed.data.address,
         parsed.data.storeAddress,
         parsed.data.note,
         nowIso()
@@ -93,6 +94,7 @@ suppliersRouter.post("/import", upload.single("file"), async (req, res) => {
         shortName: cell(row, ["供应商简称", "简称", "shortName"]),
         contact: cell(row, ["联系人", "contact"]),
         phone: cell(row, ["电话", "手机", "联系电话", "phone"]),
+        address: cell(row, ["地址", "address"]),
         storeAddress: cell(row, ["店址", "地址", "storeAddress", "address"]),
         note: cell(row, ["备注", "note"])
       };
@@ -125,7 +127,7 @@ suppliersRouter.post("/import", upload.single("file"), async (req, res) => {
     );
     const tx = db.transaction(() => {
       for (const row of parsedRows) {
-        if (row) insert.run(row.name, row.shortName, row.contact, row.phone, row.storeAddress, row.storeAddress, row.note, nowIso());
+        if (row) insert.run(row.name, row.shortName, row.contact, row.phone, row.address, row.storeAddress, row.note, nowIso());
       }
       db.prepare(
         "INSERT INTO import_jobs (type, filename, totalRows, successRows, failedRows, errorJson) VALUES (?, ?, ?, ?, ?, ?)"
@@ -166,7 +168,7 @@ suppliersRouter.put("/:id", (req, res) => {
         parsed.data.shortName,
         parsed.data.contact,
         parsed.data.phone,
-        parsed.data.storeAddress,
+        parsed.data.address,
         parsed.data.storeAddress,
         parsed.data.note,
         nowIso(),
