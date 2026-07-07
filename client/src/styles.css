@@ -64,6 +64,10 @@ button { cursor: pointer; }
 
 .form-grid { display: grid; gap: 9px; }
 .order-form { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+.repair-entry-form { gap: 12px; }
+.repair-form-row { display: grid; gap: 10px; align-items: start; }
+.repair-form-row-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.repair-form-row-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .order-form .error, .order-form .success, .order-form button:last-child { grid-column: 1 / -1; }
 .receiver-action, .receiver-result-grid, .order-meta-grid, .order-item-grid, .order-detail-grid, .order-note-row { grid-column: 1 / -1; display: grid; gap: 10px; }
 .order-form-section { padding: 12px; border: 1px solid #d8dee8; border-left: 4px solid var(--accent); border-radius: 8px; background: #f8fafc; }
@@ -187,6 +191,7 @@ tr:hover td { background: #fafcff; }
 .upload-box input[type="file"] { background: #f8fafc; }
 .modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.36); display: grid; place-items: center; padding: 24px; z-index: 10; }
 .modal { width: 440px; background: #fff; border-radius: 10px; padding: 20px; display: grid; gap: 10px; box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24); }
+.repair-modal { width: min(980px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow-y: auto; }
 .summary-edit-modal { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow-y: auto; }
 .modal h2 { margin: 0 0 6px; font-size: 18px; }
 .modal-field { display: grid; gap: 6px; color: #344054; font-size: 13px; }
@@ -230,7 +235,7 @@ tr:hover td { background: #fafcff; }
   .sidebar { position: static; }
   .nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .two-column, .dashboard-grid, .metric-grid { grid-template-columns: 1fr; }
-  .receiver-action, .receiver-result-grid, .order-meta-grid, .order-item-grid, .order-detail-grid { grid-template-columns: 1fr; }
+  .receiver-action, .receiver-result-grid, .order-meta-grid, .order-item-grid, .order-detail-grid, .repair-form-row-3, .repair-form-row-4 { grid-template-columns: 1fr; }
   .order-section-title { display: grid; gap: 4px; }
   .page-header { flex-direction: column; }
   .main { padding: 16px; }
@@ -272,7 +277,7 @@ tr:hover td { background: #fafcff; }
   .filter-date-field input { width: 100%; }
 
   .two-column, .library-layout, .dashboard-grid, .metric-grid { grid-template-columns: 1fr; }
-  .receiver-action, .receiver-result-grid, .order-meta-grid, .order-item-grid, .order-detail-grid, .order-note-row { grid-template-columns: 1fr; }
+  .receiver-action, .receiver-result-grid, .order-meta-grid, .order-item-grid, .order-detail-grid, .order-note-row, .repair-form-row-3, .repair-form-row-4 { grid-template-columns: 1fr; }
   .order-form-section { padding: 10px; }
   .field-block > span { font-size: 12px; }
   input, select, textarea { min-height: 42px; font-size: 14px; }

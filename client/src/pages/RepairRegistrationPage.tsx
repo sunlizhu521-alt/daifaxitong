@@ -49,7 +49,7 @@ export function RepairRegistrationPage() {
       carrierCompany: String(form.get("carrierCompany") ?? "").trim(),
       trackingNo: String(form.get("trackingNo") ?? "").trim(),
       note: String(form.get("note") ?? "").trim(),
-      action: String(form.get("action") ?? "").trim()
+      action: ""
     };
   }
 
@@ -67,21 +67,25 @@ export function RepairRegistrationPage() {
 
   return (
     <>
-      <PageHeader title="维修换货登记" description="登记维修换货信息：原店铺订单号、客户、店铺、系列、SKU、名称、快递信息、备注、操作。" />
+      <PageHeader title="维修换货登记" description="登记维修换货信息：原店铺订单号、店铺、客户、商品和快递信息。" />
       <Panel title="新增登记">
-        <form className="form-grid" onSubmit={submitForm}>
-          <label className="field-block"><span>原店铺订单号 *</span><input name="storeOrderNo" placeholder="原店铺订单号" required /></label>
-          <label className="field-block"><span>店铺</span><input name="storeName" placeholder="店铺" /></label>
-          <label className="field-block"><span>客户姓名</span><input name="customerName" placeholder="客户姓名" /></label>
-          <label className="field-block"><span>客户电话</span><input name="customerPhone" placeholder="客户电话" /></label>
-          <label className="field-block"><span>客户地址</span><input name="customerAddress" placeholder="客户地址" /></label>
-          <label className="field-block"><span>系列</span><input name="series" placeholder="系列" /></label>
-          <label className="field-block"><span>SKU</span><input name="sku" placeholder="SKU" /></label>
-          <label className="field-block"><span>名称</span><input name="name" placeholder="名称" /></label>
-          <label className="field-block"><span>快递公司</span><input name="carrierCompany" placeholder="快递公司" /></label>
-          <label className="field-block"><span>快递单号</span><input name="trackingNo" placeholder="快递单号" /></label>
-          <label className="field-block"><span>操作</span><input name="action" placeholder="操作" /></label>
-          <label className="field-block"><span>备注</span><textarea name="note" placeholder="备注" /></label>
+        <form className="form-grid repair-entry-form" onSubmit={submitForm}>
+          <div className="repair-form-row repair-form-row-4">
+            <label className="field-block"><span>原店铺订单号 *</span><input name="storeOrderNo" placeholder="原店铺订单号" required /></label>
+            <label className="field-block"><span>店铺</span><input name="storeName" placeholder="店铺" /></label>
+            <label className="field-block"><span>客户姓名</span><input name="customerName" placeholder="客户姓名" /></label>
+            <label className="field-block"><span>客户地址</span><input name="customerAddress" placeholder="客户地址" /></label>
+          </div>
+          <div className="repair-form-row repair-form-row-3">
+            <label className="field-block"><span>SKU</span><input name="sku" placeholder="SKU" /></label>
+            <label className="field-block"><span>系列</span><input name="series" placeholder="系列" /></label>
+            <label className="field-block"><span>名称</span><input name="name" placeholder="名称" /></label>
+          </div>
+          <div className="repair-form-row repair-form-row-3">
+            <label className="field-block"><span>快递公司</span><input name="carrierCompany" placeholder="快递公司" /></label>
+            <label className="field-block"><span>快递单号</span><input name="trackingNo" placeholder="快递单号" /></label>
+            <label className="field-block"><span>备注</span><textarea name="note" placeholder="备注" /></label>
+          </div>
           <button className="primary-button" disabled={createRepair.isPending}>提交登记</button>
           {createRepair.error ? <div className="error">{createRepair.error.message}</div> : null}
         </form>
@@ -101,7 +105,6 @@ export function RepairRegistrationPage() {
               <th>名称</th>
               <th>快递公司</th>
               <th>快递单号</th>
-              <th>操作内容</th>
               <th>备注</th>
               <th>状态</th>
               {isAdmin ? <th>操作</th> : null}
@@ -121,7 +124,6 @@ export function RepairRegistrationPage() {
                 <td>{row.name || "-"}</td>
                 <td>{row.carrierCompany || "-"}</td>
                 <td>{row.trackingNo || "-"}</td>
-                <td>{row.action || "-"}</td>
                 <td>{row.note || "-"}</td>
                 <td><span className={`status ${row.isCompleted ? "shipped" : "pending"}`}>{row.status}</span></td>
                 {isAdmin ? (
@@ -141,20 +143,24 @@ export function RepairRegistrationPage() {
       </Panel>
       {editing ? (
         <div className="modal-backdrop">
-          <form className="modal" onSubmit={submitEdit}>
+          <form className="modal repair-modal" onSubmit={submitEdit}>
             <h2>编辑维修换货</h2>
-            <label className="modal-field"><span>原店铺订单号</span><input name="storeOrderNo" defaultValue={editing.storeOrderNo} required /></label>
-            <label className="modal-field"><span>店铺</span><input name="storeName" defaultValue={editing.storeName} /></label>
-            <label className="modal-field"><span>客户姓名</span><input name="customerName" defaultValue={editing.customerName} /></label>
-            <label className="modal-field"><span>客户电话</span><input name="customerPhone" defaultValue={editing.customerPhone} /></label>
-            <label className="modal-field"><span>客户地址</span><input name="customerAddress" defaultValue={editing.customerAddress} /></label>
-            <label className="modal-field"><span>系列</span><input name="series" defaultValue={editing.series} /></label>
-            <label className="modal-field"><span>SKU</span><input name="sku" defaultValue={editing.sku} /></label>
-            <label className="modal-field"><span>名称</span><input name="name" defaultValue={editing.name} /></label>
-            <label className="modal-field"><span>快递公司</span><input name="carrierCompany" defaultValue={editing.carrierCompany} /></label>
-            <label className="modal-field"><span>快递单号</span><input name="trackingNo" defaultValue={editing.trackingNo} /></label>
-            <label className="modal-field"><span>操作</span><input name="action" defaultValue={editing.action} /></label>
-            <label className="modal-field"><span>备注</span><textarea name="note" defaultValue={editing.note} /></label>
+            <div className="repair-form-row repair-form-row-4">
+              <label className="modal-field"><span>原店铺订单号</span><input name="storeOrderNo" defaultValue={editing.storeOrderNo} required /></label>
+              <label className="modal-field"><span>店铺</span><input name="storeName" defaultValue={editing.storeName} /></label>
+              <label className="modal-field"><span>客户姓名</span><input name="customerName" defaultValue={editing.customerName} /></label>
+              <label className="modal-field"><span>客户地址</span><input name="customerAddress" defaultValue={editing.customerAddress} /></label>
+            </div>
+            <div className="repair-form-row repair-form-row-3">
+              <label className="modal-field"><span>SKU</span><input name="sku" defaultValue={editing.sku} /></label>
+              <label className="modal-field"><span>系列</span><input name="series" defaultValue={editing.series} /></label>
+              <label className="modal-field"><span>名称</span><input name="name" defaultValue={editing.name} /></label>
+            </div>
+            <div className="repair-form-row repair-form-row-3">
+              <label className="modal-field"><span>快递公司</span><input name="carrierCompany" defaultValue={editing.carrierCompany} /></label>
+              <label className="modal-field"><span>快递单号</span><input name="trackingNo" defaultValue={editing.trackingNo} /></label>
+              <label className="modal-field"><span>备注</span><textarea name="note" defaultValue={editing.note} /></label>
+            </div>
             <div className="modal-actions">
               <button type="button" className="ghost-button" onClick={() => setEditing(null)}>取消</button>
               <button className="primary-button" disabled={updateRepair.isPending}>保存修改</button>
