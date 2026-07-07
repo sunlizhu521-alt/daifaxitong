@@ -1,17 +1,32 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type RepairExchange, type User } from "../api";
+import { api, type Product, type RepairExchange, type Store, type User } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
+
+function productSku(product: Product) {
+  return product.ssku || product.sku;
+}
 
 export function RepairRegistrationPage() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<RepairExchange | null>(null);
+  const [selectedSku, setSelectedSku] = useState("");
+  const [editingSku, setEditingSku] = useState("");
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
+  const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: () => api<Product[]>("/products") });
+  const { data: stores = [] } = useQuery({ queryKey: ["stores"], queryFn: () => api<Store[]>("/stores") });
   const { data: rows = [] } = useQuery({
     queryKey: ["repairs"],
     queryFn: () => api<RepairExchange[]>("/repairs")
   });
   const isAdmin = me?.user?.role === "管理员" || me?.user?.username === "孙立柱";
+  const selectedProduct = products.find((product) => productSku(product) === selectedSku);
+  const editingProduct = products.find((product) => productSku(product) === editingSku);
+
+  useEffect(() => {
+    if (!editing) return;
+    setEditingSku(editing.sku || "");
+  }, [editing]);
 
   const createRepair = useMutation({
     mutationFn: (body: unknown) => api("/repairs", { method: "POST", body: JSON.stringify(body), notify: true }),
@@ -57,6 +72,7 @@ export function RepairRegistrationPage() {
     event.preventDefault();
     createRepair.mutate(repairPayload(new FormData(event.currentTarget)));
     event.currentTarget.reset();
+    setSelectedSku("");
   }
 
   function submitEdit(event: FormEvent<HTMLFormElement>) {
@@ -72,14 +88,30 @@ export function RepairRegistrationPage() {
         <form className="form-grid repair-entry-form" onSubmit={submitForm}>
           <div className="repair-form-row repair-form-row-4">
             <label className="field-block"><span>原店铺订单号 *</span><input name="storeOrderNo" placeholder="原店铺订单号" required /></label>
-            <label className="field-block"><span>店铺</span><input name="storeName" placeholder="店铺" /></label>
+            <label className="field-block">
+              <span>店铺</span>
+              <select name="storeName" required>
+                <option value="">选择店铺</option>
+                {stores.map((store) => (
+                  <option value={store.name} key={store.id}>{store.shortName || store.name}</option>
+                ))}
+              </select>
+            </label>
             <label className="field-block"><span>客户姓名</span><input name="customerName" placeholder="客户姓名" /></label>
             <label className="field-block"><span>客户地址</span><input name="customerAddress" placeholder="客户地址" /></label>
           </div>
           <div className="repair-form-row repair-form-row-3">
-            <label className="field-block"><span>SKU</span><input name="sku" placeholder="SKU" /></label>
-            <label className="field-block"><span>系列</span><input name="series" placeholder="系列" /></label>
-            <label className="field-block"><span>名称</span><input name="name" placeholder="名称" /></label>
+            <label className="field-block">
+              <span>SKU</span>
+              <select name="sku" value={selectedSku} onChange={(event) => setSelectedSku(event.target.value)} required>
+                <option value="">选择SKU</option>
+                {products.map((product) => (
+                  <option value={productSku(product)} key={product.id}>{product.name} / {productSku(product)}</option>
+                ))}
+              </select>
+            </label>
+            <label className="field-block"><span>系列</span><input name="series" value={selectedProduct?.series || ""} readOnly /></label>
+            <label className="field-block"><span>名称</span><input name="name" value={selectedProduct?.name || ""} readOnly /></label>
           </div>
           <div className="repair-form-row repair-form-row-3">
             <label className="field-block"><span>快递公司</span><input name="carrierCompany" placeholder="快递公司" /></label>
@@ -147,14 +179,30 @@ export function RepairRegistrationPage() {
             <h2>编辑维修换货</h2>
             <div className="repair-form-row repair-form-row-4">
               <label className="modal-field"><span>原店铺订单号</span><input name="storeOrderNo" defaultValue={editing.storeOrderNo} required /></label>
-              <label className="modal-field"><span>店铺</span><input name="storeName" defaultValue={editing.storeName} /></label>
+              <label className="modal-field">
+                <span>店铺</span>
+                <select name="storeName" defaultValue={editing.storeName} required>
+                  <option value="">选择店铺</option>
+                  {stores.map((store) => (
+                    <option value={store.name} key={store.id}>{store.shortName || store.name}</option>
+                  ))}
+                </select>
+              </label>
               <label className="modal-field"><span>客户姓名</span><input name="customerName" defaultValue={editing.customerName} /></label>
               <label className="modal-field"><span>客户地址</span><input name="customerAddress" defaultValue={editing.customerAddress} /></label>
             </div>
             <div className="repair-form-row repair-form-row-3">
-              <label className="modal-field"><span>SKU</span><input name="sku" defaultValue={editing.sku} /></label>
-              <label className="modal-field"><span>系列</span><input name="series" defaultValue={editing.series} /></label>
-              <label className="modal-field"><span>名称</span><input name="name" defaultValue={editing.name} /></label>
+              <label className="modal-field">
+                <span>SKU</span>
+                <select name="sku" value={editingSku} onChange={(event) => setEditingSku(event.target.value)} required>
+                  <option value="">选择SKU</option>
+                  {products.map((product) => (
+                    <option value={productSku(product)} key={product.id}>{product.name} / {productSku(product)}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="modal-field"><span>系列</span><input name="series" value={editingProduct?.series || ""} readOnly /></label>
+              <label className="modal-field"><span>名称</span><input name="name" value={editingProduct?.name || ""} readOnly /></label>
             </div>
             <div className="repair-form-row repair-form-row-3">
               <label className="modal-field"><span>快递公司</span><input name="carrierCompany" defaultValue={editing.carrierCompany} /></label>
