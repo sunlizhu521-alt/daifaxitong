@@ -7,6 +7,10 @@ export const repairsRouter = Router();
 
 const createSchema = z.object({
   storeOrderNo: z.string().trim().min(1, "原店铺订单号不能为空"),
+  customerName: z.string().optional().default(""),
+  customerPhone: z.string().optional().default(""),
+  customerAddress: z.string().optional().default(""),
+  storeName: z.string().optional().default(""),
   series: z.string().optional().default(""),
   sku: z.string().optional().default(""),
   name: z.string().optional().default(""),
@@ -18,6 +22,10 @@ const createSchema = z.object({
 
 const updateSchema = z.object({
   storeOrderNo: z.string().optional(),
+  customerName: z.string().optional(),
+  customerPhone: z.string().optional(),
+  customerAddress: z.string().optional(),
+  storeName: z.string().optional(),
   series: z.string().optional(),
   sku: z.string().optional(),
   name: z.string().optional(),
@@ -63,11 +71,15 @@ repairsRouter.post("/", (req, res) => {
   const result = db
     .prepare(
       `INSERT INTO repair_exchanges
-       (storeOrderNo, series, sku, name, carrierCompany, trackingNo, note, action, status, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, '顾客寄出', ?)`
+       (storeOrderNo, customerName, customerPhone, customerAddress, storeName, series, sku, name, carrierCompany, trackingNo, note, action, status, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '顾客寄出', ?)`
     )
     .run(
       parsed.data.storeOrderNo,
+      parsed.data.customerName,
+      parsed.data.customerPhone,
+      parsed.data.customerAddress,
+      parsed.data.storeName,
       parsed.data.series,
       parsed.data.sku,
       parsed.data.name,
@@ -100,6 +112,10 @@ repairsRouter.patch("/:id", (req, res) => {
 
   const fields: (keyof typeof parsed.data)[] = [
     "storeOrderNo",
+    "customerName",
+    "customerPhone",
+    "customerAddress",
+    "storeName",
     "series",
     "sku",
     "name",

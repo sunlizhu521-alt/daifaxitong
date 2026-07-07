@@ -14,12 +14,12 @@ export function RepairRegistrationPage() {
   const isAdmin = me?.user?.role === "管理员" || me?.user?.username === "孙立柱";
 
   const createRepair = useMutation({
-    mutationFn: (body: unknown) => api("/repairs", { method: "POST", body: JSON.stringify(body) }),
+    mutationFn: (body: unknown) => api("/repairs", { method: "POST", body: JSON.stringify(body), notify: true }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["repairs"] })
   });
 
   const updateRepair = useMutation({
-    mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/repairs/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+    mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/repairs/${id}`, { method: "PATCH", body: JSON.stringify(body), notify: true }),
     onSuccess: () => {
       setEditing(null);
       qc.invalidateQueries({ queryKey: ["repairs"] });
@@ -27,20 +27,22 @@ export function RepairRegistrationPage() {
   });
 
   const completeRepair = useMutation({
-    mutationFn: (id: number) => api(`/repairs/${id}`, { method: "PATCH", body: JSON.stringify({ isCompleted: 1 }) }),
+    mutationFn: (id: number) => api(`/repairs/${id}`, { method: "PATCH", body: JSON.stringify({ isCompleted: 1 }), notify: true }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["repairs"] })
   });
 
   const deleteRepair = useMutation({
-    mutationFn: (id: number) => api(`/repairs/${id}`, { method: "DELETE" }),
+    mutationFn: (id: number) => api(`/repairs/${id}`, { method: "DELETE", notify: true }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["repairs"] })
   });
 
-  function submitForm(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    createRepair.mutate({
+  function repairPayload(form: FormData) {
+    return {
       storeOrderNo: String(form.get("storeOrderNo") ?? "").trim(),
+      customerName: String(form.get("customerName") ?? "").trim(),
+      customerPhone: String(form.get("customerPhone") ?? "").trim(),
+      customerAddress: String(form.get("customerAddress") ?? "").trim(),
+      storeName: String(form.get("storeName") ?? "").trim(),
       series: String(form.get("series") ?? "").trim(),
       sku: String(form.get("sku") ?? "").trim(),
       name: String(form.get("name") ?? "").trim(),
@@ -48,35 +50,31 @@ export function RepairRegistrationPage() {
       trackingNo: String(form.get("trackingNo") ?? "").trim(),
       note: String(form.get("note") ?? "").trim(),
       action: String(form.get("action") ?? "").trim()
-    });
+    };
+  }
+
+  function submitForm(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    createRepair.mutate(repairPayload(new FormData(event.currentTarget)));
     event.currentTarget.reset();
   }
 
   function submitEdit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!editing) return;
-    const form = new FormData(event.currentTarget);
-    updateRepair.mutate({
-      id: editing.id,
-      body: {
-        storeOrderNo: String(form.get("storeOrderNo") ?? "").trim(),
-        series: String(form.get("series") ?? "").trim(),
-        sku: String(form.get("sku") ?? "").trim(),
-        name: String(form.get("name") ?? "").trim(),
-        carrierCompany: String(form.get("carrierCompany") ?? "").trim(),
-        trackingNo: String(form.get("trackingNo") ?? "").trim(),
-        note: String(form.get("note") ?? "").trim(),
-        action: String(form.get("action") ?? "").trim()
-      }
-    });
+    updateRepair.mutate({ id: editing.id, body: repairPayload(new FormData(event.currentTarget)) });
   }
 
   return (
     <>
-      <PageHeader title="维修换货登记" description="登记维修换货信息：原店铺订单号、系列、SKU、名称、快递公司、快递单号、备注、操作。" />
+      <PageHeader title="维修换货登记" description="登记维修换货信息：原店铺订单号、客户、店铺、系列、SKU、名称、快递信息、备注、操作。" />
       <Panel title="新增登记">
         <form className="form-grid" onSubmit={submitForm}>
           <label className="field-block"><span>原店铺订单号 *</span><input name="storeOrderNo" placeholder="原店铺订单号" required /></label>
+          <label className="field-block"><span>店铺</span><input name="storeName" placeholder="店铺" /></label>
+          <label className="field-block"><span>客户姓名</span><input name="customerName" placeholder="客户姓名" /></label>
+          <label className="field-block"><span>客户电话</span><input name="customerPhone" placeholder="客户电话" /></label>
+          <label className="field-block"><span>客户地址</span><input name="customerAddress" placeholder="客户地址" /></label>
           <label className="field-block"><span>系列</span><input name="series" placeholder="系列" /></label>
           <label className="field-block"><span>SKU</span><input name="sku" placeholder="SKU" /></label>
           <label className="field-block"><span>名称</span><input name="name" placeholder="名称" /></label>
@@ -93,13 +91,17 @@ export function RepairRegistrationPage() {
           <thead>
             <tr>
               <th>登记时间</th>
+              <th>店铺</th>
               <th>原店铺订单号</th>
+              <th>客户姓名</th>
+              <th>客户电话</th>
+              <th>客户地址</th>
               <th>系列</th>
               <th>SKU</th>
               <th>名称</th>
               <th>快递公司</th>
               <th>快递单号</th>
-              <th>操作</th>
+              <th>操作内容</th>
               <th>备注</th>
               <th>状态</th>
               {isAdmin ? <th>操作</th> : null}
@@ -109,7 +111,11 @@ export function RepairRegistrationPage() {
             {rows.map((row) => (
               <tr key={row.id}>
                 <td>{row.createdAt?.slice(0, 10)}</td>
+                <td>{row.storeName || "-"}</td>
                 <td>{row.storeOrderNo}</td>
+                <td>{row.customerName || "-"}</td>
+                <td>{row.customerPhone || "-"}</td>
+                <td>{row.customerAddress || "-"}</td>
                 <td>{row.series || "-"}</td>
                 <td>{row.sku || "-"}</td>
                 <td>{row.name || "-"}</td>
@@ -138,6 +144,10 @@ export function RepairRegistrationPage() {
           <form className="modal" onSubmit={submitEdit}>
             <h2>编辑维修换货</h2>
             <label className="modal-field"><span>原店铺订单号</span><input name="storeOrderNo" defaultValue={editing.storeOrderNo} required /></label>
+            <label className="modal-field"><span>店铺</span><input name="storeName" defaultValue={editing.storeName} /></label>
+            <label className="modal-field"><span>客户姓名</span><input name="customerName" defaultValue={editing.customerName} /></label>
+            <label className="modal-field"><span>客户电话</span><input name="customerPhone" defaultValue={editing.customerPhone} /></label>
+            <label className="modal-field"><span>客户地址</span><input name="customerAddress" defaultValue={editing.customerAddress} /></label>
             <label className="modal-field"><span>系列</span><input name="series" defaultValue={editing.series} /></label>
             <label className="modal-field"><span>SKU</span><input name="sku" defaultValue={editing.sku} /></label>
             <label className="modal-field"><span>名称</span><input name="name" defaultValue={editing.name} /></label>

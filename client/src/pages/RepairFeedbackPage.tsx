@@ -11,7 +11,7 @@ export function RepairFeedbackPage() {
   });
 
   const updateRepair = useMutation({
-    mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/repairs/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+    mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/repairs/${id}`, { method: "PATCH", body: JSON.stringify(body), notify: true }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["repairs"] })
   });
 
@@ -38,13 +38,17 @@ export function RepairFeedbackPage() {
           <thead>
             <tr>
               <th>登记时间</th>
+              <th>店铺</th>
               <th>原店铺订单号</th>
+              <th>客户姓名</th>
+              <th>客户电话</th>
+              <th>客户地址</th>
               <th>系列</th>
               <th>SKU</th>
               <th>名称</th>
               <th>快递公司</th>
               <th>快递单号</th>
-              <th>操作</th>
+              <th>操作内容</th>
               <th>备注</th>
               <th>是否已收到货</th>
               <th>预计完成时间</th>
@@ -61,7 +65,11 @@ export function RepairFeedbackPage() {
               return (
                 <tr key={row.id}>
                   <td>{row.createdAt?.slice(0, 10)}</td>
+                  <td>{row.storeName || "-"}</td>
                   <td>{row.storeOrderNo}</td>
+                  <td>{row.customerName || "-"}</td>
+                  <td>{row.customerPhone || "-"}</td>
+                  <td>{row.customerAddress || "-"}</td>
                   <td>{row.series || "-"}</td>
                   <td>{row.sku || "-"}</td>
                   <td>{row.name || "-"}</td>

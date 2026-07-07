@@ -171,6 +171,10 @@ export type ReturnOrderRow = {
 export type RepairExchange = {
   id: number;
   storeOrderNo: string;
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
+  storeName: string;
   series: string;
   sku: string;
   name: string;

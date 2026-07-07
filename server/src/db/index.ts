@@ -47,6 +47,10 @@ function migrateDb(database: Database.Database) {
   ensureColumn(database, "carriers", "note", "TEXT");
   ensureColumn(database, "returns", "orderId", "INTEGER");
   ensureColumn(database, "returns", "operationUser", "TEXT");
+  ensureColumn(database, "repair_exchanges", "customerName", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn(database, "repair_exchanges", "customerPhone", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn(database, "repair_exchanges", "customerAddress", "TEXT NOT NULL DEFAULT ''");
+  ensureColumn(database, "repair_exchanges", "storeName", "TEXT NOT NULL DEFAULT ''");
   database.exec(`
     UPDATE suppliers SET storeAddress = COALESCE(storeAddress, address);
     UPDATE products SET ssku = COALESCE(ssku, sku);
