@@ -15,13 +15,22 @@ export function RepairFeedbackPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["repairs"] })
   });
 
+  function confirmReceived(row: RepairExchange) {
+    updateRepair.mutate({
+      id: row.id,
+      body: {
+        isReceived: 1
+      }
+    });
+  }
+
   function submitFeedback(row: RepairExchange, event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     updateRepair.mutate({
       id: row.id,
       body: {
-        isReceived: form.get("isReceived") === "1" ? 1 : 0,
+        isReceived: row.isReceived ? 1 : 0,
         estimatedCompletion: String(form.get("estimatedCompletion") ?? "").trim(),
         returnCarrier: String(form.get("returnCarrier") ?? "").trim(),
         returnTrackingNo: String(form.get("returnTrackingNo") ?? "").trim(),
@@ -32,7 +41,7 @@ export function RepairFeedbackPage() {
 
   return (
     <>
-      <PageHeader title="维修换货反馈" description="查看维修换货登记信息，填写是否收到货、预计完成时间、寄出快递信息、供应商反馈。" />
+      <PageHeader title="维修换货反馈" description="先确认是否已收到货，再填写预计完成时间、寄出快递信息和供应商反馈。" />
       <Panel title="维修换货反馈">
         <table className="nowrap-table">
           <thead>
@@ -48,15 +57,14 @@ export function RepairFeedbackPage() {
               <th>名称</th>
               <th>快递公司</th>
               <th>快递单号</th>
-              <th>操作内容</th>
               <th>备注</th>
-              <th>是否已收到货</th>
+              <th>收货操作</th>
               <th>预计完成时间</th>
               <th>寄出快递公司</th>
               <th>寄出快递单号</th>
               <th>供应商反馈</th>
               <th>状态</th>
-              <th>保存</th>
+              <th>保存反馈</th>
             </tr>
           </thead>
           <tbody>
@@ -75,13 +83,15 @@ export function RepairFeedbackPage() {
                   <td>{row.name || "-"}</td>
                   <td>{row.carrierCompany || "-"}</td>
                   <td>{row.trackingNo || "-"}</td>
-                  <td>{row.action || "-"}</td>
                   <td>{row.note || "-"}</td>
-                  <td>
-                    <select form={formId} name="isReceived" defaultValue={row.isReceived ? "1" : "0"}>
-                      <option value="0">未收到</option>
-                      <option value="1">已收到</option>
-                    </select>
+                  <td className="row-actions">
+                    {row.isReceived ? (
+                      <span className="status purchased">已收到</span>
+                    ) : (
+                      <button type="button" className="primary-button" disabled={updateRepair.isPending} onClick={() => confirmReceived(row)}>
+                        确认收到货
+                      </button>
+                    )}
                   </td>
                   <td><input form={formId} name="estimatedCompletion" type="date" defaultValue={row.estimatedCompletion || ""} /></td>
                   <td><input form={formId} name="returnCarrier" placeholder="寄出快递公司" defaultValue={row.returnCarrier || ""} /></td>
