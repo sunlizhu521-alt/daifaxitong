@@ -219,7 +219,7 @@ export function ShippingSchedulePage() {
             批量提交
           </button>
         </div>
-        <table>
+        <table className="shipping-schedule-table">
           <thead>
             <tr>
               <th className="selection-cell">
@@ -266,23 +266,23 @@ export function ShippingSchedulePage() {
                 </td>
                 <td>{order.supplierName ?? "-"}</td>
                 <td>{order.orderType === "accessory" ? "配件" : "成品"}</td>
-                <td>{order.registrarName || "-"}</td>
-                <td>{formatCreatedAt(order.createdAt)}</td>
-                <td>{order.storeShortName || order.storeName || "-"}</td>
+                <td className="shipping-nowrap">{order.registrarName || "-"}</td>
+                <td className="shipping-nowrap">{formatCreatedAt(order.createdAt)}</td>
+                <td className="shipping-nowrap">{order.storeShortName || order.storeName || "-"}</td>
                 <td>{order.orderNo}</td>
                 <td>{order.customerName}</td>
                 <td>{order.customerPhone ?? "-"}</td>
                 <td>{order.address}</td>
                 <td>{order.productSeries || "-"}</td>
-                <td>{order.productSku || "-"}</td>
-                <td>{order.productName || "-"}</td>
+                <td className="shipping-nowrap">{order.productSku || "-"}</td>
+                <td className="shipping-nowrap">{order.productName || "-"}</td>
                 <td>{order.supplierModel || "-"}</td>
                 <td>{order.totalQuantity ?? 0}</td>
-                <td><span className={`status ${order.status}`}>{statusText[order.status] || order.status}</span></td>
-                <td>{order.carrier || "-"}</td>
+                <td className="shipping-nowrap"><span className={`status ${order.status}`}>{statusText[order.status] || order.status}</span></td>
+                <td className="shipping-nowrap">{order.carrier || "-"}</td>
                 <td>{order.trackingNo || "-"}</td>
                 <td>{order.note || order.shipmentNote || "-"}</td>
-                <td>{formatLatestShipTime(order.createdAt)}</td>
+                <td className="shipping-nowrap">{formatLatestShipTime(order.createdAt)}</td>
                 <td>
                   <div className="supplier-note-actions">
                     <input
