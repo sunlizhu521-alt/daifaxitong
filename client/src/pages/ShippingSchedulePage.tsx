@@ -25,7 +25,7 @@ function uniqueOptions(values: Array<string | null | undefined>) {
 
 export function ShippingSchedulePage() {
   const qc = useQueryClient();
-  const [status, setStatus] = useState("filled");
+  const [status, setStatus] = useState("");
   const [keyword, setKeyword] = useState("");
   const [supplierFilter, setSupplierFilter] = useState("");
   const [storeFilter, setStoreFilter] = useState("");
@@ -34,10 +34,10 @@ export function ShippingSchedulePage() {
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(() => new Set());
   const [supplierNotes, setSupplierNotes] = useState<Record<number, string>>({});
   const { data: orderResponse } = useQuery({
-    queryKey: ["shipping-schedule", status],
-    queryFn: () => api<ListResponse<OrderListRow>>(`/orders?status=${encodeURIComponent(status)}&includeAccessoryPending=${status === "filled" ? "yes" : ""}`)
+    queryKey: ["shipping-schedule"],
+    queryFn: () => api<ListResponse<OrderListRow>>("/orders?status=&includeAccessoryPending=yes")
   });
-  const orders = rowsFromListResponse(orderResponse).filter((order) => order.status !== "customer_cancelled");
+  const orders = rowsFromListResponse(orderResponse).filter((order) => order.status === "pending" || order.status === "filled");
   const supplierOptions = useMemo(() => uniqueOptions(orders.map((order) => order.supplierName)), [orders]);
   const storeOptions = useMemo(() => uniqueOptions(orders.map((order) => order.storeShortName || order.storeName)), [orders]);
   const seriesOptions = useMemo(() => uniqueOptions(orders.map((order) => order.productSeries)), [orders]);
@@ -66,6 +66,7 @@ export function ShippingSchedulePage() {
         order.supplierNote
       ].join(" ").toLowerCase();
       return (
+        (!status || order.status === status) &&
         (!supplierFilter || order.supplierName === supplierFilter) &&
         (!storeFilter || storeText === storeFilter) &&
         (!seriesFilter || order.productSeries === seriesFilter) &&
@@ -73,7 +74,7 @@ export function ShippingSchedulePage() {
         (!search || haystack.includes(search))
       );
     });
-  }, [orders, keyword, supplierFilter, storeFilter, seriesFilter, skuFilter]);
+  }, [orders, status, keyword, supplierFilter, storeFilter, seriesFilter, skuFilter]);
   const selectedVisibleOrders = useMemo(() => filteredOrders.filter((order) => selectedOrderIds.has(order.id)), [filteredOrders, selectedOrderIds]);
   const allVisibleSelected = filteredOrders.length > 0 && filteredOrders.every((order) => selectedOrderIds.has(order.id));
   const markShipped = useMutation({
@@ -171,11 +172,9 @@ export function ShippingSchedulePage() {
       <Panel title="发货信息">
         <div className="toolbar">
           <select value={status} onChange={(event) => setStatus(event.target.value)}>
-            <option value="">全部</option>
+            <option value="">待发货+已填单号</option>
             <option value="pending">待发货</option>
             <option value="filled">已填单号</option>
-            <option value="purchased">已下采购单</option>
-            <option value="shipped">已发货</option>
           </select>
           <input placeholder="搜索订单/客户/地址/备注" value={keyword} onChange={(event) => setKeyword(event.target.value)} />
           <select value={supplierFilter} onChange={(event) => setSupplierFilter(event.target.value)}>
