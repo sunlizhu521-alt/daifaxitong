@@ -1,9 +1,13 @@
 import { Router } from "express";
 import { z } from "zod";
 import { getDb, nowIso } from "../db/index.js";
+import { notifyDingtalk, notifyFeishu } from "../notifications/dingtalk.js";
 import { ROLE_ADMIN } from "../permissions.js";
 
 export const repairsRouter = Router();
+
+const REPAIR_DINGTALK_WEBHOOK = "https://oapi.dingtalk.com/robot/send?access_token=db1472c2a91822f03fee845e77b76adf9cf4049625db0eef915ca0852ea62b36";
+const REPAIR_DINGTALK_SECRET = "4SEC07f42360e2f6b080865cc453821ed06d54ad1615f62acdcf087fd69832471630";
 
 const createSchema = z.object({
   storeOrderNo: z.string().trim().min(1, "原店铺订单号不能为空"),
@@ -54,6 +58,38 @@ function deriveStatus(current: Record<string, unknown>, updates: Record<string, 
   return "顾客寄出";
 }
 
+function valueText(value: unknown): string {
+  if (value === undefined || value === null || value === "") return "-";
+  return String(value).trim() || "-";
+}
+
+function buildRepairText(row: Record<string, unknown>, action: string, operator?: string): string {
+  const fields = [
+    { label: "操作人", value: operator },
+    { label: "操作", value: action },
+    { label: "店铺", value: row.storeName },
+    { label: "原店铺订单号", value: row.storeOrderNo },
+    { label: "客户", value: row.customerName },
+    { label: "电话", value: row.customerPhone },
+    { label: "地址", value: row.customerAddress },
+    { label: "系列", value: row.series },
+    { label: "SKU", value: row.sku },
+    { label: "名称", value: row.name },
+    { label: "快递公司", value: row.carrierCompany },
+    { label: "快递单号", value: row.trackingNo },
+    { label: "操作", value: row.action },
+    { label: "备注", value: row.note },
+    { label: "是否已收到货", value: row.isReceived ? "已收到" : "未收到" },
+    { label: "预计完成时间", value: row.estimatedCompletion },
+    { label: "寄出快递公司", value: row.returnCarrier },
+    { label: "寄出快递单号", value: row.returnTrackingNo },
+    { label: "供应商反馈", value: row.supplierFeedback },
+    { label: "状态", value: row.status }
+  ].filter((field) => valueText(field.value) !== "-");
+
+  return [`### 一件代发系统：${action}`, "", ...fields.map((field) => `- **${field.label}**：${valueText(field.value)}`)].join("\n");
+}
+
 repairsRouter.get("/", (_req, res) => {
   const rows = getDb()
     .prepare("SELECT * FROM repair_exchanges ORDER BY id DESC")
@@ -90,6 +126,9 @@ repairsRouter.post("/", (req, res) => {
       nowIso()
     );
   const row = db.prepare("SELECT * FROM repair_exchanges WHERE id = ?").get(result.lastInsertRowid) as Record<string, unknown>;
+  const title = "一件代发系统：维修换货登记";
+  const text = buildRepairText(row, "维修换货登记", req.session.user?.username);
+  void notifyFeishu(title, text);
   res.status(201).json(row);
 });
 
@@ -110,7 +149,7 @@ repairsRouter.patch("/:id", (req, res) => {
   const sets: string[] = ["status = ?", "updatedAt = ?"];
   const params: unknown[] = [newStatus, nowIso()];
 
-  const fields: (keyof typeof parsed.data)[] = [
+  const fields = [
     "storeOrderNo",
     "customerName",
     "customerPhone",
@@ -129,9 +168,9 @@ repairsRouter.patch("/:id", (req, res) => {
     "returnCarrier",
     "returnTrackingNo",
     "supplierFeedback"
-  ];
+  ] as const;
   for (const field of fields) {
-    const val = parsed.data[field as keyof typeof parsed.data];
+    const val = parsed.data[field];
     if (val !== undefined) {
       sets.push(`${field} = ?`);
       params.push(val);
@@ -141,6 +180,24 @@ repairsRouter.patch("/:id", (req, res) => {
   params.push(id);
   getDb().prepare(`UPDATE repair_exchanges SET ${sets.join(", ")} WHERE id = ?`).run(...params);
   const row = getDb().prepare("SELECT * FROM repair_exchanges WHERE id = ?").get(id) as Record<string, unknown>;
+
+  const hasFeedbackChange =
+    parsed.data.isReceived !== undefined ||
+    parsed.data.estimatedCompletion !== undefined ||
+    parsed.data.returnCarrier !== undefined ||
+    parsed.data.returnTrackingNo !== undefined ||
+    parsed.data.supplierFeedback !== undefined;
+
+  if (hasFeedbackChange) {
+    const title = "一件代发系统：维修换货反馈";
+    const text = buildRepairText(row, "维修换货反馈", req.session.user?.username);
+    void notifyDingtalk(title, text, REPAIR_DINGTALK_WEBHOOK, REPAIR_DINGTALK_SECRET, "维修换货钉钉通知");
+  } else {
+    const title = "一件代发系统：维修换货登记变更";
+    const text = buildRepairText(row, "维修换货登记变更", req.session.user?.username);
+    void notifyFeishu(title, text);
+  }
+
   res.json(row);
 });
 

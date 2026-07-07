@@ -93,7 +93,7 @@ function buildNotification(input: NotifyInput) {
   return { title, text };
 }
 
-async function notifyDingtalk(title: string, text: string, webhook: string, secret: string, errorLabel: string) {
+export async function notifyDingtalk(title: string, text: string, webhook: string, secret: string, errorLabel: string) {
   if (!webhook) return;
   try {
     const response = await fetch(appendDingtalkSignature(webhook, secret), {
@@ -113,7 +113,7 @@ async function notifyDingtalk(title: string, text: string, webhook: string, secr
   }
 }
 
-async function notifyFeishu(title: string, text: string) {
+export async function notifyFeishu(title: string, text: string) {
   if (!config.feishuWebhook) return;
   const timestamp = Math.floor(Date.now() / 1000).toString();
   const payload = {
