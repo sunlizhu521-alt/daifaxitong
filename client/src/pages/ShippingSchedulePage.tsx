@@ -14,9 +14,23 @@ const statusText: Record<string, string> = {
   customer_cancelled: "顾客不要了"
 };
 
+function formatCreatedAt(value?: string) {
+  if (!value) return "-";
+  return value.slice(0, 19).replace("T", " ");
+}
+
+function uniqueOptions(values: Array<string | null | undefined>) {
+  return Array.from(new Set(values.map((value) => value?.trim()).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b, "zh-CN"));
+}
+
 export function ShippingSchedulePage() {
   const qc = useQueryClient();
   const [status, setStatus] = useState("filled");
+  const [keyword, setKeyword] = useState("");
+  const [supplierFilter, setSupplierFilter] = useState("");
+  const [storeFilter, setStoreFilter] = useState("");
+  const [seriesFilter, setSeriesFilter] = useState("");
+  const [skuFilter, setSkuFilter] = useState("");
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(() => new Set());
   const [supplierNotes, setSupplierNotes] = useState<Record<number, string>>({});
   const { data: orderResponse } = useQuery({
@@ -24,8 +38,44 @@ export function ShippingSchedulePage() {
     queryFn: () => api<ListResponse<OrderListRow>>(`/orders?status=${encodeURIComponent(status)}&includeAccessoryPending=${status === "filled" ? "yes" : ""}`)
   });
   const orders = rowsFromListResponse(orderResponse).filter((order) => order.status !== "customer_cancelled");
-  const selectedVisibleOrders = useMemo(() => orders.filter((order) => selectedOrderIds.has(order.id)), [orders, selectedOrderIds]);
-  const allVisibleSelected = orders.length > 0 && orders.every((order) => selectedOrderIds.has(order.id));
+  const supplierOptions = useMemo(() => uniqueOptions(orders.map((order) => order.supplierName)), [orders]);
+  const storeOptions = useMemo(() => uniqueOptions(orders.map((order) => order.storeShortName || order.storeName)), [orders]);
+  const seriesOptions = useMemo(() => uniqueOptions(orders.map((order) => order.productSeries)), [orders]);
+  const skuOptions = useMemo(() => uniqueOptions(orders.map((order) => order.productSku)), [orders]);
+  const filteredOrders = useMemo(() => {
+    const search = keyword.trim().toLowerCase();
+    return orders.filter((order) => {
+      const storeText = order.storeShortName || order.storeName || "";
+      const haystack = [
+        order.supplierName,
+        order.registrarName,
+        formatCreatedAt(order.createdAt),
+        storeText,
+        order.orderNo,
+        order.customerName,
+        order.customerPhone,
+        order.address,
+        order.productSeries,
+        order.productSku,
+        order.productName,
+        order.supplierModel,
+        order.carrier,
+        order.trackingNo,
+        order.note,
+        order.shipmentNote,
+        order.supplierNote
+      ].join(" ").toLowerCase();
+      return (
+        (!supplierFilter || order.supplierName === supplierFilter) &&
+        (!storeFilter || storeText === storeFilter) &&
+        (!seriesFilter || order.productSeries === seriesFilter) &&
+        (!skuFilter || order.productSku === skuFilter) &&
+        (!search || haystack.includes(search))
+      );
+    });
+  }, [orders, keyword, supplierFilter, storeFilter, seriesFilter, skuFilter]);
+  const selectedVisibleOrders = useMemo(() => filteredOrders.filter((order) => selectedOrderIds.has(order.id)), [filteredOrders, selectedOrderIds]);
+  const allVisibleSelected = filteredOrders.length > 0 && filteredOrders.every((order) => selectedOrderIds.has(order.id));
   const markShipped = useMutation({
     mutationFn: (input: number | { id: number; supplierNote?: string; notify?: boolean }) => {
       const payload = typeof input === "number" ? { id: input, supplierNote: supplierNotes[input] ?? "", notify: true } : input;
@@ -41,11 +91,11 @@ export function ShippingSchedulePage() {
 
   useEffect(() => {
     setSelectedOrderIds((current) => {
-      const visibleIds = new Set(orders.map((order) => order.id));
+      const visibleIds = new Set(filteredOrders.map((order) => order.id));
       const next = new Set([...current].filter((id) => visibleIds.has(id)));
       return next.size === current.size ? current : next;
     });
-  }, [orders]);
+  }, [filteredOrders]);
 
   async function submitSelectedOrders() {
     if (selectedVisibleOrders.length === 0) {
@@ -78,7 +128,7 @@ export function ShippingSchedulePage() {
   function toggleAllVisible(checked: boolean) {
     setSelectedOrderIds((current) => {
       const next = new Set(current);
-      for (const order of orders) {
+      for (const order of filteredOrders) {
         if (checked) next.add(order.id);
         else next.delete(order.id);
       }
@@ -127,6 +177,31 @@ export function ShippingSchedulePage() {
             <option value="purchased">已下采购单</option>
             <option value="shipped">已发货</option>
           </select>
+          <input placeholder="搜索订单/客户/地址/备注" value={keyword} onChange={(event) => setKeyword(event.target.value)} />
+          <select value={supplierFilter} onChange={(event) => setSupplierFilter(event.target.value)}>
+            <option value="">全部供应商</option>
+            {supplierOptions.map((supplier) => (
+              <option value={supplier} key={supplier}>{supplier}</option>
+            ))}
+          </select>
+          <select value={storeFilter} onChange={(event) => setStoreFilter(event.target.value)}>
+            <option value="">全部店铺</option>
+            {storeOptions.map((store) => (
+              <option value={store} key={store}>{store}</option>
+            ))}
+          </select>
+          <select value={seriesFilter} onChange={(event) => setSeriesFilter(event.target.value)}>
+            <option value="">全部系列</option>
+            {seriesOptions.map((series) => (
+              <option value={series} key={series}>{series}</option>
+            ))}
+          </select>
+          <select value={skuFilter} onChange={(event) => setSkuFilter(event.target.value)}>
+            <option value="">全部SKU</option>
+            {skuOptions.map((sku) => (
+              <option value={sku} key={sku}>{sku}</option>
+            ))}
+          </select>
           <button type="button" className="primary-button" onClick={() => downloadFile(`/orders/shipping-export?status=${encodeURIComponent(status)}`)}>导出发货</button>
           <button type="button" className="primary-button" onClick={submitSelectedOrders} disabled={markShipped.isPending}>
             批量提交
@@ -145,6 +220,8 @@ export function ShippingSchedulePage() {
               </th>
               <th>供应商</th>
               <th>分类</th>
+              <th>登记人</th>
+              <th>创建时间</th>
               <th>店铺</th>
               <th>订单编号</th>
               <th>客户姓名</th>
@@ -164,7 +241,7 @@ export function ShippingSchedulePage() {
             </tr>
           </thead>
           <tbody>
-            {orders.map((order) => (
+            {filteredOrders.map((order) => (
               <tr key={order.id}>
                 <td className="selection-cell">
                   <input
@@ -176,6 +253,8 @@ export function ShippingSchedulePage() {
                 </td>
                 <td>{order.supplierName ?? "-"}</td>
                 <td>{order.orderType === "accessory" ? "配件" : "成品"}</td>
+                <td>{order.registrarName || "-"}</td>
+                <td>{formatCreatedAt(order.createdAt)}</td>
                 <td>{order.storeShortName || order.storeName || "-"}</td>
                 <td>{order.orderNo}</td>
                 <td>{order.customerName}</td>
