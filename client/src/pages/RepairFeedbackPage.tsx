@@ -24,6 +24,16 @@ export function RepairFeedbackPage() {
     });
   }
 
+  function updateEstimatedCompletion(row: RepairExchange, estimatedCompletion: string) {
+    updateRepair.mutate({
+      id: row.id,
+      body: {
+        isReceived: row.isReceived ? 1 : 0,
+        estimatedCompletion
+      }
+    });
+  }
+
   function submitFeedback(row: RepairExchange, event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -41,7 +51,7 @@ export function RepairFeedbackPage() {
 
   return (
     <>
-      <PageHeader title="维修换货反馈" description="先确认是否已收到货，再填写预计完成时间、寄出快递信息和供应商反馈。" />
+      <PageHeader title="维修换货反馈" description="预计完成时间选择后自动提交并通知钉钉，寄出快递和供应商反馈仍可手动保存。" />
       <Panel title="维修换货反馈">
         <table className="nowrap-table">
           <thead>
@@ -59,7 +69,7 @@ export function RepairFeedbackPage() {
               <th>快递单号</th>
               <th>备注</th>
               <th>收货操作</th>
-              <th>预计完成时间</th>
+              <th>预计完成时间（自动反馈）</th>
               <th>寄出快递公司</th>
               <th>寄出快递单号</th>
               <th>供应商反馈</th>
@@ -93,7 +103,16 @@ export function RepairFeedbackPage() {
                       </button>
                     )}
                   </td>
-                  <td><input form={formId} name="estimatedCompletion" type="date" defaultValue={row.estimatedCompletion || ""} /></td>
+                  <td>
+                    <input
+                      form={formId}
+                      name="estimatedCompletion"
+                      type="date"
+                      defaultValue={row.estimatedCompletion || ""}
+                      disabled={updateRepair.isPending}
+                      onChange={(event) => updateEstimatedCompletion(row, event.target.value)}
+                    />
+                  </td>
                   <td><input form={formId} name="returnCarrier" placeholder="寄出快递公司" defaultValue={row.returnCarrier || ""} /></td>
                   <td><input form={formId} name="returnTrackingNo" placeholder="寄出快递单号" defaultValue={row.returnTrackingNo || ""} /></td>
                   <td><input form={formId} name="supplierFeedback" placeholder="供应商反馈" defaultValue={row.supplierFeedback || ""} /></td>

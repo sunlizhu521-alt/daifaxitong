@@ -7,7 +7,7 @@ import { ROLE_ADMIN } from "../permissions.js";
 export const repairsRouter = Router();
 
 const REPAIR_DINGTALK_WEBHOOK = "https://oapi.dingtalk.com/robot/send?access_token=db1472c2a91822f03fee845e77b76adf9cf4049625db0eef915ca0852ea62b36";
-const REPAIR_DINGTALK_SECRET = "4SEC07f42360e2f6b080865cc453821ed06d54ad1615f62acdcf087fd69832471630";
+const REPAIR_DINGTALK_SECRET = "SEC07f42360e2f6b080865cc453821ed06d54ad1615f62acdcf087fd69832471630";
 
 const createSchema = z.object({
   storeOrderNo: z.string().trim().min(1, "原店铺订单号不能为空"),
