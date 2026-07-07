@@ -7,6 +7,8 @@ function productSku(product: Product) {
   return product.ssku || product.sku;
 }
 
+const carrierOptions = ["顺丰速运", "京东快递", "圆通快递", "中通快递", "申通快递", "韵达快递", "极兔速递", "邮政EMS", "德邦快递", "其他"];
+
 export function RepairRegistrationPage() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<RepairExchange | null>(null);
@@ -114,7 +116,15 @@ export function RepairRegistrationPage() {
             <label className="field-block"><span>名称</span><input name="name" value={selectedProduct?.name || ""} readOnly /></label>
           </div>
           <div className="repair-form-row repair-form-row-3">
-            <label className="field-block"><span>快递公司</span><input name="carrierCompany" placeholder="快递公司" /></label>
+            <label className="field-block">
+              <span>快递公司</span>
+              <select name="carrierCompany" defaultValue="">
+                <option value="">选择快递公司（可选）</option>
+                {carrierOptions.map((carrier) => (
+                  <option value={carrier} key={carrier}>{carrier}</option>
+                ))}
+              </select>
+            </label>
             <label className="field-block"><span>快递单号</span><input name="trackingNo" placeholder="快递单号" /></label>
             <label className="field-block"><span>备注</span><textarea name="note" placeholder="备注" /></label>
           </div>
@@ -205,7 +215,15 @@ export function RepairRegistrationPage() {
               <label className="modal-field"><span>名称</span><input name="name" value={editingProduct?.name || ""} readOnly /></label>
             </div>
             <div className="repair-form-row repair-form-row-3">
-              <label className="modal-field"><span>快递公司</span><input name="carrierCompany" defaultValue={editing.carrierCompany} /></label>
+              <label className="modal-field">
+                <span>快递公司</span>
+                <select name="carrierCompany" defaultValue={editing.carrierCompany || ""}>
+                  <option value="">选择快递公司（可选）</option>
+                  {carrierOptions.map((carrier) => (
+                    <option value={carrier} key={carrier}>{carrier}</option>
+                  ))}
+                </select>
+              </label>
               <label className="modal-field"><span>快递单号</span><input name="trackingNo" defaultValue={editing.trackingNo} /></label>
               <label className="modal-field"><span>备注</span><textarea name="note" defaultValue={editing.note} /></label>
             </div>

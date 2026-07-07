@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type RepairExchange } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
+const carrierOptions = ["顺丰速运", "京东快递", "圆通快递", "中通快递", "申通快递", "韵达快递", "极兔速递", "邮政EMS", "德邦快递", "其他"];
+
 export function RepairFeedbackPage() {
   const qc = useQueryClient();
   const { data: rows = [] } = useQuery({
@@ -113,7 +115,14 @@ export function RepairFeedbackPage() {
                       onChange={(event) => updateEstimatedCompletion(row, event.target.value)}
                     />
                   </td>
-                  <td><input form={formId} name="returnCarrier" placeholder="寄出快递公司" defaultValue={row.returnCarrier || ""} /></td>
+                  <td>
+                    <select form={formId} name="returnCarrier" defaultValue={row.returnCarrier || ""}>
+                      <option value="">选择快递公司（可选）</option>
+                      {carrierOptions.map((carrier) => (
+                        <option value={carrier} key={carrier}>{carrier}</option>
+                      ))}
+                    </select>
+                  </td>
                   <td><input form={formId} name="returnTrackingNo" placeholder="寄出快递单号" defaultValue={row.returnTrackingNo || ""} /></td>
                   <td><input form={formId} name="supplierFeedback" placeholder="供应商反馈" defaultValue={row.supplierFeedback || ""} /></td>
                   <td><span className={`status ${row.isCompleted ? "shipped" : row.isReceived ? "purchased" : "pending"}`}>{row.status}</span></td>
