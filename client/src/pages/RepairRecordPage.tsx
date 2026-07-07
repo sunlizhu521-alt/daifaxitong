@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import { api, type RepairExchange } from "../api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, type RepairExchange, type User } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
 const statusClass: Record<string, string> = {
@@ -11,9 +11,17 @@ const statusClass: Record<string, string> = {
 };
 
 export function RepairRecordPage() {
+  const qc = useQueryClient();
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
   const { data: rows = [] } = useQuery({
     queryKey: ["repairs"],
     queryFn: () => api<RepairExchange[]>("/repairs")
+  });
+  const isAdmin = me?.user?.role === "管理员" || me?.user?.username === "孙立柱";
+
+  const deleteRepair = useMutation({
+    mutationFn: (id: number) => api(`/repairs/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["repairs"] })
   });
 
   return (
@@ -38,6 +46,7 @@ export function RepairRecordPage() {
               <th>寄出快递单号</th>
               <th>供应商反馈</th>
               <th>状态</th>
+              {isAdmin ? <th>操作</th> : null}
             </tr>
           </thead>
           <tbody>
@@ -58,10 +67,16 @@ export function RepairRecordPage() {
                 <td>{row.returnTrackingNo || "-"}</td>
                 <td>{row.supplierFeedback || "-"}</td>
                 <td><span className={`status ${statusClass[row.status] || "pending"}`}>{row.status}</span></td>
+                {isAdmin ? (
+                  <td className="row-actions">
+                    <button type="button" onClick={() => { if (window.confirm("确定删除？")) deleteRepair.mutate(row.id); }}>删除</button>
+                  </td>
+                ) : null}
               </tr>
             ))}
           </tbody>
         </table>
+        {deleteRepair.error ? <div className="error">{deleteRepair.error.message}</div> : null}
       </Panel>
     </>
   );
