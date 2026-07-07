@@ -283,21 +283,25 @@ export function ShippingSchedulePage() {
                 <td>{order.trackingNo || "-"}</td>
                 <td>{order.note || order.shipmentNote || "-"}</td>
                 <td>{formatLatestShipTime(order.createdAt)}</td>
-                <td className="supplier-note-actions">
-                  <input
-                    value={supplierNoteValue(order)}
-                    onChange={(event) => setSupplierNotes((current) => ({ ...current, [order.id]: event.target.value }))}
-                    placeholder="填写供应商备注"
-                  />
-                  <button type="button" onClick={() => submitSupplierNote(order)} disabled={saveSupplierNote.isPending}>
-                    提交备注
-                  </button>
+                <td>
+                  <div className="supplier-note-actions">
+                    <input
+                      value={supplierNoteValue(order)}
+                      onChange={(event) => setSupplierNotes((current) => ({ ...current, [order.id]: event.target.value }))}
+                      placeholder="填写供应商备注"
+                    />
+                    <button type="button" onClick={() => submitSupplierNote(order)} disabled={saveSupplierNote.isPending}>
+                      提交备注
+                    </button>
+                  </div>
                 </td>
-                <td className="row-actions">
-                  <button type="button" onClick={() => markShipped.mutate({ id: order.id, supplierNote: supplierNoteValue(order) })}>已提货</button>
-                  <button type="button" onClick={() => markCustomerCancelled(order)} disabled={cancelOrder.isPending}>
-                    不要了
-                  </button>
+                <td>
+                  <div className="row-actions shipping-row-actions">
+                    <button type="button" onClick={() => markShipped.mutate({ id: order.id, supplierNote: supplierNoteValue(order) })}>已提货</button>
+                    <button type="button" onClick={() => markCustomerCancelled(order)} disabled={cancelOrder.isPending}>
+                      不要了
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
