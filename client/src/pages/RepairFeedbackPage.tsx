@@ -74,7 +74,7 @@ export function RepairFeedbackPage() {
               <th>寄出快递单号</th>
               <th>供应商反馈</th>
               <th>状态</th>
-              <th>保存反馈</th>
+              <th>是否寄出</th>
             </tr>
           </thead>
           <tbody>
@@ -119,7 +119,7 @@ export function RepairFeedbackPage() {
                   <td><span className={`status ${row.isCompleted ? "shipped" : row.isReceived ? "purchased" : "pending"}`}>{row.status}</span></td>
                   <td className="row-actions">
                     <form id={formId} onSubmit={(event) => submitFeedback(row, event)}>
-                      <button className="primary-button" disabled={updateRepair.isPending}>保存反馈</button>
+                      <button className="primary-button" disabled={updateRepair.isPending}>已寄出</button>
                     </form>
                   </td>
                 </tr>
