@@ -1,10 +1,11 @@
-import { FormEvent } from "react";
+import { FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type RepairExchange, type User } from "../api";
 import { PageHeader, Panel } from "../ui/Section";
 
 export function RepairRegistrationPage() {
   const qc = useQueryClient();
+  const [editing, setEditing] = useState<RepairExchange | null>(null);
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
   const { data: rows = [] } = useQuery({
     queryKey: ["repairs"],
@@ -15,6 +16,14 @@ export function RepairRegistrationPage() {
   const createRepair = useMutation({
     mutationFn: (body: unknown) => api("/repairs", { method: "POST", body: JSON.stringify(body) }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["repairs"] })
+  });
+
+  const updateRepair = useMutation({
+    mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/repairs/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+    onSuccess: () => {
+      setEditing(null);
+      qc.invalidateQueries({ queryKey: ["repairs"] });
+    }
   });
 
   const completeRepair = useMutation({
@@ -41,6 +50,25 @@ export function RepairRegistrationPage() {
       action: String(form.get("action") ?? "").trim()
     });
     event.currentTarget.reset();
+  }
+
+  function submitEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editing) return;
+    const form = new FormData(event.currentTarget);
+    updateRepair.mutate({
+      id: editing.id,
+      body: {
+        storeOrderNo: String(form.get("storeOrderNo") ?? "").trim(),
+        series: String(form.get("series") ?? "").trim(),
+        sku: String(form.get("sku") ?? "").trim(),
+        name: String(form.get("name") ?? "").trim(),
+        carrierCompany: String(form.get("carrierCompany") ?? "").trim(),
+        trackingNo: String(form.get("trackingNo") ?? "").trim(),
+        note: String(form.get("note") ?? "").trim(),
+        action: String(form.get("action") ?? "").trim()
+      }
+    });
   }
 
   return (
@@ -92,6 +120,7 @@ export function RepairRegistrationPage() {
                 <td><span className={`status ${row.isCompleted ? "shipped" : "pending"}`}>{row.status}</span></td>
                 {isAdmin ? (
                   <td className="row-actions">
+                    <button type="button" onClick={() => setEditing(row)}>编辑</button>
                     {row.isCompleted ? null : (
                       <button type="button" className="primary-button" onClick={() => completeRepair.mutate(row.id)}>完结</button>
                     )}
@@ -104,6 +133,26 @@ export function RepairRegistrationPage() {
         </table>
         {completeRepair.error ? <div className="error">{completeRepair.error.message}</div> : null}
       </Panel>
+      {editing ? (
+        <div className="modal-backdrop">
+          <form className="modal" onSubmit={submitEdit}>
+            <h2>编辑维修换货</h2>
+            <label className="modal-field"><span>原店铺订单号</span><input name="storeOrderNo" defaultValue={editing.storeOrderNo} required /></label>
+            <label className="modal-field"><span>系列</span><input name="series" defaultValue={editing.series} /></label>
+            <label className="modal-field"><span>SKU</span><input name="sku" defaultValue={editing.sku} /></label>
+            <label className="modal-field"><span>名称</span><input name="name" defaultValue={editing.name} /></label>
+            <label className="modal-field"><span>快递公司</span><input name="carrierCompany" defaultValue={editing.carrierCompany} /></label>
+            <label className="modal-field"><span>快递单号</span><input name="trackingNo" defaultValue={editing.trackingNo} /></label>
+            <label className="modal-field"><span>操作</span><input name="action" defaultValue={editing.action} /></label>
+            <label className="modal-field"><span>备注</span><textarea name="note" defaultValue={editing.note} /></label>
+            <div className="modal-actions">
+              <button type="button" className="ghost-button" onClick={() => setEditing(null)}>取消</button>
+              <button className="primary-button" disabled={updateRepair.isPending}>保存修改</button>
+            </div>
+            {updateRepair.error ? <div className="error">{updateRepair.error.message}</div> : null}
+          </form>
+        </div>
+      ) : null}
     </>
   );
 }
