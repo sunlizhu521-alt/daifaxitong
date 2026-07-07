@@ -163,6 +163,27 @@ CREATE TABLE IF NOT EXISTS returns (
   FOREIGN KEY (orderId) REFERENCES orders(id) ON DELETE SET NULL
 );
 
+CREATE TABLE IF NOT EXISTS repair_exchanges (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  storeOrderNo TEXT NOT NULL DEFAULT '',
+  series TEXT NOT NULL DEFAULT '',
+  sku TEXT NOT NULL DEFAULT '',
+  name TEXT NOT NULL DEFAULT '',
+  carrierCompany TEXT NOT NULL DEFAULT '',
+  trackingNo TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  action TEXT NOT NULL DEFAULT '',
+  isCompleted INTEGER NOT NULL DEFAULT 0,
+  isReceived INTEGER NOT NULL DEFAULT 0,
+  estimatedCompletion TEXT NOT NULL DEFAULT '',
+  returnCarrier TEXT NOT NULL DEFAULT '',
+  returnTrackingNo TEXT NOT NULL DEFAULT '',
+  supplierFeedback TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT '顾客寄出',
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS import_jobs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   type TEXT NOT NULL,
