@@ -58,6 +58,10 @@ const statusSchema = z.object({
   supplierNote: z.string().optional()
 });
 
+const supplierNoteSchema = z.object({
+  supplierNote: z.string().optional().default("")
+});
+
 const shippingEditSchema = z.object({
   supplierId: optionalId,
   productId: optionalId,
@@ -674,6 +678,25 @@ ordersRouter.patch("/:id/status", (req, res) => {
     ]
   });
   res.json(order);
+});
+
+ordersRouter.patch("/:id/supplier-note", (req, res) => {
+  const parsed = supplierNoteSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ message: parsed.error.issues[0]?.message ?? "参数错误" });
+    return;
+  }
+  const orderId = Number(req.params.id);
+  const supplierNote = parsed.data.supplierNote.trim();
+  const result = getDb()
+    .prepare("UPDATE orders SET supplierNote = ?, updatedAt = ? WHERE id = ?")
+    .run(supplierNote, nowIso(), orderId);
+  if (result.changes === 0) {
+    res.status(404).json({ message: "订单不存在" });
+    return;
+  }
+  logOrderEvent(orderId, "提交供应商备注", supplierNote || "清空供应商备注", req.session.user?.username);
+  res.json(readOrder(orderId));
 });
 
 ordersRouter.patch("/:id/shipping-edit", (req, res) => {

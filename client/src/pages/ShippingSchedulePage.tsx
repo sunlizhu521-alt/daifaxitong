@@ -19,6 +19,13 @@ function formatCreatedAt(value?: string) {
   return value.slice(0, 19).replace("T", " ");
 }
 
+function formatLatestShipTime(value?: string) {
+  if (!value) return "-";
+  const timestamp = new Date(value).getTime();
+  if (!Number.isFinite(timestamp)) return "-";
+  return new Date(timestamp + 48 * 60 * 60 * 1000).toISOString().slice(0, 19).replace("T", " ");
+}
+
 function uniqueOptions(values: Array<string | null | undefined>) {
   return Array.from(new Set(values.map((value) => value?.trim()).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b, "zh-CN"));
 }
@@ -85,6 +92,17 @@ export function ShippingSchedulePage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
       qc.invalidateQueries({ queryKey: ["dropship-summary"] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["summary"] });
+    }
+  });
+  const saveSupplierNote = useMutation({
+    mutationFn: ({ id, supplierNote }: { id: number; supplierNote: string }) =>
+      api(`/orders/${id}/supplier-note`, { method: "PATCH", body: JSON.stringify({ supplierNote }), notify: true }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
+      qc.invalidateQueries({ queryKey: ["dropship-summary"] });
+      qc.invalidateQueries({ queryKey: ["accessory-summary"] });
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["summary"] });
     }
@@ -163,6 +181,10 @@ export function ShippingSchedulePage() {
     return supplierNotes[order.id] ?? order.supplierNote ?? "";
   }
 
+  function submitSupplierNote(order: OrderListRow) {
+    saveSupplierNote.mutate({ id: order.id, supplierNote: supplierNoteValue(order) });
+  }
+
   return (
     <>
       <PageHeader
@@ -235,6 +257,7 @@ export function ShippingSchedulePage() {
               <th>快递公司</th>
               <th>发货单号</th>
               <th>备注</th>
+              <th>最晚发货时间</th>
               <th>供应商备注</th>
               <th>操作</th>
             </tr>
@@ -268,12 +291,16 @@ export function ShippingSchedulePage() {
                 <td>{order.carrier || "-"}</td>
                 <td>{order.trackingNo || "-"}</td>
                 <td>{order.note || order.shipmentNote || "-"}</td>
-                <td>
+                <td>{formatLatestShipTime(order.createdAt)}</td>
+                <td className="row-actions">
                   <input
                     value={supplierNoteValue(order)}
                     onChange={(event) => setSupplierNotes((current) => ({ ...current, [order.id]: event.target.value }))}
                     placeholder="填写供应商备注"
                   />
+                  <button type="button" onClick={() => submitSupplierNote(order)} disabled={saveSupplierNote.isPending}>
+                    提交备注
+                  </button>
                 </td>
                 <td className="row-actions">
                   {order.status === "shipped" ? (
@@ -292,6 +319,7 @@ export function ShippingSchedulePage() {
         {markShipped.error ? <div className="error">{markShipped.error.message}</div> : null}
         {markUnshipped.error ? <div className="error">{markUnshipped.error.message}</div> : null}
         {cancelOrder.error ? <div className="error">{cancelOrder.error.message}</div> : null}
+        {saveSupplierNote.error ? <div className="error">{saveSupplierNote.error.message}</div> : null}
       </Panel>
     </>
   );
