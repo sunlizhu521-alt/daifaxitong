@@ -265,7 +265,7 @@ export function ShippingSchedulePage() {
                 <td>{order.productName || "-"}</td>
                 <td>{order.supplierModel || "-"}</td>
                 <td>{order.totalQuantity ?? 0}</td>
-                <td><span className={`status ${order.status}`}>{order.returnStatus || statusText[order.status]}</span></td>
+                <td><span className={`status ${order.status}`}>{statusText[order.status] || order.status}</span></td>
                 <td>{order.carrier || "-"}</td>
                 <td>{order.trackingNo || "-"}</td>
                 <td>{order.note || order.shipmentNote || "-"}</td>
