@@ -59,6 +59,7 @@ export type OrderListRow = {
   registrarName?: string | null;
   status: "pending" | "filled" | "purchased" | "shipped" | "exception" | "cancelled" | "customer_cancelled";
   note?: string;
+  supplierNote?: string | null;
   itemCount: number;
   totalQuantity: number;
   materialCode?: string | null;

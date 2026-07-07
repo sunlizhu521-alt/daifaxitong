@@ -54,7 +54,8 @@ const purchaseOrderSchema = z.object({
 });
 
 const statusSchema = z.object({
-  status: z.enum(["pending", "filled", "purchased", "shipped", "exception", "cancelled", "customer_cancelled"])
+  status: z.enum(["pending", "filled", "purchased", "shipped", "exception", "cancelled", "customer_cancelled"]),
+  supplierNote: z.string().optional()
 });
 
 const shippingEditSchema = z.object({
@@ -156,8 +157,8 @@ ordersRouter.get("/", async (req, res) => {
   const filters: string[] = [];
   const params: unknown[] = [];
   if (keyword) {
-    filters.push("(o.orderNo LIKE ? OR o.purchaseOrderNo LIKE ? OR o.purchaseOrderUser LIKE ? OR o.storeName LIKE ? OR o.customerName LIKE ? OR o.customerPhone LIKE ? OR o.address LIKE ? OR oi.productName LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ? OR p.materialCode LIKE ? OR latestReturn.status LIKE ? OR latestReturn.action LIKE ? OR latestReturn.reason LIKE ?)");
-    params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
+    filters.push("(o.orderNo LIKE ? OR o.purchaseOrderNo LIKE ? OR o.purchaseOrderUser LIKE ? OR o.storeName LIKE ? OR o.customerName LIKE ? OR o.customerPhone LIKE ? OR o.address LIKE ? OR o.supplierNote LIKE ? OR oi.productName LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ? OR p.materialCode LIKE ? OR latestReturn.status LIKE ? OR latestReturn.action LIKE ? OR latestReturn.reason LIKE ?)");
+    params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
   }
   if (status && includeAccessoryPending === "yes" && status === "filled") {
     filters.push("((o.orderType = 'dropship' AND o.status = ?) OR (o.orderType = 'accessory' AND o.status = 'pending'))");
@@ -342,8 +343,8 @@ ordersRouter.get("/summary-export", async (req, res) => {
   const filters: string[] = [];
   const params: unknown[] = [];
   if (keyword) {
-    filters.push("(o.orderNo LIKE ? OR o.purchaseOrderNo LIKE ? OR o.purchaseOrderUser LIKE ? OR o.storeName LIKE ? OR o.customerName LIKE ? OR o.customerPhone LIKE ? OR o.address LIKE ? OR oi.productName LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ? OR p.materialCode LIKE ? OR latestReturn.status LIKE ? OR latestReturn.action LIKE ? OR latestReturn.reason LIKE ?)");
-    params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
+    filters.push("(o.orderNo LIKE ? OR o.purchaseOrderNo LIKE ? OR o.purchaseOrderUser LIKE ? OR o.storeName LIKE ? OR o.customerName LIKE ? OR o.customerPhone LIKE ? OR o.address LIKE ? OR o.supplierNote LIKE ? OR oi.productName LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ? OR p.materialCode LIKE ? OR latestReturn.status LIKE ? OR latestReturn.action LIKE ? OR latestReturn.reason LIKE ?)");
+    params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
   }
   if (status) {
     filters.push("o.status = ?");
@@ -448,7 +449,8 @@ ordersRouter.get("/summary-export", async (req, res) => {
         采购订单号填写人: row.purchaseOrderUser ?? "",
         采购订单号: row.purchaseOrderNo ?? "",
         状态: row.returnStatus ?? statusText[String(row.status ?? "")] ?? row.status ?? "",
-        备注: [String(row.note ?? "").trim(), String(row.shipmentNote ?? "").trim()].filter(Boolean).join(" / ")
+        备注: [String(row.note ?? "").trim(), String(row.shipmentNote ?? "").trim()].filter(Boolean).join(" / "),
+        供应商备注: row.supplierNote ?? ""
       };
     })
   );
@@ -488,7 +490,7 @@ ordersRouter.get("/shipping-export", async (req, res) => {
           ELSE o.status
         END AS 状态,
         latest.carrier AS 快递公司, latest.trackingNo AS 发货单号, latest.shippedAt AS 发货时间,
-        o.note AS 备注
+        o.note AS 备注, o.supplierNote AS 供应商备注
        FROM orders o
        LEFT JOIN order_items oi ON oi.orderId = o.id
        LEFT JOIN products p ON p.id = oi.productId
@@ -647,21 +649,29 @@ ordersRouter.patch("/:id/status", (req, res) => {
   }
   const orderId = Number(req.params.id);
   const existing = getDb().prepare("SELECT status FROM orders WHERE id = ?").get(orderId) as { status: string } | undefined;
+  const supplierNote = parsed.data.supplierNote === undefined ? null : parsed.data.supplierNote.trim();
   const result = getDb()
-    .prepare("UPDATE orders SET status = ?, updatedAt = ? WHERE id = ?")
-    .run(parsed.data.status, nowIso(), orderId);
+    .prepare("UPDATE orders SET status = ?, supplierNote = CASE WHEN ? IS NULL THEN supplierNote ELSE ? END, updatedAt = ? WHERE id = ?")
+    .run(parsed.data.status, supplierNote, supplierNote, nowIso(), orderId);
   if (result.changes === 0) {
     res.status(404).json({ message: "订单不存在" });
     return;
   }
   const action = parsed.data.status === "shipped" ? "已提货" : parsed.data.status === "filled" ? "未发走" : parsed.data.status === "customer_cancelled" ? "顾客不要了" : "状态变更";
-  logOrderEvent(orderId, action, `${statusText[existing?.status ?? ""] ?? existing?.status ?? "-"} -> ${statusText[parsed.data.status]}`, req.session.user?.username);
+  const eventDetail = [
+    `${statusText[existing?.status ?? ""] ?? existing?.status ?? "-"} -> ${statusText[parsed.data.status]}`,
+    supplierNote ? `供应商备注：${supplierNote}` : ""
+  ].filter(Boolean).join(" / ");
+  logOrderEvent(orderId, action, eventDetail, req.session.user?.username);
   const order = readOrder(orderId) as Record<string, unknown> | null;
   void notifyBusinessAction({
     action,
     operator: req.session.user?.username,
     order,
-    fields: [{ label: "状态变化", value: `${statusText[existing?.status ?? ""] ?? existing?.status ?? "-"} -> ${statusText[parsed.data.status]}` }]
+    fields: [
+      { label: "状态变化", value: `${statusText[existing?.status ?? ""] ?? existing?.status ?? "-"} -> ${statusText[parsed.data.status]}` },
+      { label: "供应商备注", value: supplierNote ?? "" }
+    ]
   });
   res.json(order);
 });

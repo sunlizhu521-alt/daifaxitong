@@ -18,6 +18,7 @@ export function ShippingSchedulePage() {
   const qc = useQueryClient();
   const [status, setStatus] = useState("filled");
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(() => new Set());
+  const [supplierNotes, setSupplierNotes] = useState<Record<number, string>>({});
   const { data: orderResponse } = useQuery({
     queryKey: ["shipping-schedule", status],
     queryFn: () => api<ListResponse<OrderListRow>>(`/orders?status=${encodeURIComponent(status)}&includeAccessoryPending=${status === "filled" ? "yes" : ""}`)
@@ -26,9 +27,9 @@ export function ShippingSchedulePage() {
   const selectedVisibleOrders = useMemo(() => orders.filter((order) => selectedOrderIds.has(order.id)), [orders, selectedOrderIds]);
   const allVisibleSelected = orders.length > 0 && orders.every((order) => selectedOrderIds.has(order.id));
   const markShipped = useMutation({
-    mutationFn: (input: number | { id: number; notify?: boolean }) => {
-      const payload = typeof input === "number" ? { id: input, notify: true } : input;
-      return api(`/orders/${payload.id}/status`, { method: "PATCH", body: JSON.stringify({ status: "shipped" }), notify: payload.notify ?? true });
+    mutationFn: (input: number | { id: number; supplierNote?: string; notify?: boolean }) => {
+      const payload = typeof input === "number" ? { id: input, supplierNote: supplierNotes[input] ?? "", notify: true } : input;
+      return api(`/orders/${payload.id}/status`, { method: "PATCH", body: JSON.stringify({ status: "shipped", supplierNote: payload.supplierNote ?? "" }), notify: payload.notify ?? true });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
@@ -54,7 +55,7 @@ export function ShippingSchedulePage() {
     let successCount = 0;
     try {
       for (const order of selectedVisibleOrders) {
-        await markShipped.mutateAsync({ id: order.id, notify: false });
+        await markShipped.mutateAsync({ id: order.id, supplierNote: supplierNotes[order.id] ?? order.supplierNote ?? "", notify: false });
         successCount += 1;
       }
       setSelectedOrderIds(new Set());
@@ -107,6 +108,10 @@ export function ShippingSchedulePage() {
     cancelOrder.mutate(order.id);
   }
 
+  function supplierNoteValue(order: OrderListRow) {
+    return supplierNotes[order.id] ?? order.supplierNote ?? "";
+  }
+
   return (
     <>
       <PageHeader
@@ -153,8 +158,9 @@ export function ShippingSchedulePage() {
               <th>状态</th>
               <th>快递公司</th>
               <th>发货单号</th>
-              <th>操作</th>
               <th>备注</th>
+              <th>供应商备注</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -183,17 +189,24 @@ export function ShippingSchedulePage() {
                 <td><span className={`status ${order.status}`}>{order.returnStatus || statusText[order.status]}</span></td>
                 <td>{order.carrier || "-"}</td>
                 <td>{order.trackingNo || "-"}</td>
+                <td>{order.note || order.shipmentNote || "-"}</td>
+                <td>
+                  <input
+                    value={supplierNoteValue(order)}
+                    onChange={(event) => setSupplierNotes((current) => ({ ...current, [order.id]: event.target.value }))}
+                    placeholder="填写供应商备注"
+                  />
+                </td>
                 <td className="row-actions">
                   {order.status === "shipped" ? (
                     <button type="button" onClick={() => markUnshipped.mutate(order.id)}>未发走</button>
                   ) : (
-                    <button type="button" onClick={() => markShipped.mutate(order.id)}>已提货</button>
+                    <button type="button" onClick={() => markShipped.mutate({ id: order.id, supplierNote: supplierNoteValue(order) })}>已提货</button>
                   )}
                   <button type="button" onClick={() => markCustomerCancelled(order)} disabled={cancelOrder.isPending}>
                     不要了
                   </button>
                 </td>
-                <td>{order.note || order.shipmentNote || "-"}</td>
               </tr>
             ))}
           </tbody>

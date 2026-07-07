@@ -41,6 +41,7 @@ function migrateDb(database: Database.Database) {
   ensureColumn(database, "orders", "orderType", "TEXT NOT NULL DEFAULT 'dropship'");
   ensureColumn(database, "orders", "storeName", "TEXT");
   ensureColumn(database, "orders", "registrarName", "TEXT");
+  ensureColumn(database, "orders", "supplierNote", "TEXT");
   allowDuplicateOrderNo(database);
   ensureColumn(database, "shipments", "carrierId", "INTEGER");
   ensureColumn(database, "carriers", "note", "TEXT");
@@ -91,17 +92,18 @@ function allowDuplicateOrderNo(database: Database.Database) {
         address TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'pending',
         note TEXT,
+        supplierNote TEXT,
         createdAt TEXT NOT NULL DEFAULT (datetime('now')),
         updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
         FOREIGN KEY (supplierId) REFERENCES suppliers(id)
       );
       INSERT INTO orders_new (
         id, orderNo, purchaseOrderNo, purchaseOrderUser, orderType, supplierId, storeName, registrarName,
-        customerName, customerPhone, address, status, note, createdAt, updatedAt
+        customerName, customerPhone, address, status, note, supplierNote, createdAt, updatedAt
       )
       SELECT
         id, orderNo, purchaseOrderNo, purchaseOrderUser, orderType, supplierId, storeName, registrarName,
-        customerName, customerPhone, address, status, note, createdAt, updatedAt
+        customerName, customerPhone, address, status, note, supplierNote, createdAt, updatedAt
       FROM orders;
       DROP TABLE orders;
       ALTER TABLE orders_new RENAME TO orders;

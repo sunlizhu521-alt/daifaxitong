@@ -92,6 +92,7 @@ CREATE TABLE IF NOT EXISTS orders (
   address TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending',
   note TEXT,
+  supplierNote TEXT,
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (supplierId) REFERENCES suppliers(id)

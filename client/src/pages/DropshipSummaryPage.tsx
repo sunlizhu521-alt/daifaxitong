@@ -302,6 +302,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
               <th>采购订单号</th>
               <th>状态</th>
               <th>备注</th>
+              <th>供应商备注</th>
               {canEdit || canDelete ? <th>操作</th> : null}
             </tr>
           </thead>
@@ -348,6 +349,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
                 <td>{order.purchaseOrderNo || "-"}</td>
                 <td><span className={`status ${order.status}`}>{currentStatusText(order)}</span></td>
                 <td>{mergeNotes(order)}</td>
+                <td>{order.supplierNote || "-"}</td>
                 {canEdit || canDelete ? (
                   <td className="row-actions">
                     {canEdit ? <button type="button" className="primary-button" onClick={() => openEdit(order)}>修改</button> : null}
