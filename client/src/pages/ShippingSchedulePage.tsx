@@ -154,15 +154,6 @@ export function ShippingSchedulePage() {
       return next;
     });
   }
-  const markUnshipped = useMutation({
-    mutationFn: (id: number) => api(`/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "filled" }), notify: true }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
-      qc.invalidateQueries({ queryKey: ["dropship-summary"] });
-      qc.invalidateQueries({ queryKey: ["orders"] });
-      qc.invalidateQueries({ queryKey: ["summary"] });
-    }
-  });
   const cancelOrder = useMutation({
     mutationFn: (id: number) => api(`/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "customer_cancelled" }), notify: true }),
     onSuccess: () => {
@@ -303,11 +294,7 @@ export function ShippingSchedulePage() {
                   </button>
                 </td>
                 <td className="row-actions">
-                  {order.status === "shipped" ? (
-                    <button type="button" onClick={() => markUnshipped.mutate(order.id)}>未发走</button>
-                  ) : (
-                    <button type="button" onClick={() => markShipped.mutate({ id: order.id, supplierNote: supplierNoteValue(order) })}>已提货</button>
-                  )}
+                  <button type="button" onClick={() => markShipped.mutate({ id: order.id, supplierNote: supplierNoteValue(order) })}>已提货</button>
                   <button type="button" onClick={() => markCustomerCancelled(order)} disabled={cancelOrder.isPending}>
                     不要了
                   </button>
@@ -317,7 +304,6 @@ export function ShippingSchedulePage() {
           </tbody>
         </table>
         {markShipped.error ? <div className="error">{markShipped.error.message}</div> : null}
-        {markUnshipped.error ? <div className="error">{markUnshipped.error.message}</div> : null}
         {cancelOrder.error ? <div className="error">{cancelOrder.error.message}</div> : null}
         {saveSupplierNote.error ? <div className="error">{saveSupplierNote.error.message}</div> : null}
       </Panel>
