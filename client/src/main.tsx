@@ -16,6 +16,9 @@ import { AccessorySummaryPage, DropshipSummaryPage } from "./pages/DropshipSumma
 import { ReturnRegistrationPage } from "./pages/ReturnRegistrationPage";
 import { ReturnOperationPage } from "./pages/ReturnOperationPage";
 import { ReturnReceiptPage } from "./pages/ReturnReceiptPage";
+import { RepairRegistrationPage } from "./pages/RepairRegistrationPage";
+import { RepairFeedbackPage } from "./pages/RepairFeedbackPage";
+import { RepairRecordPage } from "./pages/RepairRecordPage";
 import { OperationRecordsPage } from "./pages/OperationRecordsPage";
 import { OperationFlowPage } from "./pages/OperationFlowPage";
 import { BackupCenterPage } from "./pages/BackupCenterPage";
@@ -66,6 +69,9 @@ const router = createBrowserRouter([
       { path: "returns", element: <ReturnRegistrationPage /> },
       { path: "return-operations", element: <ReturnOperationPage /> },
       { path: "return-receipts", element: <ReturnReceiptPage /> },
+      { path: "repair-registration", element: <RepairRegistrationPage /> },
+      { path: "repair-feedback", element: <RepairFeedbackPage /> },
+      { path: "repair-record", element: <RepairRecordPage /> },
       { path: "suppliers", element: <SuppliersPage /> },
       { path: "products", element: <ProductsPage /> },
       { path: "orders", element: <Navigate to="/drop-shipping" replace /> },

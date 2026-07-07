@@ -168,6 +168,27 @@ export type ReturnOrderRow = {
   totalQuantity?: number | null;
 };
 
+export type RepairExchange = {
+  id: number;
+  storeOrderNo: string;
+  series: string;
+  sku: string;
+  name: string;
+  carrierCompany: string;
+  trackingNo: string;
+  note: string;
+  action: string;
+  isCompleted: number;
+  isReceived: number;
+  estimatedCompletion: string;
+  returnCarrier: string;
+  returnTrackingNo: string;
+  supplierFeedback: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type PageOption = {
   key:
     | "dropShippingRegistration"
@@ -184,6 +205,9 @@ export type PageOption = {
     | "returnRegistration"
     | "returnOperation"
     | "returnReceipt"
+    | "repairRegistration"
+    | "repairFeedback"
+    | "repairRecord"
     | "accessoryRegistration"
     | "suppliers"
     | "productLibrary"

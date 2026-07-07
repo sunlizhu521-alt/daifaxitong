@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Archive, Boxes, CalendarClock, CheckCircle2, ClipboardCheck, ClipboardList, FileText, GitBranch, History, LogOut, Package, PackageCheck, PackagePlus, RotateCcw, ShieldCheck, Store, Truck, Undo2, Warehouse } from "lucide-react";
+import { Archive, Boxes, CalendarClock, CheckCircle2, ClipboardCheck, ClipboardList, FileText, GitBranch, History, LogOut, MessageSquare, Package, PackageCheck, PackagePlus, RotateCcw, ShieldCheck, Store, Truck, Undo2, Warehouse, Wrench } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api, type User } from "../api";
 
@@ -19,6 +19,9 @@ const nav = [
   { key: "returnRegistration", to: "/returns", label: "退货登记", icon: RotateCcw },
   { key: "returnOperation", to: "/return-operations", label: "退货操作", icon: CheckCircle2 },
   { key: "returnReceipt", to: "/return-receipts", label: "退货收货", icon: Undo2 },
+  { key: "repairRegistration", to: "/repair-registration", label: "维修换货登记", icon: Wrench },
+  { key: "repairFeedback", to: "/repair-feedback", label: "维修换货反馈", icon: MessageSquare },
+  { key: "repairRecord", to: "/repair-record", label: "维修换货记录", icon: FileText },
   { key: "suppliers", to: "/suppliers", label: "供应商库", icon: Boxes },
   { key: "productLibrary", to: "/products", label: "商品信息", icon: Package },
   { key: "storeLibrary", to: "/stores", label: "店铺信息", icon: Store },
