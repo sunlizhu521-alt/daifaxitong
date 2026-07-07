@@ -283,7 +283,7 @@ export function ShippingSchedulePage() {
                 <td>{order.trackingNo || "-"}</td>
                 <td>{order.note || order.shipmentNote || "-"}</td>
                 <td>{formatLatestShipTime(order.createdAt)}</td>
-                <td className="row-actions">
+                <td className="supplier-note-actions">
                   <input
                     value={supplierNoteValue(order)}
                     onChange={(event) => setSupplierNotes((current) => ({ ...current, [order.id]: event.target.value }))}

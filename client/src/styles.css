@@ -133,6 +133,10 @@ td input[type="file"] { min-width: 190px; margin-top: 6px; }
 .ghost-button, .row-actions button { background: #fff; color: #273244; border-color: #cfd6e2; }
 .ghost-button:hover, .row-actions button:hover { border-color: #9aa7b8; }
 .row-actions { display: flex; gap: 8px; white-space: nowrap; }
+.supplier-note-actions { display: grid; grid-template-columns: minmax(180px, 1fr) auto; gap: 8px; align-items: center; min-width: 300px; }
+.supplier-note-actions input { min-width: 180px; }
+.supplier-note-actions button { border-radius: 7px; border: 1px solid #cfd6e2; min-height: 36px; padding: 0 13px; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; background: #fff; color: #273244; white-space: nowrap; }
+.supplier-note-actions button:hover { border-color: #9aa7b8; }
 
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
 th, td { border: 1px solid #d8dee8; padding: 10px; text-align: center; vertical-align: middle; }
@@ -272,6 +276,8 @@ tr:hover td { background: #fafcff; }
   .primary-button, .ghost-button, .row-actions button { min-height: 40px; }
 
   .row-actions { flex-wrap: wrap; justify-content: flex-start; white-space: normal; }
+  .supplier-note-actions { grid-template-columns: 1fr; min-width: 180px; }
+  .supplier-note-actions button { min-height: 40px; }
   table { min-width: 860px; font-size: 13px; }
   th, td { padding: 8px; }
   td input, td select, td textarea, td input[type="file"] { min-width: 150px; }
