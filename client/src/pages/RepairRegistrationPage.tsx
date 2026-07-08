@@ -72,7 +72,16 @@ export function RepairRegistrationPage() {
 
   function submitForm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    createRepair.mutate(repairPayload(new FormData(event.currentTarget)));
+    const payload = repairPayload(new FormData(event.currentTarget));
+    const hasDuplicate = rows.some((row) => {
+      if (String(row.storeOrderNo ?? "").trim() !== payload.storeOrderNo) return false;
+      if (payload.storeName && String(row.storeName ?? "").trim() !== payload.storeName) return false;
+      return true;
+    });
+    if (hasDuplicate && !window.confirm("已有信息，是否继续？")) {
+      return;
+    }
+    createRepair.mutate(payload);
     event.currentTarget.reset();
     setSelectedSku("");
   }

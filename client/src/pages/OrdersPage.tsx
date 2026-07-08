@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, downloadFile, Product, Store, Supplier, User } from "../api";
+import { api, downloadFile, ListResponse, OrderListRow, Product, rowsFromListResponse, Store, Supplier, User } from "../api";
 import { notifyApp } from "../ui/AppNotifications";
 import { PageHeader, Panel } from "../ui/Section";
 
@@ -205,7 +205,17 @@ export function OrderEntryPage({
     });
   }
 
-  function submitOrder(event: FormEvent<HTMLFormElement>) {
+  async function hasDuplicateOrder(orderNo: string, storeName: string, orderType: "dropship" | "accessory") {
+    const query = new URLSearchParams({ keyword: orderNo, orderType, pageSize: "200" });
+    const response = await api<ListResponse<OrderListRow>>(`/orders?${query.toString()}`);
+    return rowsFromListResponse(response).some((row) => {
+      if (String(row.orderNo ?? "").trim() !== orderNo) return false;
+      if (storeName && String(row.storeName ?? "").trim() !== storeName) return false;
+      return true;
+    });
+  }
+
+  async function submitOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formElement = event.currentTarget;
     const form = new FormData(event.currentTarget);
@@ -213,12 +223,23 @@ export function OrderEntryPage({
     if (itemInputMode === "select" && !product) return;
     const manualProductSku = String(form.get("productSku") ?? "").trim();
     const manualProductName = String(form.get("productName") ?? "").trim();
+    const orderNo = String(form.get("orderNo") ?? "").trim();
+    const storeName = String(form.get("storeName") ?? "").trim();
+    try {
+      if ((await hasDuplicateOrder(orderNo, storeName, orderType)) && !window.confirm("已有信息，是否继续？")) {
+        return;
+      }
+    } catch {
+      if (!window.confirm("重复信息检查失败，是否继续提交？")) {
+        return;
+      }
+    }
     createOrder.mutate(
       {
-        orderNo: form.get("orderNo"),
+        orderNo,
         orderType,
         supplierId: form.get("supplierId"),
-        storeName: form.get("storeName"),
+        storeName,
         registrarName: form.get("registrarName"),
         customerName: form.get("customerName"),
         customerPhone: form.get("customerPhone"),
