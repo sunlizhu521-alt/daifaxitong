@@ -283,7 +283,7 @@ test("registered users must be authorized before accessing pages", async () => {
   await admin.delete(`/api/orders/${order.body.id}`).expect(200);
 });
 
-test("sessions persist and require the same IP", async () => {
+test("sessions persist across app restarts and IP changes", async () => {
   const app = createApp();
   const login = await request(app)
     .post("/api/auth/login")
@@ -302,11 +302,12 @@ test("sessions persist and require the same IP", async () => {
   assert.equal(me.body.user.username, "admin");
   assert.ok(me.body.user.pageAccess.includes("carrierLibrary"));
 
-  await request(restartedApp)
+  const changedIp = await request(restartedApp)
     .get("/api/auth/me")
     .set("Cookie", cookie)
     .set("X-Forwarded-For", "10.0.0.2")
-    .expect(401);
+    .expect(200);
+  assert.equal(changedIp.body.user.username, "admin");
 });
 
 test("imports suppliers, products and stores from Excel", async () => {

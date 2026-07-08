@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { config } from "./config.js";
 import { apiRouter } from "./routes/index.js";
-import { getRequestIp, sessionMaxAgeMs, SqliteSessionStore } from "./sessionStore.js";
+import { sessionMaxAgeMs, SqliteSessionStore } from "./sessionStore.js";
 
 export function createApp() {
   fs.mkdirSync(config.uploadDir, { recursive: true });
@@ -31,25 +31,6 @@ export function createApp() {
       }
     })
   );
-  app.use((req, res, next) => {
-    if (!req.path.startsWith("/api")) {
-      next();
-      return;
-    }
-    if (!req.session.user || !req.session.loginIp) {
-      next();
-      return;
-    }
-    if (req.session.loginIp === getRequestIp(req)) {
-      next();
-      return;
-    }
-    req.session.destroy(() => {
-      res.clearCookie("daifa.sid");
-      res.status(401).json({ message: "登录 IP 已变化，请重新登录" });
-    });
-  });
-
   app.use("/api", apiRouter);
   app.use("/api", (_req, res) => {
     res.status(404).json({ message: "接口不存在" });

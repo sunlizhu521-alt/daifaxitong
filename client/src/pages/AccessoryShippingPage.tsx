@@ -163,9 +163,7 @@ export function AccessoryShippingPage() {
               <th>售后姓名</th>
               <th>售后电话</th>
               <th>收货地址</th>
-              <th>品号</th>
               <th>商品名称</th>
-              <th>数量</th>
               <th>状态</th>
               <th>快递公司 *</th>
               <th>发货单号 *</th>
@@ -189,9 +187,7 @@ export function AccessoryShippingPage() {
                 <td>{order.customerName}</td>
                 <td>{order.customerPhone ?? "-"}</td>
                 <td>{order.address}</td>
-                <td>{order.productSku || "-"}</td>
                 <td>{order.productName || "-"}</td>
-                <td>{order.totalQuantity ?? 0}</td>
                 <td><span className={`status ${order.status}`}>{order.returnStatus || statusText[order.status]}</span></td>
                 <td>
                   <form id={`accessory-shipment-${order.id}`} className="inline-shipment-form" onSubmit={(event) => submitShipment(order, event)}>
