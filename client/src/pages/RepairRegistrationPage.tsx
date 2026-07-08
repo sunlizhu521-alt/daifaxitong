@@ -172,7 +172,7 @@ export function RepairRegistrationPage() {
                   <td className="row-actions">
                     <button type="button" onClick={() => setEditing(row)}>编辑</button>
                     {row.isCompleted ? null : (
-                      <button type="button" className="primary-button" onClick={() => completeRepair.mutate(row.id)}>完结</button>
+                      <button type="button" className="primary-button" onClick={() => completeRepair.mutate(row.id)}>顾客确定没问题</button>
                     )}
                     <button type="button" onClick={() => { if (window.confirm("确定删除？")) deleteRepair.mutate(row.id); }}>删除</button>
                   </td>
