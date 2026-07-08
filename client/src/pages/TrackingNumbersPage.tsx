@@ -215,6 +215,7 @@ export function TrackingNumbersPage() {
               <th>姓名</th>
               <th>SKU</th>
               <th>数量</th>
+              <th>手机号</th>
               <th>地址</th>
               <th>状态</th>
               <th>快递公司 *</th>
@@ -238,6 +239,7 @@ export function TrackingNumbersPage() {
                 <td>{order.customerName}</td>
                 <td>{order.productSku || "-"}</td>
                 <td>{order.totalQuantity ?? 0}</td>
+                <td>{order.customerPhone ?? "-"}</td>
                 <td>{order.address}</td>
                 <td>
                   <span className={`status ${order.status}`}>{order.returnStatus || statusText[order.status]}</span>

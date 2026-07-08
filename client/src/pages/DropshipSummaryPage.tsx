@@ -306,7 +306,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
               <th>系列</th>
               <th>SKU</th>
               {orderType === "accessory" ? <th>更换配件</th> : null}
-              <th>数量</th>
+              {orderType !== "accessory" ? <th>数量</th> : null}
               <th>发货时间</th>
               <th>快递公司</th>
               <th>发货单号</th>
@@ -354,7 +354,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
                     </button>
                   </td>
                 ) : null}
-                <td>{order.totalQuantity ?? 0}</td>
+                {orderType !== "accessory" ? <td>{order.totalQuantity ?? 0}</td> : null}
                 <td>{order.shippedAt ? order.shippedAt.slice(0, 16).replace("T", " ") : "-"}</td>
                 <td>{order.carrier || "-"}</td>
                 <td>{order.trackingNo || "-"}</td>
