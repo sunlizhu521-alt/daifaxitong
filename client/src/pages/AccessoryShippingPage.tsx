@@ -27,7 +27,7 @@ export function AccessoryShippingPage() {
         `/orders?orderType=accessory&status=${encodeURIComponent(status)}&keyword=${encodeURIComponent(keyword)}`
       )
   });
-  const orders = rowsFromListResponse(orderResponse);
+  const orders = rowsFromListResponse(orderResponse).filter((order) => order.status !== "customer_cancelled" && order.status !== "cancelled");
   const selectedVisibleOrders = useMemo(() => orders.filter((order) => selectedOrderIds.has(order.id)), [orders, selectedOrderIds]);
   const allVisibleSelected = orders.length > 0 && orders.every((order) => selectedOrderIds.has(order.id));
 

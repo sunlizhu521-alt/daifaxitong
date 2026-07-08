@@ -116,6 +116,18 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
       qc.invalidateQueries({ queryKey: ["summary"] });
     }
   });
+  const cancelAccessoryShipment = useMutation({
+    mutationFn: (id: number) => api(`/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "customer_cancelled" }), notify: true }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [queryKey] });
+      qc.invalidateQueries({ queryKey: ["accessory-summary"] });
+      qc.invalidateQueries({ queryKey: ["accessory-shipping"] });
+      qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
+      qc.invalidateQueries({ queryKey: ["purchase-orders"] });
+      qc.invalidateQueries({ queryKey: ["return-orders"] });
+      qc.invalidateQueries({ queryKey: ["summary"] });
+    }
+  });
 
   async function openEdit(order: OrderListRow) {
     setEditing(await api<OrderDetail>(`/orders/${order.id}`));
@@ -224,6 +236,11 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
     });
   }
 
+  function cancelAccessory(order: OrderListRow) {
+    if (!window.confirm(`确认配件订单 ${order.orderNo} 顾客不要了，不需要发货了吗？`)) return;
+    cancelAccessoryShipment.mutate(order.id);
+  }
+
   return (
     <>
       <PageHeader title={title} description={description} />
@@ -303,6 +320,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
               <th>状态</th>
               <th>备注</th>
               <th>供应商备注</th>
+              {orderType === "accessory" ? <th>客服操作</th> : null}
               {canEdit || canDelete ? <th>操作</th> : null}
             </tr>
           </thead>
@@ -350,6 +368,17 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
                 <td><span className={`status ${order.status}`}>{currentStatusText(order)}</span></td>
                 <td>{mergeNotes(order)}</td>
                 <td>{order.supplierNote || "-"}</td>
+                {orderType === "accessory" ? (
+                  <td className="row-actions">
+                    {order.status === "customer_cancelled" ? (
+                      <span className="status customer_cancelled">顾客不要了</span>
+                    ) : (
+                      <button type="button" onClick={() => cancelAccessory(order)} disabled={cancelAccessoryShipment.isPending}>
+                        撤销发货
+                      </button>
+                    )}
+                  </td>
+                ) : null}
                 {canEdit || canDelete ? (
                   <td className="row-actions">
                     {canEdit ? <button type="button" className="primary-button" onClick={() => openEdit(order)}>修改</button> : null}
@@ -363,6 +392,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
         {deleteOrder.error ? <div className="error">{deleteOrder.error.message}</div> : null}
         {updateOrder.error ? <div className="error">{updateOrder.error.message}</div> : null}
         {changeAccessory.error ? <div className="error">{changeAccessory.error.message}</div> : null}
+        {cancelAccessoryShipment.error ? <div className="error">{cancelAccessoryShipment.error.message}</div> : null}
       </Panel>
       {accessoryEditing ? (
         <div className="modal-backdrop">
