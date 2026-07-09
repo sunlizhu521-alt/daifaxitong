@@ -256,7 +256,7 @@ export function ShippingSchedulePage() {
                   onChange={(event) => toggleAllVisible(event.target.checked)}
                 />
               </th>
-              <th>
+              <th className="supplier-note-column">
                 <div className="table-header-action">
                   <span>供应商备注</span>
                   <button type="button" onClick={submitSelectedSupplierNotes} disabled={saveSupplierNote.isPending}>批量提交</button>
@@ -295,7 +295,7 @@ export function ShippingSchedulePage() {
                     onChange={(event) => toggleOrderSelected(order.id, event.target.checked)}
                   />
                 </td>
-                <td>
+                <td className="supplier-note-column">
                   <div className="supplier-note-actions">
                     <input
                       value={supplierNoteValue(order)}
