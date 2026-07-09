@@ -26,6 +26,19 @@ function formatLatestShipTime(value?: string) {
   return new Date(timestamp + 48 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
+function buildShippingInfo(order: OrderListRow) {
+  const name = order.customerName || "-";
+  if (order.orderType === "accessory") return `${name}-配件`;
+
+  const productName = order.productName || "";
+  const capacityMatch = productName.match(/(\d+(?:\.\d+)?)\s*(?:AH|Ah|ah|A\s*H|安)/);
+  const capacity = capacityMatch ? `${capacityMatch[1]}L` : "-";
+  const beforeCapacity = capacityMatch ? productName.slice(0, capacityMatch.index) : productName;
+  const colorMatch = beforeCapacity.match(/(黑色|白色|红色|蓝色|灰色|银色|金色|黄色|绿色|紫色|粉色|橙色|棕色|咖啡色|米色)$/);
+  const color = colorMatch?.[1] ?? "-";
+  return `${name}-${capacity}-${color}`;
+}
+
 function uniqueOptions(values: Array<string | null | undefined>) {
   return Array.from(new Set(values.map((value) => value?.trim()).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b, "zh-CN"));
 }
@@ -235,6 +248,7 @@ export function ShippingSchedulePage() {
               <th>状态</th>
               <th>快递公司</th>
               <th>发货单号</th>
+              <th>发货信息</th>
               <th>备注</th>
               <th>最晚发货时间</th>
               <th className="selection-cell">
@@ -274,6 +288,7 @@ export function ShippingSchedulePage() {
                 <td className="shipping-nowrap"><span className={`status ${order.status}`}>{statusText[order.status] || order.status}</span></td>
                 <td className="shipping-nowrap">{order.carrier || "-"}</td>
                 <td>{order.trackingNo || "-"}</td>
+                <td className="shipping-nowrap">{buildShippingInfo(order)}</td>
                 <td>{order.note || order.shipmentNote || "-"}</td>
                 <td className="shipping-nowrap">{formatLatestShipTime(order.createdAt)}</td>
                 <td className="selection-cell">
