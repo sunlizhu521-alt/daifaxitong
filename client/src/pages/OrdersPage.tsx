@@ -223,6 +223,10 @@ export function OrderEntryPage({
     if (itemInputMode === "select" && !product) return;
     const manualProductSku = String(form.get("productSku") ?? "").trim();
     const manualProductName = String(form.get("productName") ?? "").trim();
+    if (itemInputMode === "manual" && !manualProductName.includes("*")) {
+      notifyApp({ variant: "error", message: "商品名称必须包含 *，*后面是数值" });
+      return;
+    }
     const orderNo = String(form.get("orderNo") ?? "").trim();
     const storeName = String(form.get("storeName") ?? "").trim();
     try {
@@ -350,7 +354,7 @@ export function OrderEntryPage({
             <div className="order-detail-grid order-form-section section-detail">
               <div className="order-section-title">
                 <strong>订单与商品</strong>
-                <span>{itemInputMode === "manual" ? "店铺、订单、供应商、品号、商品名称、数量均为必填" : "店铺、订单、供应商、SKU、数量均为必填"}</span>
+                <span>{itemInputMode === "manual" ? "店铺、订单、供应商、品号、商品名称均为必填，商品名称里 * 后面是数值" : "店铺、订单、供应商、SKU、数量均为必填"}</span>
               </div>
               <label className="field-block">
                 <span>选择店铺</span>
@@ -386,7 +390,7 @@ export function OrderEntryPage({
                   </label>
                   <label className="field-block">
                     <span>商品名称</span>
-                    <input name="productName" placeholder="商品名称" required />
+                    <input name="productName" placeholder="商品名称，*后面是数值" pattern=".*\*.*" title="商品名称必须包含 *，*后面是数值" required />
                   </label>
                 </>
               ) : (
@@ -402,10 +406,14 @@ export function OrderEntryPage({
                   </select>
                 </label>
               )}
-              <label className="field-block">
-                <span>数量</span>
-                <input name="quantity" type="number" min="1" placeholder="数量" required />
-              </label>
+              {itemInputMode === "manual" ? (
+                <input type="hidden" name="quantity" value="1" />
+              ) : (
+                <label className="field-block">
+                  <span>数量</span>
+                  <input name="quantity" type="number" min="1" placeholder="数量" required />
+                </label>
+              )}
             </div>
             <input key={me?.user?.username ?? "registrar"} type="hidden" name="registrarName" value={me?.user?.username ?? ""} />
             <div className="order-note-row order-form-section section-note">
