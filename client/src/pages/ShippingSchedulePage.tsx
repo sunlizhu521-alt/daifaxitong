@@ -97,8 +97,8 @@ export function ShippingSchedulePage() {
     }
   });
   const saveSupplierNote = useMutation({
-    mutationFn: ({ id, supplierNote }: { id: number; supplierNote: string }) =>
-      api(`/orders/${id}/supplier-note`, { method: "PATCH", body: JSON.stringify({ supplierNote }), notify: true }),
+    mutationFn: ({ id, supplierNote, notify = true }: { id: number; supplierNote: string; notify?: boolean }) =>
+      api(`/orders/${id}/supplier-note`, { method: "PATCH", body: JSON.stringify({ supplierNote }), notify }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
       qc.invalidateQueries({ queryKey: ["dropship-summary"] });
@@ -132,6 +132,24 @@ export function ShippingSchedulePage() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "请求失败";
       notifyApp({ variant: "error", message: `批量提交中断\n已成功 ${successCount} 条，第 ${successCount + 1} 条失败。\n失败原因：${message}` });
+    }
+  }
+
+  async function submitSelectedSupplierNotes() {
+    if (selectedVisibleOrders.length === 0) {
+      notifyApp({ variant: "error", message: "请先选择要批量提交备注的订单" });
+      return;
+    }
+    let successCount = 0;
+    try {
+      for (const order of selectedVisibleOrders) {
+        await saveSupplierNote.mutateAsync({ id: order.id, supplierNote: supplierNoteValue(order), notify: false });
+        successCount += 1;
+      }
+      notifyApp({ variant: "success", message: `批量提交备注完成\n共选择 ${selectedVisibleOrders.length} 条，成功提交 ${successCount} 条。` });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "请求失败";
+      notifyApp({ variant: "error", message: `批量提交备注中断\n已成功 ${successCount} 条，第 ${successCount + 1} 条失败。\n失败原因：${message}` });
     }
   }
 
@@ -215,21 +233,10 @@ export function ShippingSchedulePage() {
             ))}
           </select>
           <button type="button" className="primary-button" onClick={() => downloadFile(`/orders/shipping-export?status=${encodeURIComponent(status)}`)}>导出发货</button>
-          <button type="button" className="primary-button" onClick={submitSelectedOrders} disabled={markShipped.isPending}>
-            批量提交
-          </button>
         </div>
         <table className="shipping-schedule-table">
           <thead>
             <tr>
-              <th className="selection-cell">
-                <input
-                  type="checkbox"
-                  aria-label="选择当前列表全部订单"
-                  checked={allVisibleSelected}
-                  onChange={(event) => toggleAllVisible(event.target.checked)}
-                />
-              </th>
               <th>创建时间</th>
               <th>订单编号</th>
               <th>客户姓名</th>
@@ -245,21 +252,31 @@ export function ShippingSchedulePage() {
               <th>发货单号</th>
               <th>备注</th>
               <th>最晚发货时间</th>
-              <th>供应商备注</th>
-              <th>操作</th>
+              <th className="selection-cell">
+                <input
+                  type="checkbox"
+                  aria-label="选择当前列表全部订单"
+                  checked={allVisibleSelected}
+                  onChange={(event) => toggleAllVisible(event.target.checked)}
+                />
+              </th>
+              <th>
+                <div className="table-header-action">
+                  <span>供应商备注</span>
+                  <button type="button" onClick={submitSelectedSupplierNotes} disabled={saveSupplierNote.isPending}>批量提交</button>
+                </div>
+              </th>
+              <th>
+                <div className="table-header-action">
+                  <span>操作</span>
+                  <button type="button" onClick={submitSelectedOrders} disabled={markShipped.isPending}>批量提交</button>
+                </div>
+              </th>
             </tr>
           </thead>
           <tbody>
             {filteredOrders.map((order) => (
               <tr key={order.id}>
-                <td className="selection-cell">
-                  <input
-                    type="checkbox"
-                    aria-label={`选择订单 ${order.orderNo}`}
-                    checked={selectedOrderIds.has(order.id)}
-                    onChange={(event) => toggleOrderSelected(order.id, event.target.checked)}
-                  />
-                </td>
                 <td className="shipping-nowrap">{formatCreatedAt(order.createdAt)}</td>
                 <td>{order.orderNo}</td>
                 <td>{order.customerName}</td>
@@ -275,6 +292,14 @@ export function ShippingSchedulePage() {
                 <td>{order.trackingNo || "-"}</td>
                 <td>{order.note || order.shipmentNote || "-"}</td>
                 <td className="shipping-nowrap">{formatLatestShipTime(order.createdAt)}</td>
+                <td className="selection-cell">
+                  <input
+                    type="checkbox"
+                    aria-label={`选择订单 ${order.orderNo}`}
+                    checked={selectedOrderIds.has(order.id)}
+                    onChange={(event) => toggleOrderSelected(order.id, event.target.checked)}
+                  />
+                </td>
                 <td>
                   <div className="supplier-note-actions">
                     <input

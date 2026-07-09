@@ -145,6 +145,9 @@ td input[type="file"] { min-width: 190px; margin-top: 6px; }
 .shipping-schedule-table th,
 .shipping-schedule-table .shipping-nowrap { white-space: nowrap; }
 .shipping-schedule-table .shipping-product-name { white-space: normal; min-width: 180px; max-width: 320px; line-height: 1.4; }
+.table-header-action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; }
+.table-header-action button { border-radius: 7px; border: 1px solid transparent; min-height: 30px; padding: 0 10px; background: var(--accent); color: #fff; font-size: 13px; }
+.table-header-action button:disabled { opacity: 0.62; cursor: not-allowed; }
 
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
 th, td { border: 1px solid #d8dee8; padding: 10px; text-align: center; vertical-align: middle; }
