@@ -240,7 +240,6 @@ export function ShippingSchedulePage() {
               <th>客户姓名</th>
               <th>电话</th>
               <th>收货地址</th>
-              <th>系列</th>
               <th>SKU</th>
               <th>名称</th>
               <th>供应商型号</th>
@@ -280,7 +279,6 @@ export function ShippingSchedulePage() {
                 <td>{order.customerName}</td>
                 <td>{order.customerPhone ?? "-"}</td>
                 <td>{order.address}</td>
-                <td>{order.productSeries || "-"}</td>
                 <td className="shipping-nowrap">{order.productSku || "-"}</td>
                 <td className="shipping-product-name">{order.productName || "-"}</td>
                 <td>{order.supplierModel || "-"}</td>
