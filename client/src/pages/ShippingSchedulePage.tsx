@@ -57,7 +57,7 @@ export function ShippingSchedulePage() {
     queryKey: ["shipping-schedule"],
     queryFn: () => api<ListResponse<OrderListRow>>("/orders?status=&includeAccessoryPending=yes")
   });
-  const orders = rowsFromListResponse(orderResponse).filter((order) => order.status === "pending" || order.status === "filled");
+  const orders = rowsFromListResponse(orderResponse).filter((order) => (order.orderType === "accessory" && order.status === "pending") || (order.orderType !== "accessory" && order.status === "filled"));
   const supplierOptions = useMemo(() => uniqueOptions(orders.map((order) => order.supplierName)), [orders]);
   const storeOptions = useMemo(() => uniqueOptions(orders.map((order) => order.storeShortName || order.storeName)), [orders]);
   const seriesOptions = useMemo(() => uniqueOptions(orders.map((order) => order.productSeries)), [orders]);
