@@ -470,7 +470,7 @@ ordersRouter.get("/summary-export", async (req, res) => {
 ordersRouter.get("/shipping-export", async (req, res) => {
   const XLSX = (await import("xlsx")).default;
   const status = String(req.query.status ?? "").trim();
-  const filters: string[] = [];
+  const filters: string[] = ["o.orderType = 'dropship'"];
   const params: unknown[] = [];
   if (status) {
     filters.push("o.status = ?");

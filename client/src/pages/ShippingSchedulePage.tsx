@@ -28,8 +28,6 @@ function formatLatestShipTime(value?: string) {
 
 function buildShippingInfo(order: OrderListRow) {
   const name = order.customerName || "-";
-  if (order.orderType === "accessory") return `${name}-配件`;
-
   const productName = order.productName || "";
   const capacityMatch = productName.match(/(\d+(?:\.\d+)?)\s*(?:AH|Ah|ah|A\s*H|安)/);
   const capacity = capacityMatch ? `${capacityMatch[1]}L` : "-";
