@@ -172,20 +172,6 @@ export function ShippingSchedulePage() {
       return next;
     });
   }
-  const cancelOrder = useMutation({
-    mutationFn: (id: number) => api(`/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: "customer_cancelled" }), notify: true }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["shipping-schedule"] });
-      qc.invalidateQueries({ queryKey: ["dropship-summary"] });
-      qc.invalidateQueries({ queryKey: ["orders"] });
-      qc.invalidateQueries({ queryKey: ["summary"] });
-    }
-  });
-  function markCustomerCancelled(order: OrderListRow) {
-    if (!window.confirm(`确认订单 ${order.orderNo} 顾客不要了吗？`)) return;
-    cancelOrder.mutate(order.id);
-  }
-
   function supplierNoteValue(order: OrderListRow) {
     return supplierNotes[order.id] ?? order.supplierNote ?? "";
   }
@@ -313,9 +299,6 @@ export function ShippingSchedulePage() {
                 <td>
                   <div className="row-actions shipping-row-actions">
                     <button type="button" onClick={() => markShipped.mutate({ id: order.id, supplierNote: supplierNoteValue(order) })}>已提货</button>
-                    <button type="button" onClick={() => markCustomerCancelled(order)} disabled={cancelOrder.isPending}>
-                      不要了
-                    </button>
                   </div>
                 </td>
               </tr>
@@ -323,7 +306,6 @@ export function ShippingSchedulePage() {
           </tbody>
         </table>
         {markShipped.error ? <div className="error">{markShipped.error.message}</div> : null}
-        {cancelOrder.error ? <div className="error">{cancelOrder.error.message}</div> : null}
         {saveSupplierNote.error ? <div className="error">{saveSupplierNote.error.message}</div> : null}
       </Panel>
     </>
