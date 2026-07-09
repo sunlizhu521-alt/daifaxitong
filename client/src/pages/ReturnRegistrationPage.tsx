@@ -99,7 +99,8 @@ export function ReturnRegistrationPage() {
     form.set("customerName", row.customerName);
     form.set("customerPhone", row.customerPhone || "");
     form.set("address", row.address);
-    form.set("status", "已提交退货");
+    const action = String(form.get("action") ?? "");
+    form.set("status", action === "未发货退款" ? "未发货退款" : "已提交退货");
     saveReturn.mutate(form);
   }
 
@@ -216,6 +217,7 @@ export function ReturnRegistrationPage() {
                     <option value="拦截">拦截</option>
                     <option value="自行寄回">自行寄回</option>
                     <option value="上门取件">上门取件</option>
+                    <option value="未发货退款">未发货退款</option>
                   </select>
                 </td>
                 <td>

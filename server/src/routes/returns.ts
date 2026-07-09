@@ -37,7 +37,7 @@ const returnSchema = z.object({
   customerPhone: z.string().optional().default(""),
   address: z.string().trim().min(1, "地址不能为空"),
   status: z.string().trim().min(1, "状态不能为空").default("已提交退货"),
-  action: z.enum(["拦截", "自行寄回", "上门取件", "寄回"]).transform((value) => (value === "寄回" ? "自行寄回" : value)),
+  action: z.enum(["拦截", "自行寄回", "上门取件", "寄回", "未发货退款"]).transform((value) => (value === "寄回" ? "自行寄回" : value)),
   trackingNo: z.string().optional().default(""),
   reason: z.enum(["七天无理由", "质量问题"]),
   note: z.string().optional().default("")
@@ -299,6 +299,7 @@ returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
     res.status(400).json({ message: "退货订单不存在或订单编号不匹配" });
     return;
   }
+  const returnStatus = parsed.data.action === "未发货退款" ? "未发货退款" : parsed.data.status;
   const result = db
     .prepare(
       `INSERT INTO returns
@@ -315,7 +316,7 @@ returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
       parsed.data.customerName,
       parsed.data.customerPhone,
       parsed.data.address,
-      parsed.data.status,
+      returnStatus,
       parsed.data.action,
       parsed.data.trackingNo,
       parsed.data.reason,
