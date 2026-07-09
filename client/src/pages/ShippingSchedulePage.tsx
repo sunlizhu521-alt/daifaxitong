@@ -238,7 +238,6 @@ export function ShippingSchedulePage() {
           <thead>
             <tr>
               <th>创建时间</th>
-              <th>订单编号</th>
               <th>客户姓名</th>
               <th>电话</th>
               <th>收货地址</th>
@@ -278,7 +277,6 @@ export function ShippingSchedulePage() {
             {filteredOrders.map((order) => (
               <tr key={order.id}>
                 <td className="shipping-nowrap">{formatCreatedAt(order.createdAt)}</td>
-                <td>{order.orderNo}</td>
                 <td>{order.customerName}</td>
                 <td>{order.customerPhone ?? "-"}</td>
                 <td>{order.address}</td>
