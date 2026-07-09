@@ -16,14 +16,14 @@ const statusText: Record<string, string> = {
 
 function formatCreatedAt(value?: string) {
   if (!value) return "-";
-  return value.slice(0, 19).replace("T", " ");
+  return value.slice(0, 10);
 }
 
 function formatLatestShipTime(value?: string) {
   if (!value) return "-";
   const timestamp = new Date(value).getTime();
   if (!Number.isFinite(timestamp)) return "-";
-  return new Date(timestamp + 48 * 60 * 60 * 1000).toISOString().slice(0, 19).replace("T", " ");
+  return new Date(timestamp + 48 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
 function uniqueOptions(values: Array<string | null | undefined>) {
@@ -230,11 +230,7 @@ export function ShippingSchedulePage() {
                   onChange={(event) => toggleAllVisible(event.target.checked)}
                 />
               </th>
-              <th>供应商</th>
-              <th>分类</th>
-              <th>登记人</th>
               <th>创建时间</th>
-              <th>店铺</th>
               <th>订单编号</th>
               <th>客户姓名</th>
               <th>电话</th>
@@ -264,18 +260,14 @@ export function ShippingSchedulePage() {
                     onChange={(event) => toggleOrderSelected(order.id, event.target.checked)}
                   />
                 </td>
-                <td>{order.supplierName ?? "-"}</td>
-                <td>{order.orderType === "accessory" ? "配件" : "成品"}</td>
-                <td className="shipping-nowrap">{order.registrarName || "-"}</td>
                 <td className="shipping-nowrap">{formatCreatedAt(order.createdAt)}</td>
-                <td className="shipping-nowrap">{order.storeShortName || order.storeName || "-"}</td>
                 <td>{order.orderNo}</td>
                 <td>{order.customerName}</td>
                 <td>{order.customerPhone ?? "-"}</td>
                 <td>{order.address}</td>
                 <td>{order.productSeries || "-"}</td>
                 <td className="shipping-nowrap">{order.productSku || "-"}</td>
-                <td className="shipping-nowrap">{order.productName || "-"}</td>
+                <td className="shipping-product-name">{order.productName || "-"}</td>
                 <td>{order.supplierModel || "-"}</td>
                 <td>{order.totalQuantity ?? 0}</td>
                 <td className="shipping-nowrap"><span className={`status ${order.status}`}>{statusText[order.status] || order.status}</span></td>

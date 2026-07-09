@@ -144,6 +144,7 @@ td input[type="file"] { min-width: 190px; margin-top: 6px; }
 .shipping-row-actions { justify-content: center; flex-wrap: nowrap; }
 .shipping-schedule-table th,
 .shipping-schedule-table .shipping-nowrap { white-space: nowrap; }
+.shipping-schedule-table .shipping-product-name { white-space: normal; min-width: 180px; max-width: 320px; line-height: 1.4; }
 
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
 th, td { border: 1px solid #d8dee8; padding: 10px; text-align: center; vertical-align: middle; }
