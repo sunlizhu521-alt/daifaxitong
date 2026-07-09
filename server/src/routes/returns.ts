@@ -225,7 +225,7 @@ returnsRouter.get("/orders", async (req, res) => {
   }
   const rows = getDb()
     .prepare(
-      `SELECT o.id AS orderId, o.orderNo, o.orderType, o.storeName, o.customerName, o.customerPhone, o.address, o.status AS orderStatus,
+      `SELECT o.id AS orderId, o.orderNo, o.orderType, o.storeName, COALESCE(st.shortName, o.storeName) AS storeShortName, o.customerName, o.customerPhone, o.address, o.status AS orderStatus,
         COALESCE(s.shortName, s.name) AS supplierName,
         GROUP_CONCAT(DISTINCT p.series) AS productSeries,
         GROUP_CONCAT(DISTINCT oi.productSku) AS productSku,
@@ -248,6 +248,7 @@ returnsRouter.get("/orders", async (req, res) => {
          ORDER BY latest.id DESC
          LIMIT 1
        )
+       LEFT JOIN stores st ON st.name = o.storeName
        LEFT JOIN suppliers s ON s.id = COALESCE(sh.supplierId, o.supplierId)
        LEFT JOIN order_items oi ON oi.orderId = o.id
        LEFT JOIN products p ON p.id = oi.productId

@@ -171,6 +171,8 @@ export function ReturnRegistrationPage() {
           <thead>
             <tr>
               <th>分类</th>
+              <th>店铺简称</th>
+              <th>店铺订单编号</th>
               <th>客户</th>
               <th>电话</th>
               <th>地址</th>
@@ -193,9 +195,11 @@ export function ReturnRegistrationPage() {
               return (
               <tr key={row.orderId}>
                 <td>{orderTypeText(row)}</td>
+                <td>{row.storeShortName || row.storeName || "-"}</td>
+                <td>{row.orderNo}</td>
                 <td>{row.customerName}</td>
                 <td>{row.customerPhone || "-"}</td>
-                <td>{row.address}</td>
+                <td className="return-address-cell">{row.address}</td>
                 <td>{row.supplierModel || row.model || row.productName || row.productSku || "-"}</td>
                 <td>{registrationStatus(row)}</td>
                 <td>{row.shipmentTrackingNo || "-"}</td>

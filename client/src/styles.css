@@ -128,6 +128,7 @@ td input[type="file"] { min-width: 190px; margin-top: 6px; }
 .return-registration-actions { flex-wrap: nowrap; justify-content: center; min-width: 220px; white-space: nowrap; }
 .return-registration-actions .inline-return-form,
 .return-registration-actions button { flex: 0 0 auto; white-space: nowrap; }
+.nowrap-table td.return-address-cell { white-space: normal; min-width: 220px; max-width: 360px; line-height: 1.45; text-align: left; }
 .muted-text { display: block; margin-top: 4px; color: var(--text-muted); font-size: 12px; white-space: nowrap; }
 
 .primary-button, .ghost-button, .row-actions button { border-radius: 7px; border: 1px solid transparent; min-height: 36px; padding: 0 13px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-size: 14px; }
