@@ -55,9 +55,9 @@ export function ShippingSchedulePage() {
   const [supplierNotes, setSupplierNotes] = useState<Record<number, string>>({});
   const { data: orderResponse } = useQuery({
     queryKey: ["shipping-schedule"],
-    queryFn: () => api<ListResponse<OrderListRow>>("/orders?status=&includeAccessoryPending=yes")
+    queryFn: () => api<ListResponse<OrderListRow>>("/orders?orderType=dropship&status=filled")
   });
-  const orders = rowsFromListResponse(orderResponse).filter((order) => (order.orderType === "accessory" && order.status === "pending") || (order.orderType !== "accessory" && order.status === "filled"));
+  const orders = rowsFromListResponse(orderResponse).filter((order) => order.orderType !== "accessory" && order.status === "filled");
   const supplierOptions = useMemo(() => uniqueOptions(orders.map((order) => order.supplierName)), [orders]);
   const storeOptions = useMemo(() => uniqueOptions(orders.map((order) => order.storeShortName || order.storeName)), [orders]);
   const seriesOptions = useMemo(() => uniqueOptions(orders.map((order) => order.productSeries)), [orders]);

@@ -8,7 +8,7 @@ const statusText: Record<string, string> = {
   pending: "待发货",
   filled: "已填单号",
   purchased: "已下采购单",
-  shipped: "快递取走",
+  shipped: "已发货",
   exception: "异常",
   cancelled: "已取消"
 };
@@ -104,7 +104,7 @@ export function AccessoryShippingPage() {
         successCount += 1;
       }
       setSelectedOrderIds(new Set());
-      notifyApp({ variant: "success", message: `批量提交完成\n共选择 ${selectedVisibleOrders.length} 条，成功提交 ${successCount} 条。\n状态已更新为快递取走。` });
+      notifyApp({ variant: "success", message: `批量提交完成\n共选择 ${selectedVisibleOrders.length} 条，成功提交 ${successCount} 条。\n状态已更新为已发货。` });
     } catch (error) {
       const message = error instanceof Error ? error.message : "请求失败";
       notifyApp({ variant: "error", message: `批量提交中断\n已成功 ${successCount} 条，第 ${successCount + 1} 条失败。\n失败原因：${message}` });
@@ -140,7 +140,7 @@ export function AccessoryShippingPage() {
             <option value="">全部状态</option>
             <option value="pending">待发货</option>
             <option value="filled">已填单号</option>
-            <option value="shipped">快递取走</option>
+            <option value="shipped">已发货</option>
           </select>
           <input placeholder="搜索订单号/姓名/电话/地址/品号/商品" value={keyword} onChange={(event) => setKeyword(event.target.value)} />
           <button type="button" className="primary-button" onClick={submitSelectedShipments} disabled={ship.isPending}>
