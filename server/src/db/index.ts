@@ -56,6 +56,8 @@ function migrateDb(database: Database.Database) {
     UPDATE suppliers SET storeAddress = COALESCE(storeAddress, address);
     UPDATE products SET ssku = COALESCE(ssku, sku);
     UPDATE stores SET operator = COALESCE(operator, owner);
+    UPDATE returns SET action = '未出单号退款' WHERE action = '未发货退款';
+    UPDATE returns SET status = '未出单号退款' WHERE status = '未发货退款';
     UPDATE returns
        SET orderId = (
          SELECT orders.id

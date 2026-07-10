@@ -92,12 +92,12 @@ export function ReturnRegistrationPage() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const action = String(form.get("action") ?? "");
-    if (action === "未发货退款" && row.shipmentTrackingNo) {
-      window.alert("已有发货单号的订单不能选择未发货退款");
+    if (action === "未出单号退款" && row.shipmentTrackingNo) {
+      window.alert("已有发货单号的订单不能选择未出单号退款");
       return;
     }
-    if (action === "拦截" && !row.shipmentTrackingNo) {
-      window.alert("拦截需要已有发货快递单号；没有单号请选未发货退款");
+    if (isAutoShipmentReturn(action) && !row.shipmentTrackingNo) {
+      window.alert(`${action}需要已有发货快递单号；没有单号请选未出单号退款`);
       return;
     }
     if (action === "自行寄回") {
@@ -116,15 +116,15 @@ export function ReturnRegistrationPage() {
     form.set("customerName", row.customerName);
     form.set("customerPhone", row.customerPhone || "");
     form.set("address", row.address);
-    if (action === "拦截") {
+    if (isAutoShipmentReturn(action)) {
       form.set("returnCarrier", row.shipmentCarrier || "");
       form.set("trackingNo", row.shipmentTrackingNo || "");
     }
-    if (action === "上门取件" || action === "未发货退款") {
+    if (action === "上门取件" || action === "未出单号退款") {
       form.set("returnCarrier", "");
       form.set("trackingNo", "");
     }
-    form.set("status", action === "未发货退款" ? "未发货退款" : action === "自行寄回" ? "退回中" : "已提交退货");
+    form.set("status", action === "未出单号退款" ? "未出单号退款" : action === "自行寄回" ? "退回中" : "已提交退货");
     saveReturn.mutate(form);
   }
 
@@ -145,14 +145,18 @@ export function ReturnRegistrationPage() {
     return row.returnStatus === "已提交退货";
   }
 
+  function isAutoShipmentReturn(action: string) {
+    return action === "拦截" || action === "已出单号未发货退款";
+  }
+
   function returnCarrierValue(row: ReturnOrderRow, action: string) {
-    if (action === "拦截") return row.shipmentCarrier || "";
+    if (isAutoShipmentReturn(action)) return row.shipmentCarrier || "";
     if (action === "自行寄回") return row.returnCarrier || "";
     return "";
   }
 
   function returnTrackingValue(row: ReturnOrderRow, action: string) {
-    if (action === "拦截") return row.shipmentTrackingNo || "";
+    if (isAutoShipmentReturn(action)) return row.shipmentTrackingNo || "";
     if (action === "自行寄回") return row.returnTrackingNo || "";
     return "";
   }
@@ -163,10 +167,10 @@ export function ReturnRegistrationPage() {
 
   return (
     <>
-      <PageHeader title="退货登记" description="登记拦截、自行寄回、上门取件、未发货退款；自行寄回直接进入退货收货，未发货退款直接归档。" />
+      <PageHeader title="退货登记" description="登记拦截、自行寄回、上门取件、未出单号退款、已出单号未发货退款；自行寄回直接进入退货收货，未出单号退款直接归档。" />
       <Panel title="退货登记">
         <div className="helper-text">
-          操作说明：拦截自动带出原发货快递公司和发货单号；自行寄回需要填写退回快递公司和退回单号；上门取件不填写退回单号；未发货退款只适用于没有发货单号的订单。
+          操作说明：拦截和已出单号未发货退款会自动带出原发货快递公司和发货单号；自行寄回需要填写退回快递公司和退回单号；上门取件不填写退回单号；未出单号退款只适用于没有发货单号的订单。
         </div>
         <div className="toolbar filter-toolbar">
           <select value={storeName} onChange={(event) => setStoreName(event.target.value)}>
@@ -259,7 +263,8 @@ export function ReturnRegistrationPage() {
                     <option value="拦截">拦截</option>
                     <option value="自行寄回">自行寄回</option>
                     <option value="上门取件">上门取件</option>
-                    <option value="未发货退款">未发货退款</option>
+                    <option value="未出单号退款">未出单号退款</option>
+                    <option value="已出单号未发货退款">已出单号未发货退款</option>
                   </select>
                 </td>
                 <td>
@@ -279,8 +284,8 @@ export function ReturnRegistrationPage() {
                     name="returnCarrier"
                     placeholder={actionValue === "自行寄回" ? "填写退回快递公司 *" : "-"}
                     defaultValue={returnCarrierValue(row, actionValue)}
-                    readOnly={actionValue === "拦截"}
-                    disabled={actionValue === "上门取件" || actionValue === "未发货退款" || !actionValue}
+                    readOnly={isAutoShipmentReturn(actionValue)}
+                    disabled={actionValue === "上门取件" || actionValue === "未出单号退款" || !actionValue}
                     required={canEditReturnLogistics(actionValue)}
                   />
                 </td>
@@ -291,8 +296,8 @@ export function ReturnRegistrationPage() {
                     name="trackingNo"
                     placeholder={actionValue === "自行寄回" ? "填写退回单号 *" : "-"}
                     defaultValue={returnTrackingValue(row, actionValue)}
-                    readOnly={actionValue === "拦截"}
-                    disabled={actionValue === "上门取件" || actionValue === "未发货退款" || !actionValue}
+                    readOnly={isAutoShipmentReturn(actionValue)}
+                    disabled={actionValue === "上门取件" || actionValue === "未出单号退款" || !actionValue}
                     required={canEditReturnLogistics(actionValue)}
                   />
                 </td>

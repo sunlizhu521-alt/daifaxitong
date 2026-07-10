@@ -37,7 +37,9 @@ const returnSchema = z.object({
   customerPhone: z.string().optional().default(""),
   address: z.string().trim().min(1, "地址不能为空"),
   status: z.string().trim().min(1, "状态不能为空").default("已提交退货"),
-  action: z.enum(["拦截", "自行寄回", "上门取件", "寄回", "未发货退款"]).transform((value) => (value === "寄回" ? "自行寄回" : value)),
+  action: z
+    .enum(["拦截", "自行寄回", "上门取件", "寄回", "未发货退款", "未出单号退款", "已出单号未发货退款"])
+    .transform((value) => (value === "寄回" ? "自行寄回" : value === "未发货退款" ? "未出单号退款" : value)),
   returnCarrier: z.string().optional().default(""),
   trackingNo: z.string().optional().default(""),
   reason: z.enum(["七天无理由", "质量问题"]),
@@ -75,6 +77,10 @@ function latestShipment(orderId: number) {
        LIMIT 1`
     )
     .get(orderId) as { carrier?: string; trackingNo?: string } | undefined;
+}
+
+function isAutoShipmentReturn(action: string) {
+  return action === "拦截" || action === "已出单号未发货退款";
 }
 
 returnsRouter.get("/", async (req, res) => {
@@ -315,9 +321,9 @@ returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
     return;
   }
   const shipment = latestShipment(order.id);
-  if (parsed.data.action === "未发货退款" && shipment?.trackingNo) {
+  if (parsed.data.action === "未出单号退款" && shipment?.trackingNo) {
     files.forEach((f) => fs.unlink(f.path, () => undefined));
-    res.status(400).json({ message: "已有发货单号的订单不能选择未发货退款" });
+    res.status(400).json({ message: "已有发货单号的订单不能选择未出单号退款" });
     return;
   }
   if (parsed.data.action === "自行寄回" && (!parsed.data.returnCarrier.trim() || !parsed.data.trackingNo.trim())) {
@@ -325,17 +331,17 @@ returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
     res.status(400).json({ message: "自行寄回需要填写退回快递公司和退回单号" });
     return;
   }
-  if (parsed.data.action === "拦截" && !shipment?.trackingNo) {
+  if (isAutoShipmentReturn(parsed.data.action) && !shipment?.trackingNo) {
     files.forEach((f) => fs.unlink(f.path, () => undefined));
-    res.status(400).json({ message: "拦截需要已有发货快递单号；没有单号请选未发货退款" });
+    res.status(400).json({ message: `${parsed.data.action}需要已有发货快递单号；没有单号请选未出单号退款` });
     return;
   }
   const returnStatus =
-    parsed.data.action === "未发货退款" ? "未发货退款" : parsed.data.action === "自行寄回" ? "退回中" : parsed.data.status;
+    parsed.data.action === "未出单号退款" ? "未出单号退款" : parsed.data.action === "自行寄回" ? "退回中" : parsed.data.status;
   const returnCarrier =
-    parsed.data.action === "拦截" ? shipment?.carrier ?? "" : parsed.data.action === "自行寄回" ? parsed.data.returnCarrier.trim() : "";
+    isAutoShipmentReturn(parsed.data.action) ? shipment?.carrier ?? "" : parsed.data.action === "自行寄回" ? parsed.data.returnCarrier.trim() : "";
   const returnTrackingNo =
-    parsed.data.action === "拦截" ? shipment?.trackingNo ?? "" : parsed.data.action === "自行寄回" ? parsed.data.trackingNo.trim() : "";
+    isAutoShipmentReturn(parsed.data.action) ? shipment?.trackingNo ?? "" : parsed.data.action === "自行寄回" ? parsed.data.trackingNo.trim() : "";
   const result = db
     .prepare(
       `INSERT INTO returns
