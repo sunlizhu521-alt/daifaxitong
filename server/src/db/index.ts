@@ -47,6 +47,7 @@ function migrateDb(database: Database.Database) {
   ensureColumn(database, "carriers", "note", "TEXT");
   ensureColumn(database, "returns", "orderId", "INTEGER");
   ensureColumn(database, "returns", "operationUser", "TEXT");
+  ensureColumn(database, "returns", "returnCarrier", "TEXT");
   ensureColumn(database, "repair_exchanges", "customerName", "TEXT NOT NULL DEFAULT ''");
   ensureColumn(database, "repair_exchanges", "customerPhone", "TEXT NOT NULL DEFAULT ''");
   ensureColumn(database, "repair_exchanges", "customerAddress", "TEXT NOT NULL DEFAULT ''");

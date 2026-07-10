@@ -38,6 +38,7 @@ const returnSchema = z.object({
   address: z.string().trim().min(1, "地址不能为空"),
   status: z.string().trim().min(1, "状态不能为空").default("已提交退货"),
   action: z.enum(["拦截", "自行寄回", "上门取件", "寄回", "未发货退款"]).transform((value) => (value === "寄回" ? "自行寄回" : value)),
+  returnCarrier: z.string().optional().default(""),
   trackingNo: z.string().optional().default(""),
   reason: z.enum(["七天无理由", "质量问题"]),
   note: z.string().optional().default("")
@@ -64,6 +65,18 @@ function latestTrackingNo(orderNo: string, orderId?: number | null) {
   return row?.trackingNo ?? "";
 }
 
+function latestShipment(orderId: number) {
+  return getDb()
+    .prepare(
+      `SELECT carrier, trackingNo
+       FROM shipments
+       WHERE orderId = ?
+       ORDER BY id DESC
+       LIMIT 1`
+    )
+    .get(orderId) as { carrier?: string; trackingNo?: string } | undefined;
+}
+
 returnsRouter.get("/", async (req, res) => {
   const keyword = String(req.query.keyword ?? "").trim();
   const status = String(req.query.status ?? "").trim();
@@ -77,9 +90,10 @@ returnsRouter.get("/", async (req, res) => {
   const params: unknown[] = [];
   if (keyword) {
     filters.push(
-      "(r.storeName LIKE ? OR r.operator LIKE ? OR r.orderNo LIKE ? OR r.model LIKE ? OR r.customerName LIKE ? OR r.customerPhone LIKE ? OR r.address LIKE ? OR r.trackingNo LIKE ? OR r.reason LIKE ? OR r.note LIKE ? OR o.status LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ? OR s.name LIKE ? OR s.shortName LIKE ?)"
+      "(r.storeName LIKE ? OR r.operator LIKE ? OR r.orderNo LIKE ? OR r.model LIKE ? OR r.customerName LIKE ? OR r.customerPhone LIKE ? OR r.address LIKE ? OR r.returnCarrier LIKE ? OR r.trackingNo LIKE ? OR r.reason LIKE ? OR r.note LIKE ? OR o.status LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ? OR s.name LIKE ? OR s.shortName LIKE ?)"
     );
     params.push(
+      `%${keyword}%`,
       `%${keyword}%`,
       `%${keyword}%`,
       `%${keyword}%`,
@@ -133,7 +147,7 @@ returnsRouter.get("/", async (req, res) => {
         GROUP_CONCAT(DISTINCT oi.productName) AS productName,
         SUM(oi.quantity) AS totalQuantity,
         sh.carrier AS shipmentCarrier,
-        sh.carrier AS returnCarrier,
+        r.returnCarrier AS returnCarrier,
         sh.trackingNo AS shipmentTrackingNo
        FROM returns r
        LEFT JOIN orders o ON o.id = r.orderId
@@ -179,9 +193,10 @@ returnsRouter.get("/orders", async (req, res) => {
   const params: unknown[] = [];
   if (keyword) {
     filters.push(
-      "(o.storeName LIKE ? OR o.orderNo LIKE ? OR o.customerName LIKE ? OR o.customerPhone LIKE ? OR o.address LIKE ? OR o.status LIKE ? OR latestReturn.action LIKE ? OR latestReturn.reason LIKE ? OR latestReturn.note LIKE ? OR latestReturn.trackingNo LIKE ? OR oi.productName LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ? OR s.name LIKE ? OR s.shortName LIKE ?)"
+      "(o.storeName LIKE ? OR o.orderNo LIKE ? OR o.customerName LIKE ? OR o.customerPhone LIKE ? OR o.address LIKE ? OR o.status LIKE ? OR latestReturn.action LIKE ? OR latestReturn.reason LIKE ? OR latestReturn.note LIKE ? OR latestReturn.returnCarrier LIKE ? OR latestReturn.trackingNo LIKE ? OR oi.productName LIKE ? OR oi.productSku LIKE ? OR p.series LIKE ? OR s.name LIKE ? OR s.shortName LIKE ?)"
     );
     params.push(
+      `%${keyword}%`,
       `%${keyword}%`,
       `%${keyword}%`,
       `%${keyword}%`,
@@ -235,7 +250,7 @@ returnsRouter.get("/orders", async (req, res) => {
         sh.carrier AS shipmentCarrier,
         sh.trackingNo AS shipmentTrackingNo,
         latestReturn.id AS returnId, latestReturn.operator, latestReturn.model, latestReturn.status AS returnStatus,
-        latestReturn.action, latestReturn.trackingNo AS returnTrackingNo, latestReturn.reason, latestReturn.note,
+        latestReturn.action, latestReturn.returnCarrier, latestReturn.trackingNo AS returnTrackingNo, latestReturn.reason, latestReturn.note,
         latestReturn.attachmentJson, latestReturn.createdAt AS returnCreatedAt
        FROM orders o
        LEFT JOIN shipments sh ON sh.id = (
@@ -299,12 +314,33 @@ returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
     res.status(400).json({ message: "退货订单不存在或订单编号不匹配" });
     return;
   }
-  const returnStatus = parsed.data.action === "未发货退款" ? "未发货退款" : parsed.data.status;
+  const shipment = latestShipment(order.id);
+  if (parsed.data.action === "未发货退款" && shipment?.trackingNo) {
+    files.forEach((f) => fs.unlink(f.path, () => undefined));
+    res.status(400).json({ message: "已有发货单号的订单不能选择未发货退款" });
+    return;
+  }
+  if (parsed.data.action === "自行寄回" && (!parsed.data.returnCarrier.trim() || !parsed.data.trackingNo.trim())) {
+    files.forEach((f) => fs.unlink(f.path, () => undefined));
+    res.status(400).json({ message: "自行寄回需要填写退回快递公司和退回单号" });
+    return;
+  }
+  if (parsed.data.action === "拦截" && !shipment?.trackingNo) {
+    files.forEach((f) => fs.unlink(f.path, () => undefined));
+    res.status(400).json({ message: "拦截需要已有发货快递单号；没有单号请选未发货退款" });
+    return;
+  }
+  const returnStatus =
+    parsed.data.action === "未发货退款" ? "未发货退款" : parsed.data.action === "自行寄回" ? "退回中" : parsed.data.status;
+  const returnCarrier =
+    parsed.data.action === "拦截" ? shipment?.carrier ?? "" : parsed.data.action === "自行寄回" ? parsed.data.returnCarrier.trim() : "";
+  const returnTrackingNo =
+    parsed.data.action === "拦截" ? shipment?.trackingNo ?? "" : parsed.data.action === "自行寄回" ? parsed.data.trackingNo.trim() : "";
   const result = db
     .prepare(
       `INSERT INTO returns
-       (orderId, storeName, operator, operationUser, orderNo, model, customerName, customerPhone, address, status, action, trackingNo, reason, note, attachmentJson, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       (orderId, storeName, operator, operationUser, orderNo, model, customerName, customerPhone, address, status, action, returnCarrier, trackingNo, reason, note, attachmentJson, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       order.id,
@@ -318,7 +354,8 @@ returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
       parsed.data.address,
       returnStatus,
       parsed.data.action,
-      parsed.data.trackingNo,
+      returnCarrier,
+      returnTrackingNo,
       parsed.data.reason,
       parsed.data.note,
       JSON.stringify(attachments),

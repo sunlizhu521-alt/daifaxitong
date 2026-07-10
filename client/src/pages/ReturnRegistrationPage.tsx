@@ -91,6 +91,23 @@ export function ReturnRegistrationPage() {
   function submitReturn(row: ReturnOrderRow, event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    const action = String(form.get("action") ?? "");
+    if (action === "未发货退款" && row.shipmentTrackingNo) {
+      window.alert("已有发货单号的订单不能选择未发货退款");
+      return;
+    }
+    if (action === "拦截" && !row.shipmentTrackingNo) {
+      window.alert("拦截需要已有发货快递单号；没有单号请选未发货退款");
+      return;
+    }
+    if (action === "自行寄回") {
+      const returnCarrier = String(form.get("returnCarrier") ?? "").trim();
+      const trackingNo = String(form.get("trackingNo") ?? "").trim();
+      if (!returnCarrier || !trackingNo) {
+        window.alert("自行寄回需要填写退回快递公司和退回单号");
+        return;
+      }
+    }
     form.set("orderId", String(row.orderId));
     form.set("storeName", row.storeName || "");
     form.set("operator", row.operator || "");
@@ -99,8 +116,15 @@ export function ReturnRegistrationPage() {
     form.set("customerName", row.customerName);
     form.set("customerPhone", row.customerPhone || "");
     form.set("address", row.address);
-    const action = String(form.get("action") ?? "");
-    form.set("status", action === "未发货退款" ? "未发货退款" : "已提交退货");
+    if (action === "拦截") {
+      form.set("returnCarrier", row.shipmentCarrier || "");
+      form.set("trackingNo", row.shipmentTrackingNo || "");
+    }
+    if (action === "上门取件" || action === "未发货退款") {
+      form.set("returnCarrier", "");
+      form.set("trackingNo", "");
+    }
+    form.set("status", action === "未发货退款" ? "未发货退款" : action === "自行寄回" ? "退回中" : "已提交退货");
     saveReturn.mutate(form);
   }
 
@@ -121,12 +145,28 @@ export function ReturnRegistrationPage() {
     return row.returnStatus === "已提交退货";
   }
 
+  function returnCarrierValue(row: ReturnOrderRow, action: string) {
+    if (action === "拦截") return row.shipmentCarrier || "";
+    if (action === "自行寄回") return row.returnCarrier || "";
+    return "";
+  }
+
+  function returnTrackingValue(row: ReturnOrderRow, action: string) {
+    if (action === "拦截") return row.shipmentTrackingNo || "";
+    if (action === "自行寄回") return row.returnTrackingNo || "";
+    return "";
+  }
+
+  function canEditReturnLogistics(action: string) {
+    return action === "自行寄回";
+  }
+
   return (
     <>
-      <PageHeader title="退货登记" description="登记拦截、自行寄回、上门取件处理信息，提交后进入退货操作页面处理。" />
+      <PageHeader title="退货登记" description="登记拦截、自行寄回、上门取件、未发货退款；自行寄回直接进入退货收货，未发货退款直接归档。" />
       <Panel title="退货登记">
         <div className="helper-text">
-          操作说明：拦截是指顾客还没有签收的情况；自行寄回是顾客自己联系快递寄回；上门取件是物流部安排取件，其中包含原单号召回和重新下单。
+          操作说明：拦截自动带出原发货快递公司和发货单号；自行寄回需要填写退回快递公司和退回单号；上门取件不填写退回单号；未发货退款只适用于没有发货单号的订单。
         </div>
         <div className="toolbar filter-toolbar">
           <select value={storeName} onChange={(event) => setStoreName(event.target.value)}>
@@ -184,6 +224,8 @@ export function ReturnRegistrationPage() {
               <th>操作 *</th>
               <th>退货理由 *</th>
               <th>备注</th>
+              <th>退回快递公司</th>
+              <th>退回单号</th>
               <th>附件</th>
               <th>查看附件</th>
               <th>退货登记</th>
@@ -229,6 +271,30 @@ export function ReturnRegistrationPage() {
                 </td>
                 <td>
                   <textarea form={formId} name="note" placeholder="填写备注" defaultValue={row.note || ""} />
+                </td>
+                <td>
+                  <input
+                    key={`${row.orderId}-${actionValue}-returnCarrier`}
+                    form={formId}
+                    name="returnCarrier"
+                    placeholder={actionValue === "自行寄回" ? "填写退回快递公司 *" : "-"}
+                    defaultValue={returnCarrierValue(row, actionValue)}
+                    readOnly={actionValue === "拦截"}
+                    disabled={actionValue === "上门取件" || actionValue === "未发货退款" || !actionValue}
+                    required={canEditReturnLogistics(actionValue)}
+                  />
+                </td>
+                <td>
+                  <input
+                    key={`${row.orderId}-${actionValue}-returnTrackingNo`}
+                    form={formId}
+                    name="trackingNo"
+                    placeholder={actionValue === "自行寄回" ? "填写退回单号 *" : "-"}
+                    defaultValue={returnTrackingValue(row, actionValue)}
+                    readOnly={actionValue === "拦截"}
+                    disabled={actionValue === "上门取件" || actionValue === "未发货退款" || !actionValue}
+                    required={canEditReturnLogistics(actionValue)}
+                  />
                 </td>
                 <td>
                   <input form={formId} name="attachments" type="file" accept="image/*" multiple />

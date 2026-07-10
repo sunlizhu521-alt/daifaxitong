@@ -160,6 +160,7 @@ export type ReturnOrderRow = {
   action?: string | null;
   shipmentCarrier?: string | null;
   shipmentTrackingNo?: string | null;
+  returnCarrier?: string | null;
   logisticsStatus?: string | null;
   returnTrackingNo?: string | null;
   reason?: string | null;

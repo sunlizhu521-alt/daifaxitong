@@ -160,7 +160,8 @@ test("auth, supplier, product, order and shipment flow", async () => {
     .field("reason", "七天无理由")
     .field("note", "测试退货")
     .expect(201);
-  assert.equal(returnRecord.body.trackingNo, "");
+  assert.equal(returnRecord.body.returnCarrier, "顺丰速运");
+  assert.equal(returnRecord.body.trackingNo, "SF123");
   const returnsByStatus = await agent.get("/api/returns?keyword=filled").expect(200);
   assert.equal(returnsByStatus.body[0].orderNo, "DF001");
   const pendingReturns = await agent.get(`/api/returns?status=${encodeURIComponent("已提交退货")}`).expect(200);
@@ -185,6 +186,8 @@ test("auth, supplier, product, order and shipment flow", async () => {
     .field("address", "上海市")
     .field("status", "已提交退货")
     .field("action", "自行寄回")
+    .field("returnCarrier", "圆通快递")
+    .field("trackingNo", "YT123")
     .field("reason", "质量问题")
     .expect(201);
   await agent.delete(`/api/orders/${order.body.id}/shipment`).expect(200);

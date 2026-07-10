@@ -234,7 +234,7 @@ ordersRouter.get("/", async (req, res) => {
         latest.carrierId AS carrierId, latest.carrier AS carrier, latest.trackingNo AS trackingNo, latest.shippedAt AS shippedAt,
         latest.note AS shipmentNote,
         latestReturn.status AS returnStatus, latestReturn.action AS returnAction, latestReturn.reason AS returnReason,
-        '' AS returnCarrier, latestReturn.trackingNo AS returnTrackingNo,
+        latestReturn.returnCarrier AS returnCarrier, latestReturn.trackingNo AS returnTrackingNo,
         COALESCE(shipSupplier.shortName, shipSupplier.name, orderSupplier.shortName, orderSupplier.name) AS supplierName,
         COALESCE(orderSupplier.shortName, orderSupplier.name) AS registrationSupplierName
        FROM orders o
@@ -385,7 +385,7 @@ ordersRouter.get("/summary-export", async (req, res) => {
         latest.carrier AS carrier, latest.trackingNo AS trackingNo, latest.shippedAt AS shippedAt,
         latest.note AS shipmentNote,
         latestReturn.status AS returnStatus, latestReturn.trackingNo AS returnTrackingNo,
-        '' AS returnCarrier,
+        latestReturn.returnCarrier AS returnCarrier,
         COALESCE(shipSupplier.shortName, shipSupplier.name, orderSupplier.shortName, orderSupplier.name) AS supplierName
        FROM orders o
        LEFT JOIN order_items oi ON oi.orderId = o.id

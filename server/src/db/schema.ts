@@ -154,6 +154,7 @@ CREATE TABLE IF NOT EXISTS returns (
   address TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT '待处理',
   action TEXT NOT NULL,
+  returnCarrier TEXT,
   trackingNo TEXT,
   reason TEXT NOT NULL,
   note TEXT,
