@@ -327,11 +327,11 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
         </div>
       </Panel>
       <Panel title={panelTitle}>
-        <table className="nowrap-table">
+        <table className={`nowrap-table summary-table${canDelete ? " summary-table-with-selection" : ""}`}>
           <thead>
             <tr>
               {canDelete ? (
-                <th className="selection-cell">
+                <th className="selection-cell summary-selection-column">
                   <input
                     type="checkbox"
                     aria-label={`选择当前列表全部${panelTitle}订单`}
@@ -340,11 +340,11 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
                   />
                 </th>
               ) : null}
-              <th>创建时间</th>
-              <th>登记人</th>
-              <th>店铺</th>
-              <th>订单编号</th>
-              <th>客户姓名</th>
+              <th className="summary-sticky-column summary-created-column">创建时间</th>
+              <th className="summary-sticky-column summary-registrar-column">登记人</th>
+              <th className="summary-sticky-column summary-store-column">店铺</th>
+              <th className="summary-sticky-column summary-order-column">订单编号</th>
+              <th className="summary-sticky-column summary-customer-column">客户姓名</th>
               <th>电话</th>
               <th>地址</th>
               <th>商品</th>
@@ -373,7 +373,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
             {orders.map((order) => (
               <tr key={order.id}>
                 {canDelete ? (
-                  <td className="selection-cell">
+                  <td className="selection-cell summary-selection-column">
                     <input
                       type="checkbox"
                       aria-label={`选择订单 ${order.orderNo}`}
@@ -382,11 +382,11 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
                     />
                   </td>
                 ) : null}
-                <td>{formatCreatedAt(order.createdAt)}</td>
-                <td>{order.registrarName || "-"}</td>
-                <td>{order.storeName || "-"}</td>
-                <td>{order.orderNo}</td>
-                <td>{order.customerName}</td>
+                <td className="summary-sticky-column summary-created-column">{formatCreatedAt(order.createdAt)}</td>
+                <td className="summary-sticky-column summary-registrar-column">{order.registrarName || "-"}</td>
+                <td className="summary-sticky-column summary-store-column">{order.storeName || "-"}</td>
+                <td className="summary-sticky-column summary-order-column">{order.orderNo}</td>
+                <td className="summary-sticky-column summary-customer-column">{order.customerName}</td>
                 <td>{order.customerPhone ?? "-"}</td>
                 <td>{order.address}</td>
                 <td>{order.productName || "-"}</td>
