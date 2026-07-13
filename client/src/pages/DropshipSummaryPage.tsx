@@ -282,8 +282,9 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
 
   return (
     <>
-      <PageHeader title={title} description={description} />
-      <Panel title="筛选器">
+      <div className="summary-page-content">
+        <PageHeader title={title} description={description} />
+        <Panel title="筛选器">
         <div className="toolbar filter-toolbar">
           <input placeholder="搜索订单号/采购订单号/电话/地址/商品/SKU" value={keyword} onChange={(event) => setKeyword(event.target.value)} />
           <input placeholder="客户姓名" value={customerName} onChange={(event) => setCustomerName(event.target.value)} />
@@ -325,8 +326,8 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
             </button>
           ) : null}
         </div>
-      </Panel>
-      <Panel title={panelTitle}>
+        </Panel>
+        <Panel title={panelTitle}>
         <table className={`nowrap-table summary-table${canDelete ? " summary-table-with-selection" : ""}`}>
           <thead>
             <tr>
@@ -449,7 +450,8 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
             </button>
           </div>
         </div>
-      </Panel>
+        </Panel>
+      </div>
       {accessoryEditing ? (
         <div className="modal-backdrop">
           <form className="modal summary-edit-modal" onSubmit={submitAccessoryChange}>

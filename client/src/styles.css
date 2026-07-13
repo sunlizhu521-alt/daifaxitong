@@ -162,6 +162,10 @@ td input[type="file"] { min-width: 190px; margin-top: 6px; }
 .pagination-actions { display: flex; gap: 8px; }
 .pagination-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
 
+.summary-page-content { width: max-content; min-width: 100%; }
+.summary-page-content > .page-header,
+.summary-page-content > .panel { width: 100%; max-width: none; }
+
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
 th, td { border: 1px solid #d8dee8; padding: 10px; text-align: center; vertical-align: middle; }
 th { background: #f1f4f8; color: #344054; font-weight: 700; }
