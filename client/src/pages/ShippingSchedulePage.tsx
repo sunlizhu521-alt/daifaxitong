@@ -14,6 +14,10 @@ const statusText: Record<string, string> = {
   customer_cancelled: "顾客不要了"
 };
 
+function shippingStatus(order: OrderListRow) {
+  return order.returnStatus === "已提交退货" ? order.returnStatus : order.status;
+}
+
 function formatCreatedAt(value?: string) {
   if (!value) return "-";
   return value.slice(0, 10);
@@ -53,7 +57,8 @@ export function ShippingSchedulePage() {
   const [supplierNotes, setSupplierNotes] = useState<Record<number, string>>({});
   const { data: orderResponse } = useQuery({
     queryKey: ["shipping-schedule"],
-    queryFn: () => api<ListResponse<OrderListRow>>("/orders?orderType=dropship&status=filled")
+    queryFn: () => api<ListResponse<OrderListRow>>("/orders?orderType=dropship&status=filled&shippingSchedule=yes"),
+    refetchInterval: 10_000
   });
   const orders = rowsFromListResponse(orderResponse).filter((order) => order.orderType !== "accessory" && order.status === "filled");
   const supplierOptions = useMemo(() => uniqueOptions(orders.map((order) => order.supplierName)), [orders]);
@@ -84,7 +89,7 @@ export function ShippingSchedulePage() {
         order.supplierNote
       ].join(" ").toLowerCase();
       return (
-        (!status || order.status === status) &&
+        (!status || shippingStatus(order) === status) &&
         (!supplierFilter || order.supplierName === supplierFilter) &&
         (!storeFilter || storeText === storeFilter) &&
         (!seriesFilter || order.productSeries === seriesFilter) &&
@@ -200,9 +205,9 @@ export function ShippingSchedulePage() {
       <Panel title="发货信息">
         <div className="toolbar">
           <select value={status} onChange={(event) => setStatus(event.target.value)}>
-            <option value="">待发货+已填单号</option>
-            <option value="pending">待发货</option>
+            <option value="">全部待处理</option>
             <option value="filled">已填单号</option>
+            <option value="已提交退货">已提交退货</option>
           </select>
           <input placeholder="搜索订单/客户/地址/备注" value={keyword} onChange={(event) => setKeyword(event.target.value)} />
           <select value={supplierFilter} onChange={(event) => setSupplierFilter(event.target.value)}>
@@ -281,7 +286,7 @@ export function ShippingSchedulePage() {
                 <td className="shipping-product-name">{order.productName || "-"}</td>
                 <td>{order.supplierModel || "-"}</td>
                 <td>{order.totalQuantity ?? 0}</td>
-                <td className="shipping-nowrap"><span className={`status ${order.status}`}>{statusText[order.status] || order.status}</span></td>
+                <td className="shipping-nowrap"><span className={`status ${shippingStatus(order) === "已提交退货" ? "exception" : order.status}`}>{statusText[shippingStatus(order)] || shippingStatus(order)}</span></td>
                 <td className="shipping-nowrap">{order.carrier || "-"}</td>
                 <td>{order.trackingNo || "-"}</td>
                 <td className="shipping-nowrap">{buildShippingInfo(order)}</td>

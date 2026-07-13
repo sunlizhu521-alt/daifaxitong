@@ -162,6 +162,11 @@ test("auth, supplier, product, order and shipment flow", async () => {
     .expect(201);
   assert.equal(returnRecord.body.returnCarrier, "顺丰速运");
   assert.equal(returnRecord.body.trackingNo, "SF123");
+  const shippingScheduleAfterRegistration = await agent
+    .get("/api/orders?orderType=dropship&status=filled&shippingSchedule=yes")
+    .expect(200);
+  assert.equal(shippingScheduleAfterRegistration.body.total, 1);
+  assert.equal(shippingScheduleAfterRegistration.body.rows[0].returnStatus, "已提交退货");
   const returnsByStatus = await agent.get("/api/returns?keyword=filled").expect(200);
   assert.equal(returnsByStatus.body[0].orderNo, "DF001");
   const pendingReturns = await agent.get(`/api/returns?status=${encodeURIComponent("已提交退货")}`).expect(200);
@@ -169,6 +174,10 @@ test("auth, supplier, product, order and shipment flow", async () => {
   const arrangedReturn = await agent.patch(`/api/returns/${returnRecord.body.id}/status`).send({ status: "退回中" }).expect(200);
   assert.equal(arrangedReturn.body.status, "退回中");
   assert.equal(arrangedReturn.body.trackingNo, "SF123");
+  const shippingScheduleAfterReturnOperation = await agent
+    .get("/api/orders?orderType=dropship&status=filled&shippingSchedule=yes")
+    .expect(200);
+  assert.equal(shippingScheduleAfterReturnOperation.body.total, 0);
   await agent.delete(`/api/returns/${returnRecord.body.id}`).expect(409);
   const receivedReturn = await agent.patch(`/api/returns/${returnRecord.body.id}/status`).send({ status: "退货成功" }).expect(200);
   assert.equal(receivedReturn.body.status, "退货成功");

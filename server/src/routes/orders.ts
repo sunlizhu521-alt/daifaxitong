@@ -154,7 +154,7 @@ function saveOrder(data: z.infer<typeof orderSchema>, id?: number) {
 }
 
 ordersRouter.get("/", async (req, res) => {
-  const { keyword = "", status = "", supplierId = "", storeName = "", series = "", sku = "", startDate = "", endDate = "", hasTracking = "", orderType = "", includeAccessoryPending = "", page = "1", pageSize = "50" } = req.query;
+  const { keyword = "", status = "", supplierId = "", storeName = "", series = "", sku = "", startDate = "", endDate = "", hasTracking = "", orderType = "", includeAccessoryPending = "", shippingSchedule = "", page = "1", pageSize = "50" } = req.query;
   const pageNum = Math.max(1, Number(page) || 1);
   const pageSizeNum = Math.min(200, Math.max(1, Number(pageSize) || 50));
   const offset = (pageNum - 1) * pageSizeNum;
@@ -174,6 +174,9 @@ ordersRouter.get("/", async (req, res) => {
   if (orderType) {
     filters.push("o.orderType = ?");
     params.push(orderType);
+  }
+  if (shippingSchedule === "yes") {
+    filters.push("(latestReturn.id IS NULL OR latestReturn.status = '已提交退货')");
   }
   if (supplierId) {
     filters.push("(o.supplierId = ? OR EXISTS (SELECT 1 FROM shipments sh WHERE sh.orderId = o.id AND sh.supplierId = ?))");
@@ -470,10 +473,14 @@ ordersRouter.get("/summary-export", async (req, res) => {
 ordersRouter.get("/shipping-export", async (req, res) => {
   const XLSX = (await import("xlsx")).default;
   const status = String(req.query.status ?? "").trim();
-  const filters: string[] = ["o.orderType = 'dropship'"];
+  const filters: string[] = ["o.orderType = 'dropship'", "(latestReturn.id IS NULL OR latestReturn.status = '已提交退货')"];
   const params: unknown[] = [];
-  if (status) {
+  if (status === "已提交退货") {
+    filters.push("latestReturn.status = ?");
+    params.push(status);
+  } else if (status) {
     filters.push("o.status = ?");
+    filters.push("latestReturn.id IS NULL");
     params.push(status);
   }
   const rows = getDb()
@@ -483,7 +490,7 @@ ordersRouter.get("/shipping-export", async (req, res) => {
         o.address AS 地址, GROUP_CONCAT(DISTINCT p.series) AS 系列, GROUP_CONCAT(DISTINCT oi.productSku) AS SKU,
         GROUP_CONCAT(DISTINCT oi.productName) AS 名称, GROUP_CONCAT(DISTINCT p.supplierModel) AS 供应商型号,
         SUM(oi.quantity) AS 数量,
-        CASE o.status
+        COALESCE(latestReturn.status, CASE o.status
           WHEN 'pending' THEN '待发货'
           WHEN 'filled' THEN '已填单号'
           WHEN 'purchased' THEN '已下采购单'
@@ -492,7 +499,7 @@ ordersRouter.get("/shipping-export", async (req, res) => {
           WHEN 'cancelled' THEN '已取消'
           WHEN 'customer_cancelled' THEN '顾客不要了'
           ELSE o.status
-        END AS 状态,
+        END) AS 状态,
         latest.carrier AS 快递公司, latest.trackingNo AS 发货单号, latest.shippedAt AS 发货时间,
         o.note AS 备注, o.supplierNote AS 供应商备注
        FROM orders o
@@ -500,6 +507,9 @@ ordersRouter.get("/shipping-export", async (req, res) => {
        LEFT JOIN products p ON p.id = oi.productId
        LEFT JOIN shipments latest ON latest.id = (
          SELECT sh.id FROM shipments sh WHERE sh.orderId = o.id ORDER BY sh.id DESC LIMIT 1
+       )
+       LEFT JOIN returns latestReturn ON latestReturn.id = (
+         SELECT lr.id FROM returns lr WHERE lr.orderId = o.id ORDER BY lr.id DESC LIMIT 1
        )
        LEFT JOIN suppliers shipSupplier ON shipSupplier.id = latest.supplierId
        LEFT JOIN suppliers orderSupplier ON orderSupplier.id = o.supplierId
