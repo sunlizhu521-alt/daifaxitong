@@ -100,6 +100,9 @@ test("auth, supplier, product, order and shipment flow", async () => {
   assert.equal(purchaseRows.body.rows[0].purchaseOrderNo, "CG20260701001");
   assert.equal(purchaseRows.body.rows[0].purchaseOrderUser, "采购A");
   assert.equal(purchaseRows.body.rows[0].status, "purchased");
+  const twentyPerPage = await agent.get("/api/orders?page=1&pageSize=20").expect(200);
+  assert.equal(twentyPerPage.body.page, 1);
+  assert.equal(twentyPerPage.body.pageSize, 20);
   await agent.patch(`/api/orders/${order.body.id}/purchase-order`).send({ purchaseOrderNo: "CG20260701002", purchaseOrderUser: "采购B" }).expect(200);
   const modifiedPurchaseRows = await agent.get("/api/orders?keyword=CG20260701002").expect(200);
   assert.equal(modifiedPurchaseRows.body.rows[0].purchaseOrderNo, "CG20260701002");

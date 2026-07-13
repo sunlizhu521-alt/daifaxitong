@@ -158,6 +158,9 @@ td input[type="file"] { min-width: 190px; margin-top: 6px; }
 .table-header-action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; }
 .table-header-action button { border-radius: 7px; border: 1px solid transparent; min-height: 30px; padding: 0 10px; background: var(--accent); color: #fff; font-size: 13px; }
 .table-header-action button:disabled { opacity: 0.62; cursor: not-allowed; }
+.pagination-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; color: var(--text-muted); font-size: 13px; }
+.pagination-actions { display: flex; gap: 8px; }
+.pagination-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
 th, td { border: 1px solid #d8dee8; padding: 10px; text-align: center; vertical-align: middle; }
@@ -289,6 +292,8 @@ tr:hover td { background: #fafcff; }
   .toolbar input, .toolbar select, .filter-toolbar input, .filter-toolbar select { max-width: none; }
   .filter-date-field { display: grid; gap: 4px; align-items: stretch; }
   .filter-date-field input { width: 100%; }
+  .pagination-bar { align-items: stretch; flex-direction: column; }
+  .pagination-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   .two-column, .library-layout, .dashboard-grid, .metric-grid { grid-template-columns: 1fr; }
   .receiver-action, .receiver-result-grid, .order-meta-grid, .order-item-grid, .order-detail-grid, .order-note-row, .repair-form-row-3, .repair-form-row-4 { grid-template-columns: 1fr; }

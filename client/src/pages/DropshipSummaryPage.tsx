@@ -47,6 +47,26 @@ type SummaryPageProps = {
   queryKey: string;
 };
 
+type SummaryFilters = {
+  keyword: string;
+  status: string;
+  supplierId: string;
+  storeName: string;
+  startDate: string;
+  endDate: string;
+};
+
+const SUMMARY_PAGE_SIZE = 20;
+
+const emptySummaryFilters: SummaryFilters = {
+  keyword: "",
+  status: "",
+  supplierId: "",
+  storeName: "",
+  startDate: "",
+  endDate: ""
+};
+
 function SummaryPage({ title, description, panelTitle, editTitle, orderType, queryKey }: SummaryPageProps) {
   const qc = useQueryClient();
   const [keyword, setKeyword] = useState("");
@@ -55,6 +75,8 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
   const [storeName, setStoreName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [appliedFilters, setAppliedFilters] = useState<SummaryFilters>(emptySummaryFilters);
+  const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<OrderDetail | null>(null);
   const [accessoryEditing, setAccessoryEditing] = useState<OrderListRow | null>(null);
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(() => new Set());
@@ -62,13 +84,16 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
   const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers"], queryFn: () => api<Supplier[]>("/suppliers") });
   const { data: stores = [] } = useQuery({ queryKey: ["stores"], queryFn: () => api<Store[]>("/stores") });
   const { data: orderResponse } = useQuery({
-    queryKey: [queryKey, keyword, status, supplierId, storeName, startDate, endDate],
+    queryKey: [queryKey, appliedFilters, page],
     queryFn: () =>
       api<ListResponse<OrderListRow>>(
-        `/orders?orderType=${encodeURIComponent(orderType)}&keyword=${encodeURIComponent(keyword)}&status=${encodeURIComponent(status)}&supplierId=${encodeURIComponent(supplierId)}&storeName=${encodeURIComponent(storeName)}&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`
+        `/orders?orderType=${encodeURIComponent(orderType)}&keyword=${encodeURIComponent(appliedFilters.keyword)}&status=${encodeURIComponent(appliedFilters.status)}&supplierId=${encodeURIComponent(appliedFilters.supplierId)}&storeName=${encodeURIComponent(appliedFilters.storeName)}&startDate=${encodeURIComponent(appliedFilters.startDate)}&endDate=${encodeURIComponent(appliedFilters.endDate)}&page=${page}&pageSize=${SUMMARY_PAGE_SIZE}`
       )
   });
   const orders = rowsFromListResponse(orderResponse);
+  const total = Array.isArray(orderResponse) ? orders.length : Number(orderResponse?.total ?? orders.length);
+  const currentPage = Array.isArray(orderResponse) ? page : Number(orderResponse?.page ?? page);
+  const totalPages = Math.max(1, Math.ceil(total / SUMMARY_PAGE_SIZE));
   const selectedVisibleOrders = useMemo(() => orders.filter((order) => selectedOrderIds.has(order.id)), [orders, selectedOrderIds]);
   const allVisibleSelected = orders.length > 0 && orders.every((order) => selectedOrderIds.has(order.id));
   const canEdit = me?.user?.role === "管理员";
@@ -91,6 +116,10 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
       return next.size === current.size ? current : next;
     });
   }, [orders]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
   const updateOrder = useMutation({
     mutationFn: ({ id, body }: { id: number; body: unknown }) => api(`/orders/${id}`, { method: "PUT", body: JSON.stringify(body), notify: true }),
     onSuccess: () => {
@@ -141,14 +170,15 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
   function exportFilteredOrders() {
     const params = new URLSearchParams({
       orderType,
-      keyword,
-      status,
-      supplierId,
-      storeName,
-      startDate,
-      endDate
+      ...appliedFilters
     });
     downloadFile(`/orders/summary-export?${params.toString()}`);
+  }
+
+  function applyFilters() {
+    setAppliedFilters({ keyword, status, supplierId, storeName, startDate, endDate });
+    setPage(1);
+    setSelectedOrderIds(new Set());
   }
 
   async function removeSelectedOrders() {
@@ -271,6 +301,9 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
           </select>
           <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
           <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+          <button type="button" className="primary-button" onClick={applyFilters}>
+            筛选
+          </button>
           <button type="button" className="primary-button" onClick={exportFilteredOrders}>
             导出文件
           </button>
@@ -393,6 +426,17 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
         {updateOrder.error ? <div className="error">{updateOrder.error.message}</div> : null}
         {changeAccessory.error ? <div className="error">{changeAccessory.error.message}</div> : null}
         {cancelAccessoryShipment.error ? <div className="error">{cancelAccessoryShipment.error.message}</div> : null}
+        <div className="pagination-bar">
+          <span>共 {total} 条，每页 {SUMMARY_PAGE_SIZE} 条，第 {currentPage} / {totalPages} 页</span>
+          <div className="pagination-actions">
+            <button type="button" className="ghost-button" disabled={currentPage <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>
+              上一页
+            </button>
+            <button type="button" className="ghost-button" disabled={currentPage >= totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}>
+              下一页
+            </button>
+          </div>
+        </div>
       </Panel>
       {accessoryEditing ? (
         <div className="modal-backdrop">
