@@ -49,6 +49,9 @@ type SummaryPageProps = {
 
 type SummaryFilters = {
   keyword: string;
+  customerName: string;
+  trackingNo: string;
+  supplierNote: string;
   status: string;
   supplierId: string;
   storeName: string;
@@ -60,6 +63,9 @@ const SUMMARY_PAGE_SIZE = 20;
 
 const emptySummaryFilters: SummaryFilters = {
   keyword: "",
+  customerName: "",
+  trackingNo: "",
+  supplierNote: "",
   status: "",
   supplierId: "",
   storeName: "",
@@ -70,6 +76,9 @@ const emptySummaryFilters: SummaryFilters = {
 function SummaryPage({ title, description, panelTitle, editTitle, orderType, queryKey }: SummaryPageProps) {
   const qc = useQueryClient();
   const [keyword, setKeyword] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [trackingNo, setTrackingNo] = useState("");
+  const [supplierNote, setSupplierNote] = useState("");
   const [status, setStatus] = useState("");
   const [supplierId, setSupplierId] = useState("");
   const [storeName, setStoreName] = useState("");
@@ -87,7 +96,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
     queryKey: [queryKey, appliedFilters, page],
     queryFn: () =>
       api<ListResponse<OrderListRow>>(
-        `/orders?orderType=${encodeURIComponent(orderType)}&keyword=${encodeURIComponent(appliedFilters.keyword)}&status=${encodeURIComponent(appliedFilters.status)}&supplierId=${encodeURIComponent(appliedFilters.supplierId)}&storeName=${encodeURIComponent(appliedFilters.storeName)}&startDate=${encodeURIComponent(appliedFilters.startDate)}&endDate=${encodeURIComponent(appliedFilters.endDate)}&page=${page}&pageSize=${SUMMARY_PAGE_SIZE}`
+        `/orders?orderType=${encodeURIComponent(orderType)}&keyword=${encodeURIComponent(appliedFilters.keyword)}&customerName=${encodeURIComponent(appliedFilters.customerName)}&trackingNo=${encodeURIComponent(appliedFilters.trackingNo)}&supplierNote=${encodeURIComponent(appliedFilters.supplierNote)}&status=${encodeURIComponent(appliedFilters.status)}&supplierId=${encodeURIComponent(appliedFilters.supplierId)}&storeName=${encodeURIComponent(appliedFilters.storeName)}&startDate=${encodeURIComponent(appliedFilters.startDate)}&endDate=${encodeURIComponent(appliedFilters.endDate)}&page=${page}&pageSize=${SUMMARY_PAGE_SIZE}`
       )
   });
   const orders = rowsFromListResponse(orderResponse);
@@ -176,7 +185,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
   }
 
   function applyFilters() {
-    setAppliedFilters({ keyword, status, supplierId, storeName, startDate, endDate });
+    setAppliedFilters({ keyword, customerName, trackingNo, supplierNote, status, supplierId, storeName, startDate, endDate });
     setPage(1);
     setSelectedOrderIds(new Set());
   }
@@ -276,7 +285,10 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
       <PageHeader title={title} description={description} />
       <Panel title="筛选器">
         <div className="toolbar filter-toolbar">
-          <input placeholder="搜索订单号/采购订单号/姓名/电话/地址/商品/SKU" value={keyword} onChange={(event) => setKeyword(event.target.value)} />
+          <input placeholder="搜索订单号/采购订单号/电话/地址/商品/SKU" value={keyword} onChange={(event) => setKeyword(event.target.value)} />
+          <input placeholder="客户姓名" value={customerName} onChange={(event) => setCustomerName(event.target.value)} />
+          <input placeholder="发货单号" value={trackingNo} onChange={(event) => setTrackingNo(event.target.value)} />
+          <input placeholder="供应商备注" value={supplierNote} onChange={(event) => setSupplierNote(event.target.value)} />
           <select value={supplierId} onChange={(event) => setSupplierId(event.target.value)}>
             <option value="">全部供应商</option>
             {suppliers.map((supplier) => (

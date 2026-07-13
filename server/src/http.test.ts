@@ -135,6 +135,19 @@ test("auth, supplier, product, order and shipment flow", async () => {
   assert.equal(detail.body.shipments[0].carrier, "顺丰速运");
   assert.equal(detail.body.shipments[0].carrierId, carrier.body.id);
   assert.equal(detail.body.shipments[0].trackingNo, "SF123");
+  await agent.patch(`/api/orders/${order.body.id}/supplier-note`).send({ supplierNote: "供应商测试备注" }).expect(200);
+  const dedicatedFilters = await agent
+    .get(
+      `/api/orders?customerName=${encodeURIComponent("张三")}&trackingNo=${encodeURIComponent("SF123")}&supplierNote=${encodeURIComponent("测试备注")}`
+    )
+    .expect(200);
+  assert.equal(dedicatedFilters.body.total, 1);
+  assert.equal(dedicatedFilters.body.rows[0].orderNo, "DF001");
+  await agent
+    .get(
+      `/api/orders/summary-export?orderType=dropship&customerName=${encodeURIComponent("张三")}&trackingNo=${encodeURIComponent("SF123")}&supplierNote=${encodeURIComponent("测试备注")}`
+    )
+    .expect(200);
   const operationRecords = await agent.get("/api/operation-records?keyword=DF001").expect(200);
   assert.ok(operationRecords.body.total >= 2);
   assert.ok(operationRecords.body.rows.some((row: { action: string }) => row.action === "登记代发"));
