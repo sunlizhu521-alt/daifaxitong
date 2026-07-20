@@ -47,7 +47,7 @@ export const config = {
 export function validateConfig() {
   const errors: string[] = [];
   if (!config.adminUsername) errors.push("ADMIN_USERNAME 未设置");
-  if (config.adminPassword.length < 12) errors.push("ADMIN_PASSWORD 必须至少 12 个字符");
+  if (!config.adminPassword) errors.push("ADMIN_PASSWORD 未设置");
   if (config.sessionSecret.length < 32) errors.push("SESSION_SECRET 必须至少 32 个字符");
   if (!Number.isFinite(config.sessionMaxAgeMs) || config.sessionMaxAgeMs <= 0) {
     errors.push("SESSION_MAX_AGE_HOURS 必须是正数");
