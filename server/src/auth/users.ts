@@ -48,12 +48,7 @@ export function ensureAdminUser(db: Database.Database = getDb()) {
   const existing = db.prepare("SELECT * FROM users WHERE username = ?").get(config.adminUsername) as DbUser | undefined;
   if (existing) {
     if (existing.role !== ROLE_ADMIN) {
-      db.prepare("UPDATE users SET role = ?, pageAccess = ?, updatedAt = ? WHERE id = ?").run(
-        ROLE_ADMIN,
-        JSON.stringify(allPageKeys),
-        nowIso(),
-        existing.id
-      );
+      throw new Error("ADMIN_USERNAME 与现有普通用户重名，已拒绝自动提升权限");
     }
     return;
   }

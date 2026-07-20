@@ -19,9 +19,10 @@ process.env.RETURN_DINGTALK_WEBHOOK = "";
 process.env.RETURN_DINGTALK_SECRET = "";
 process.env.FEISHU_WEBHOOK = "";
 process.env.FEISHU_SECRET = "";
+process.env.ALLOW_DATABASE_CREATE = "true";
 
 const { createApp } = await import("./http.js");
-const { closeDb } = await import("./db/index.js");
+const { closeDb, getDb } = await import("./db/index.js");
 const { createUser } = await import("./auth/users.js");
 
 function writeWorkbook(filename: string, rows: Record<string, unknown>[]) {
@@ -35,6 +36,10 @@ function writeWorkbook(filename: string, rows: Record<string, unknown>[]) {
 test("auth, supplier, product, order and shipment flow", async () => {
   const app = createApp();
   const agent = request.agent(app);
+
+  const health = await request(app).get("/api/health").expect(200);
+  assert.equal(health.headers["cache-control"], "no-store");
+  assert.equal(health.headers["x-powered-by"], undefined);
 
   await agent.post("/api/auth/login").send({ username: "admin", password: "bad" }).expect(401);
   await agent.post("/api/auth/login").send({ username: "admin", password: "secret" }).expect(200);
@@ -152,6 +157,11 @@ test("auth, supplier, product, order and shipment flow", async () => {
   assert.ok(operationRecords.body.total >= 2);
   assert.ok(operationRecords.body.rows.some((row: { action: string }) => row.action === "登记代发"));
   assert.ok(operationRecords.body.rows.some((row: { action: string }) => row.action === "填写发货单号"));
+  const writeAudit = getDb()
+    .prepare("SELECT result, statusCode FROM data_write_audit ORDER BY id")
+    .all() as Array<{ result: string; statusCode: number }>;
+  assert.ok(writeAudit.some((row) => row.result === "success" && row.statusCode < 400));
+  assert.ok(writeAudit.some((row) => row.result === "failed" && row.statusCode >= 400));
   await agent.delete(`/api/operation-records/${operationRecords.body.rows[0].id}`).expect(200);
   const operationRecordsAfterDelete = await agent.get("/api/operation-records?keyword=DF001").expect(200);
   assert.equal(operationRecordsAfterDelete.body.total, operationRecords.body.total - 1);
@@ -258,17 +268,17 @@ test("registered users must be authorized before accessing pages", async () => {
   const admin = request.agent(app);
   const member = request.agent(app);
 
-  await member.post("/api/auth/register").send({ username: "member", password: "secret123" }).expect(403);
-  await member.post("/api/auth/login").send({ username: "member", password: "secret123" }).expect(401);
+  await member.post("/api/auth/register").send({ username: "member", password: "secret123456" }).expect(403);
+  await member.post("/api/auth/login").send({ username: "member", password: "secret123456" }).expect(401);
 
   await admin.post("/api/auth/login").send({ username: "admin", password: "secret" }).expect(200);
-  await admin.post("/api/auth/users").send({ username: "member", password: "secret123" }).expect(201);
+  await admin.post("/api/auth/users").send({ username: "member", password: "secret123456" }).expect(201);
   const users = await admin.get("/api/auth/users").expect(200);
   const target = users.body.users.find((user: { username: string }) => user.username === "member");
   assert.ok(target);
 
   await admin.patch(`/api/auth/users/${target.id}/access`).send({ pageAccess: ["dropShippingRegistration"] }).expect(200);
-  const login = await member.post("/api/auth/login").send({ username: "member", password: "secret123" }).expect(200);
+  const login = await member.post("/api/auth/login").send({ username: "member", password: "secret123456" }).expect(200);
   assert.deepEqual(login.body.pageAccess, ["dropShippingRegistration"]);
 
   await member.get("/api/orders").expect(200);
@@ -301,9 +311,9 @@ test("registered users must be authorized before accessing pages", async () => {
 
   await member.delete(`/api/orders/${order.body.id}`).expect(403);
   await member.delete(`/api/products/${product.body.id}`).expect(403);
-  createUser("otherAdmin", "secret123", "管理员", []);
+  createUser("otherAdmin", "secret123456", "管理员", []);
   const otherAdmin = request.agent(app);
-  await otherAdmin.post("/api/auth/login").send({ username: "otherAdmin", password: "secret123" }).expect(200);
+  await otherAdmin.post("/api/auth/login").send({ username: "otherAdmin", password: "secret123456" }).expect(200);
   const operationRecords = await otherAdmin.get("/api/operation-records?keyword=AUTH-DELETE-001").expect(200);
   assert.ok(operationRecords.body.total >= 1);
   await otherAdmin.delete(`/api/operation-records/${operationRecords.body.rows[0].id}`).expect(403);

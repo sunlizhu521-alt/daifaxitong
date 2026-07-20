@@ -10,10 +10,12 @@ import { kuaidi100Router } from "./kuaidi100.js";
 import { operationRecordsRouter } from "./operationRecords.js";
 import { backupsRouter } from "./backups.js";
 import { repairsRouter } from "./repairs.js";
+import { auditDataWrite } from "../writeAudit.js";
 
 export const apiRouter = Router();
 
 apiRouter.get("/health", (_req, res) => res.json({ ok: true }));
+apiRouter.use(auditDataWrite);
 apiRouter.use("/auth", authRouter);
 apiRouter.use(requireAuth);
 apiRouter.use("/products", requireAnyPage(["productLibrary", "dropShippingRegistration", "accessoryRegistration", "accessoryShipping", "trackingNumbers", "returnRegistration", "shippingSchedule", "purchaseOrders", "dropshipSummary"]), productsRouter);

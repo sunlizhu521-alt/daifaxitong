@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS products (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_products_name_sku ON products(name, sku);
+CREATE INDEX IF NOT EXISTS idx_products_series_sku ON products(series, ssku, sku);
 
 CREATE TABLE IF NOT EXISTS stores (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -99,6 +100,9 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 
 CREATE INDEX IF NOT EXISTS idx_orders_order_no ON orders(orderNo);
+CREATE INDEX IF NOT EXISTS idx_orders_type_status_id ON orders(orderType, status, id DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(createdAt, id DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_store_name ON orders(storeName, id DESC);
 
 CREATE TABLE IF NOT EXISTS order_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -128,6 +132,10 @@ CREATE TABLE IF NOT EXISTS shipments (
   FOREIGN KEY (supplierId) REFERENCES suppliers(id),
   FOREIGN KEY (carrierId) REFERENCES carriers(id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(orderId, id);
+CREATE INDEX IF NOT EXISTS idx_shipments_order_id ON shipments(orderId, id DESC);
+CREATE INDEX IF NOT EXISTS idx_shipments_supplier_id ON shipments(supplierId, orderId);
 
 CREATE TABLE IF NOT EXISTS order_events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -164,6 +172,9 @@ CREATE TABLE IF NOT EXISTS returns (
   FOREIGN KEY (orderId) REFERENCES orders(id) ON DELETE SET NULL
 );
 
+CREATE INDEX IF NOT EXISTS idx_returns_order_id ON returns(orderId, id DESC);
+CREATE INDEX IF NOT EXISTS idx_returns_status_id ON returns(status, id DESC);
+
 CREATE TABLE IF NOT EXISTS repair_exchanges (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   storeOrderNo TEXT NOT NULL DEFAULT '',
@@ -199,4 +210,17 @@ CREATE TABLE IF NOT EXISTS import_jobs (
   errorJson TEXT,
   createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS data_write_audit (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  actor TEXT NOT NULL DEFAULT '',
+  method TEXT NOT NULL,
+  path TEXT NOT NULL,
+  targetId TEXT NOT NULL DEFAULT '',
+  result TEXT NOT NULL,
+  statusCode INTEGER NOT NULL,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_data_write_audit_created_at ON data_write_audit(createdAt, id);
 `;

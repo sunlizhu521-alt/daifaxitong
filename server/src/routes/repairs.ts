@@ -1,13 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
+import { config } from "../config.js";
 import { getDb, nowIso } from "../db/index.js";
 import { notifyDingtalk, notifyFeishu } from "../notifications/dingtalk.js";
 import { ROLE_ADMIN } from "../permissions.js";
 
 export const repairsRouter = Router();
-
-const REPAIR_DINGTALK_WEBHOOK = "https://oapi.dingtalk.com/robot/send?access_token=db1472c2a91822f03fee845e77b76adf9cf4049625db0eef915ca0852ea62b36";
-const REPAIR_DINGTALK_SECRET = "SEC07f42360e2f6b080865cc453821ed06d54ad1615f62acdcf087fd69832471630";
 
 const createSchema = z.object({
   storeOrderNo: z.string().trim().min(1, "原店铺订单号不能为空"),
@@ -150,24 +148,9 @@ repairsRouter.patch("/:id", (req, res) => {
   const params: unknown[] = [newStatus, nowIso()];
 
   const fields = [
-    "storeOrderNo",
-    "customerName",
-    "customerPhone",
-    "customerAddress",
-    "storeName",
-    "series",
-    "sku",
-    "name",
-    "carrierCompany",
-    "trackingNo",
-    "note",
-    "action",
-    "isCompleted",
-    "isReceived",
-    "estimatedCompletion",
-    "returnCarrier",
-    "returnTrackingNo",
-    "supplierFeedback"
+    "storeOrderNo", "customerName", "customerPhone", "customerAddress", "storeName", "series", "sku", "name",
+    "carrierCompany", "trackingNo", "note", "action", "isCompleted", "isReceived", "estimatedCompletion",
+    "returnCarrier", "returnTrackingNo", "supplierFeedback"
   ] as const;
   for (const field of fields) {
     const val = parsed.data[field];
@@ -191,7 +174,7 @@ repairsRouter.patch("/:id", (req, res) => {
   if (hasFeedbackChange) {
     const title = "一件代发系统：维修换货反馈";
     const text = buildRepairText(row, "维修换货反馈", req.session.user?.username);
-    void notifyDingtalk(title, text, REPAIR_DINGTALK_WEBHOOK, REPAIR_DINGTALK_SECRET, "维修换货钉钉通知");
+    void notifyDingtalk(title, text, config.repairDingtalkWebhook, config.repairDingtalkSecret, "维修换货钉钉通知");
   } else {
     const title = "一件代发系统：维修换货登记变更";
     const text = buildRepairText(row, "维修换货登记变更", req.session.user?.username);

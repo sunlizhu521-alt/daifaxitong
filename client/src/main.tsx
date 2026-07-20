@@ -1,34 +1,68 @@
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createBrowserRouter, Navigate, RouterProvider, useRouteError } from "react-router-dom";
 import { AppShell } from "./ui/AppShell";
 import { AppNotifications } from "./ui/AppNotifications";
 import { LoginPage } from "./pages/LoginPage";
-import { OrdersPage } from "./pages/OrdersPage";
-import { AccessoryRegistrationPage } from "./pages/AccessoryRegistrationPage";
-import { AccessoryShippingPage } from "./pages/AccessoryShippingPage";
-import { TrackingNumbersPage } from "./pages/TrackingNumbersPage";
-import { CarrierLibraryPage } from "./pages/CarrierLibraryPage";
-import { ShippingSchedulePage } from "./pages/ShippingSchedulePage";
-import { PurchaseOrdersPage } from "./pages/PurchaseOrdersPage";
-import { AccessorySummaryPage, DropshipSummaryPage } from "./pages/DropshipSummaryPage";
-import { ReturnRegistrationPage } from "./pages/ReturnRegistrationPage";
-import { ReturnOperationPage } from "./pages/ReturnOperationPage";
-import { ReturnReceiptPage } from "./pages/ReturnReceiptPage";
-import { RepairRegistrationPage } from "./pages/RepairRegistrationPage";
-import { RepairFeedbackPage } from "./pages/RepairFeedbackPage";
-import { RepairRecordPage } from "./pages/RepairRecordPage";
-import { OperationRecordsPage } from "./pages/OperationRecordsPage";
-import { OperationFlowPage } from "./pages/OperationFlowPage";
-import { BackupCenterPage } from "./pages/BackupCenterPage";
-import { SuppliersPage } from "./pages/SuppliersPage";
-import { ProductsPage } from "./pages/ProductsPage";
-import { StoreLibraryPage } from "./pages/StoreLibraryPage";
-import { PermissionsPage } from "./pages/PermissionsPage";
 import "./styles.css";
 
-const queryClient = new QueryClient();
+const CHUNK_RELOAD_KEY = "daifa:chunk-reload";
+
+function lazyPage(loader: () => Promise<Record<string, unknown>>, exportName: string) {
+  return lazy(async () => {
+    try {
+      const module = await loader();
+      const component = module[exportName];
+      if (!component) throw new Error(`Page export not found: ${exportName}`);
+      sessionStorage.removeItem(CHUNK_RELOAD_KEY);
+      return { default: component as React.ComponentType };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isChunkFailure = /dynamically imported module|module script|loading chunk|failed to fetch/i.test(message);
+      if (isChunkFailure && sessionStorage.getItem(CHUNK_RELOAD_KEY) !== location.pathname) {
+        sessionStorage.setItem(CHUNK_RELOAD_KEY, location.pathname);
+        location.reload();
+        return new Promise<never>(() => undefined);
+      }
+      throw error;
+    }
+  });
+}
+
+const OrdersPage = lazyPage(() => import("./pages/OrdersPage"), "OrdersPage");
+const AccessoryRegistrationPage = lazyPage(() => import("./pages/AccessoryRegistrationPage"), "AccessoryRegistrationPage");
+const AccessoryShippingPage = lazyPage(() => import("./pages/AccessoryShippingPage"), "AccessoryShippingPage");
+const TrackingNumbersPage = lazyPage(() => import("./pages/TrackingNumbersPage"), "TrackingNumbersPage");
+const CarrierLibraryPage = lazyPage(() => import("./pages/CarrierLibraryPage"), "CarrierLibraryPage");
+const ShippingSchedulePage = lazyPage(() => import("./pages/ShippingSchedulePage"), "ShippingSchedulePage");
+const PurchaseOrdersPage = lazyPage(() => import("./pages/PurchaseOrdersPage"), "PurchaseOrdersPage");
+const DropshipSummaryPage = lazyPage(() => import("./pages/DropshipSummaryPage"), "DropshipSummaryPage");
+const AccessorySummaryPage = lazyPage(() => import("./pages/DropshipSummaryPage"), "AccessorySummaryPage");
+const ReturnRegistrationPage = lazyPage(() => import("./pages/ReturnRegistrationPage"), "ReturnRegistrationPage");
+const ReturnOperationPage = lazyPage(() => import("./pages/ReturnOperationPage"), "ReturnOperationPage");
+const ReturnReceiptPage = lazyPage(() => import("./pages/ReturnReceiptPage"), "ReturnReceiptPage");
+const RepairRegistrationPage = lazyPage(() => import("./pages/RepairRegistrationPage"), "RepairRegistrationPage");
+const RepairFeedbackPage = lazyPage(() => import("./pages/RepairFeedbackPage"), "RepairFeedbackPage");
+const RepairRecordPage = lazyPage(() => import("./pages/RepairRecordPage"), "RepairRecordPage");
+const OperationRecordsPage = lazyPage(() => import("./pages/OperationRecordsPage"), "OperationRecordsPage");
+const OperationFlowPage = lazyPage(() => import("./pages/OperationFlowPage"), "OperationFlowPage");
+const BackupCenterPage = lazyPage(() => import("./pages/BackupCenterPage"), "BackupCenterPage");
+const SuppliersPage = lazyPage(() => import("./pages/SuppliersPage"), "SuppliersPage");
+const ProductsPage = lazyPage(() => import("./pages/ProductsPage"), "ProductsPage");
+const StoreLibraryPage = lazyPage(() => import("./pages/StoreLibraryPage"), "StoreLibraryPage");
+const PermissionsPage = lazyPage(() => import("./pages/PermissionsPage"), "PermissionsPage");
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      gcTime: 30 * 60 * 1000,
+      retry: 1,
+      refetchOnWindowFocus: false
+    }
+  }
+});
 
 function RouteErrorFallback() {
   const error = useRouteError() as Error | { message?: string } | unknown;
@@ -86,7 +120,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <AppNotifications />
-      <RouterProvider router={router} />
+      <Suspense fallback={<div className="loading-screen">加载中...</div>}>
+        <RouterProvider router={router} />
+      </Suspense>
     </QueryClientProvider>
   </React.StrictMode>
 );

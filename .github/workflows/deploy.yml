@@ -1,4 +1,4 @@
-name: Deploy to 129.211.9.242:4006
+name: Deploy daifaxitong
 
 on:
   push:
@@ -44,11 +44,13 @@ jobs:
         id: secrets
         env:
           SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
           SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
         run: |
           missing=()
+          [ -n "$SERVER_HOST" ] || missing+=(SERVER_HOST)
           [ -n "$SERVER_USER" ] || missing+=(SERVER_USER)
           [ -n "$SERVER_SSH_KEY" ] || missing+=(SERVER_SSH_KEY)
           [ -n "$ADMIN_PASSWORD" ] || missing+=(ADMIN_PASSWORD)
@@ -60,6 +62,19 @@ jobs:
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Setup Node.js
+        if: steps.secrets.outputs.ready == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Build deployment artifacts
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          npm ci
+          npm run build
 
       - name: Create deployment package
         if: steps.secrets.outputs.ready == 'true'
@@ -79,7 +94,7 @@ jobs:
         if: steps.secrets.outputs.ready == 'true'
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: 129.211.9.242
+          host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_SSH_PORT || 22 }}
@@ -93,6 +108,9 @@ jobs:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           DEPLOY_PACKAGE_DIR: /tmp/daifaxitong-deploy-${{ github.run_id }}
           DEPLOY_PORT: "4006"
+          PREBUILT_DIST: "true"
+          COOKIE_SECURE: "false"
+          SESSION_MAX_AGE_HOURS: "720"
           ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
@@ -102,14 +120,16 @@ jobs:
           RETURN_DINGTALK_SECRET: ${{ secrets.RETURN_DINGTALK_SECRET }}
           FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
           FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
+          REPAIR_DINGTALK_WEBHOOK: ${{ secrets.REPAIR_DINGTALK_WEBHOOK }}
+          REPAIR_DINGTALK_SECRET: ${{ secrets.REPAIR_DINGTALK_SECRET }}
           KUAIDI100_CUSTOMER: ${{ secrets.KUAIDI100_CUSTOMER }}
           KUAIDI100_KEY: ${{ secrets.KUAIDI100_KEY }}
         with:
-          host: 129.211.9.242
+          host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_SSH_PORT || 22 }}
-          envs: DEPLOY_PATH,DEPLOY_PACKAGE_DIR,DEPLOY_PORT,ADMIN_USERNAME,ADMIN_PASSWORD,SESSION_SECRET,DINGTALK_WEBHOOK,DINGTALK_SECRET,RETURN_DINGTALK_WEBHOOK,RETURN_DINGTALK_SECRET,FEISHU_WEBHOOK,FEISHU_SECRET,KUAIDI100_CUSTOMER,KUAIDI100_KEY
+          envs: DEPLOY_PATH,DEPLOY_PACKAGE_DIR,DEPLOY_PORT,PREBUILT_DIST,COOKIE_SECURE,SESSION_MAX_AGE_HOURS,ADMIN_USERNAME,ADMIN_PASSWORD,SESSION_SECRET,DINGTALK_WEBHOOK,DINGTALK_SECRET,RETURN_DINGTALK_WEBHOOK,RETURN_DINGTALK_SECRET,REPAIR_DINGTALK_WEBHOOK,REPAIR_DINGTALK_SECRET,FEISHU_WEBHOOK,FEISHU_SECRET,KUAIDI100_CUSTOMER,KUAIDI100_KEY
           script: |
             set -eu
 
@@ -135,7 +155,13 @@ jobs:
                 --exclude='server/data' \
                 --exclude='server/uploads' \
                 --exclude='server/logs' \
+                --exclude='server/dist/public/assets' \
+                --exclude='server/dist/public/index.html' \
                 "$staging_dir"/ "$APP_DIR"/
+              mkdir -p "$APP_DIR/server/dist/public/assets"
+              rsync -a "$staging_dir/server/dist/public/assets/" "$APP_DIR/server/dist/public/assets/"
+              cp "$staging_dir/server/dist/public/index.html" "$APP_DIR/server/dist/public/index.html.new"
+              mv -f "$APP_DIR/server/dist/public/index.html.new" "$APP_DIR/server/dist/public/index.html"
             else
               tar -xzf "$PACKAGE" -C "$APP_DIR"
             fi

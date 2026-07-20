@@ -4,9 +4,11 @@ import { config, validateConfig } from "./config.js";
 import { createApp } from "./http.js";
 import { getDb } from "./db/index.js";
 import { startDailyBackupScheduler } from "./backup.js";
+import { startSessionCleanup } from "./sessionStore.js";
 
-getDb();
 validateConfig();
+getDb();
+startSessionCleanup();
 startDailyBackupScheduler();
 
 setInterval(() => {

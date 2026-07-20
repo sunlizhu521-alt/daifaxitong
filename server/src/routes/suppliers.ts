@@ -1,15 +1,13 @@
 import fs from "node:fs";
 import { Router } from "express";
-import multer from "multer";
 import { z } from "zod";
-import { config } from "../config.js";
 import { getDb, nowIso } from "../db/index.js";
 import { notifyBusinessAction } from "../notifications/dingtalk.js";
 import { ROLE_ADMIN } from "../permissions.js";
+import { excelUpload as upload } from "../uploads.js";
 import { cell, normalizeHeader } from "../utils.js";
 
 export const suppliersRouter = Router();
-const upload = multer({ dest: config.uploadDir });
 
 const supplierSchema = z.object({
   name: z.string().trim().min(1, "供应商名称不能为空"),
@@ -80,9 +78,9 @@ suppliersRouter.post("/import", upload.single("file"), async (req, res) => {
     res.status(400).json({ message: "请上传 Excel 文件" });
     return;
   }
-  const XLSX = (await import("xlsx")).default;
   const db = getDb();
   try {
+    const XLSX = (await import("xlsx")).default;
     const workbook = XLSX.readFile(req.file.path);
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
@@ -133,7 +131,7 @@ suppliersRouter.post("/import", upload.single("file"), async (req, res) => {
         "INSERT INTO import_jobs (type, filename, totalRows, successRows, failedRows, errorJson) VALUES (?, ?, ?, ?, ?, ?)"
       ).run("suppliers", req.file!.originalname, rows.length, rows.length, 0, "[]");
     });
-    tx();
+    tx.immediate();
     void notifyBusinessAction({
       action: "批量导入供应商",
       operator: req.session.user?.username,

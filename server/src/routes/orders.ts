@@ -1,17 +1,16 @@
 import fs from "node:fs";
 import { Router } from "express";
-import multer from "multer";
 import { z } from "zod";
 import { config } from "../config.js";
 import { getDb, nowIso } from "../db/index.js";
-import { fallbackLogisticsStatus, queryKuaidi100Info, queryKuaidi100Status } from "../logistics/kuaidi100.js";
+import { fallbackLogisticsStatus, queryKuaidi100Info, queryKuaidi100Status, withLogisticsDeadline } from "../logistics/kuaidi100.js";
 import { notifyBusinessAction } from "../notifications/dingtalk.js";
 import { logOrderEvent } from "../orderEvents.js";
 import { ROLE_ADMIN } from "../permissions.js";
+import { excelUpload as upload } from "../uploads.js";
 import { optionalId } from "../utils.js";
 
 export const ordersRouter = Router();
-const upload = multer({ dest: config.uploadDir });
 
 const orderItemSchema = z.object({
   productId: optionalId,
@@ -150,7 +149,7 @@ function saveOrder(data: z.infer<typeof orderSchema>, id?: number) {
     }
     return orderId;
   });
-  return readOrder(tx());
+  return readOrder(tx.immediate());
 }
 
 ordersRouter.get("/", async (req, res) => {
@@ -274,22 +273,31 @@ ordersRouter.get("/", async (req, res) => {
     )
     .all(...params, pageSizeNum, offset) as Array<Record<string, unknown>>;
   const enrichedRows = await Promise.all(
-    rows.map(async (row) => {
+    rows.map(async (row, index) => {
       const shipmentTrackingNo = String(row.trackingNo ?? "");
       const returnTrackingNo = String(row.returnTrackingNo ?? "");
       const shipmentFallback = fallbackLogisticsStatus(String(row.status ?? ""), shipmentTrackingNo, String(row.returnStatus ?? ""));
       const returnFallback = fallbackLogisticsStatus(String(row.status ?? ""), returnTrackingNo, String(row.returnStatus ?? ""));
+      const refreshLogistics = index < 10;
       const [shipmentLogisticsStatus, returnLogisticsInfo] = await Promise.all([
-        queryKuaidi100Status({
-          carrierName: String(row.carrier ?? ""),
-          trackingNo: shipmentTrackingNo,
-          phone: String(row.customerPhone ?? "")
-        }).catch(() => null),
-        queryKuaidi100Info({
-          carrierName: String(row.returnCarrier ?? ""),
-          trackingNo: returnTrackingNo,
-          phone: String(row.customerPhone ?? "")
-        }).catch(() => null)
+        refreshLogistics
+          ? withLogisticsDeadline(
+              queryKuaidi100Status({
+                carrierName: String(row.carrier ?? ""),
+                trackingNo: shipmentTrackingNo,
+                phone: String(row.customerPhone ?? "")
+              })
+            )
+          : null,
+        refreshLogistics
+          ? withLogisticsDeadline(
+              queryKuaidi100Info({
+                carrierName: String(row.returnCarrier ?? ""),
+                trackingNo: returnTrackingNo,
+                phone: String(row.customerPhone ?? "")
+              })
+            )
+          : null
       ]);
       const returnCarrier =
         String(row.returnCarrier ?? "").trim() ||
@@ -774,7 +782,7 @@ ordersRouter.patch("/:id/shipping-edit", (req, res) => {
       req.session.user?.username
     );
   });
-  tx();
+  tx.immediate();
   const updated = readOrder(orderId) as Record<string, unknown> | null;
   void notifyBusinessAction({
     action: "发货安排修改",
@@ -807,11 +815,14 @@ ordersRouter.post("/:id/ship", (req, res) => {
   }
   const supplierId = parsed.data.supplierId ?? order.supplierId ?? null;
   const carrierName = carrier?.name ?? parsed.data.carrier;
+  const saveShipment = db.transaction(() => {
   db.prepare(
     "INSERT INTO shipments (orderId, supplierId, carrierId, carrier, trackingNo, shippedAt, status, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
   ).run(id, supplierId, parsed.data.carrierId ?? null, carrierName, parsed.data.trackingNo, parsed.data.shippedAt, parsed.data.status, parsed.data.note);
   db.prepare("UPDATE orders SET status = ?, updatedAt = ? WHERE id = ?").run(parsed.data.status, nowIso(), id);
   logOrderEvent(id, "填写发货单号", `${carrierName} ${parsed.data.trackingNo}`, req.session.user?.username);
+  });
+  saveShipment.immediate();
   const updated = readOrder(id) as Record<string, unknown> | null;
   void notifyBusinessAction({
     action: parsed.data.status === "shipped" ? "配件发货" : "填写发货单号",
@@ -846,7 +857,7 @@ ordersRouter.delete("/:id/shipment", (req, res) => {
       .get(id) as { status: string } | undefined;
     db.prepare("UPDATE orders SET status = ?, updatedAt = ? WHERE id = ?").run(remaining?.status ?? "pending", nowIso(), id);
   });
-  tx();
+  tx.immediate();
   logOrderEvent(id, "删除发货单号", "删除最新发货单号", req.session.user?.username);
   void notifyBusinessAction({
     action: "删除发货单号",
@@ -861,6 +872,7 @@ ordersRouter.post("/import", upload.single("file"), async (req, res) => {
     res.status(400).json({ message: "请上传 Excel 文件" });
     return;
   }
+  try {
   const XLSX = (await import("xlsx")).default;
   const db = getDb();
   const workbook = XLSX.readFile(req.file.path);
@@ -933,7 +945,7 @@ ordersRouter.post("/import", upload.single("file"), async (req, res) => {
     ).run("orders", req.file!.originalname, rows.length, rows.length, 0, "[]");
   });
   try {
-    tx();
+    tx.immediate();
     void notifyBusinessAction({
       action: "批量导入代发单",
       operator: req.session.user?.username,
@@ -945,6 +957,11 @@ ordersRouter.post("/import", upload.single("file"), async (req, res) => {
     res.json({ totalRows: rows.length, successRows: rows.length, failedRows: 0 });
   } catch {
     res.status(409).json({ message: "导入失败，请检查是否存在重复订单号" });
+  } finally {
+    fs.unlink(req.file.path, () => undefined);
+  }
+  } catch {
+    if (!res.headersSent) res.status(400).json({ message: "Excel 解析失败，请检查文件格式和表头" });
   } finally {
     fs.unlink(req.file.path, () => undefined);
   }

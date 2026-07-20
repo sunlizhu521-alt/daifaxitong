@@ -1,15 +1,13 @@
 import fs from "node:fs";
 import { Router } from "express";
-import multer from "multer";
 import { z } from "zod";
-import { config } from "../config.js";
 import { getDb, nowIso } from "../db/index.js";
 import { notifyBusinessAction } from "../notifications/dingtalk.js";
 import { ROLE_ADMIN } from "../permissions.js";
+import { excelUpload as upload } from "../uploads.js";
 import { cell, normalizeHeader, optionalId } from "../utils.js";
 
 export const productsRouter = Router();
-const upload = multer({ dest: config.uploadDir });
 
 const productSchema = z.object({
   materialCode: z.string().trim().min(1, "物料编码不能为空"),
@@ -91,9 +89,9 @@ productsRouter.post("/import", upload.single("file"), async (req, res) => {
     res.status(400).json({ message: "请上传 Excel 文件" });
     return;
   }
-  const XLSX = (await import("xlsx")).default;
   const db = getDb();
   try {
+    const XLSX = (await import("xlsx")).default;
     const workbook = XLSX.readFile(req.file.path);
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
@@ -142,7 +140,16 @@ productsRouter.post("/import", upload.single("file"), async (req, res) => {
     );
     const update = db.prepare(
       `UPDATE products
-       SET materialCode = ?, productLine = ?, series = ?, ssku = ?, name = ?, sku = ?, supplierModel = ?, supplierId = ?, note = ?, updatedAt = ?
+       SET materialCode = COALESCE(NULLIF(?, ''), materialCode),
+           productLine = COALESCE(NULLIF(?, ''), productLine),
+           series = COALESCE(NULLIF(?, ''), series),
+           ssku = COALESCE(NULLIF(?, ''), ssku),
+           name = COALESCE(NULLIF(?, ''), name),
+           sku = COALESCE(NULLIF(?, ''), sku),
+           supplierModel = COALESCE(NULLIF(?, ''), supplierModel),
+           supplierId = COALESCE(?, supplierId),
+           note = COALESCE(NULLIF(?, ''), note),
+           updatedAt = ?
        WHERE id = ?`
     );
     const findByNameSku = db.prepare("SELECT id FROM products WHERE name = ? AND sku = ?");
@@ -183,7 +190,7 @@ productsRouter.post("/import", upload.single("file"), async (req, res) => {
         "INSERT INTO import_jobs (type, filename, totalRows, successRows, failedRows, errorJson) VALUES (?, ?, ?, ?, ?, ?)"
       ).run("products", req.file!.originalname, rows.length, parsedRows.length, 0, "[]");
     });
-    tx();
+    tx.immediate();
     void notifyBusinessAction({
       action: "批量导入商品",
       operator: req.session.user?.username,

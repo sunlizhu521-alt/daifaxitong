@@ -16,7 +16,7 @@ const loginSchema = z.object({
 
 const registerSchema = z.object({
   username: z.string().trim().min(2, "账号至少 2 个字符"),
-  password: z.string().min(6, "密码至少 6 个字符")
+  password: z.string().min(12, "密码至少 12 个字符")
 });
 
 const accessSchema = z.object({
@@ -76,7 +76,8 @@ authRouter.post("/login", (req, res) => {
   }
 
   const loginIp = getRequestIp(req);
-  const rateCheck = checkLoginRateLimit(loginIp);
+  const loginIdentifier = `${loginIp}:${parsed.data.username.toLowerCase()}`;
+  const rateCheck = checkLoginRateLimit(loginIdentifier);
   if (!rateCheck.allowed) {
     res.status(429).json({ message: rateCheck.message! });
     return;
@@ -84,7 +85,7 @@ authRouter.post("/login", (req, res) => {
 
   const user = getUserByUsername(parsed.data.username);
   if (!user || !verifyPassword(parsed.data.password, user.passwordHash)) {
-    recordLoginFailure(loginIp);
+    recordLoginFailure(loginIdentifier);
     res.status(401).json({ message: "账号或密码错误" });
     return;
   }
@@ -95,15 +96,27 @@ authRouter.post("/login", (req, res) => {
     return;
   }
 
-  req.session.user = {
-    id: publicUser.id,
-    username: publicUser.username,
-    role: publicUser.role,
-    pageAccess: publicUser.pageAccess
-  };
-  req.session.loginIp = getRequestIp(req);
-  clearLoginAttempts(loginIp);
-  res.json(publicUser);
+  req.session.regenerate((error) => {
+    if (error) {
+      res.status(500).json({ message: "登录会话创建失败，请重试" });
+      return;
+    }
+    req.session.user = {
+      id: publicUser.id,
+      username: publicUser.username,
+      role: publicUser.role,
+      pageAccess: publicUser.pageAccess
+    };
+    req.session.loginIp = loginIp;
+    req.session.save((saveError) => {
+      if (saveError) {
+        res.status(500).json({ message: "登录会话保存失败，请重试" });
+        return;
+      }
+      clearLoginAttempts(loginIdentifier);
+      res.json(publicUser);
+    });
+  });
 });
 
 authRouter.post("/register", (req, res) => {

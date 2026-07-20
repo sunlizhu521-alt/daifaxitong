@@ -3,26 +3,40 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import { config } from "../config.js";
 import { schema } from "./schema.js";
+import { assertDatabaseHealthy, createPreMigrationBackup, inspectDatabase } from "./safety.js";
 
 let db: Database.Database | undefined;
 
 export function getDb() {
   if (!db) {
+    const databaseExists = fs.existsSync(config.databasePath);
+    const mayCreateDatabase =
+      process.env.ALLOW_DATABASE_CREATE === "true" ||
+      process.env.NODE_ENV === "test" ||
+      process.argv.some((arg) => arg.includes("src/db/init.ts") || arg.includes("dist/db/init"));
+    if (!databaseExists && !mayCreateDatabase) {
+      throw new Error(`数据库文件不存在，已拒绝自动创建空数据库：${config.databasePath}。请先运行 npm run db:init。`);
+    }
     fs.mkdirSync(path.dirname(config.databasePath), { recursive: true });
-    db = new Database(config.databasePath);
-    db.pragma("foreign_keys = ON");
-    db.pragma("journal_mode = WAL");
-    db.pragma("busy_timeout = 5000");
-    db.exec(schema);
-    migrateDb(db);
-    if (!process.argv.some((arg) => arg.includes("src/db/init.ts") || arg.includes("dist/db/init"))) {
-      const backupDir = path.resolve(config.rootDir, "server", "backups");
-      fs.mkdirSync(backupDir, { recursive: true });
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      void db.backup(path.join(backupDir, `daifa-startup-${timestamp}.sqlite`)).catch(() => undefined);
+    const database = new Database(config.databasePath);
+    try {
+      database.pragma("foreign_keys = ON");
+      database.pragma("busy_timeout = 5000");
+      if (databaseExists) {
+        assertDatabaseHealthy(inspectDatabase(database), "启动前数据库");
+        createPreMigrationBackup(database, config.databasePath, config.safetyBackupDir);
+      }
+      database.pragma("journal_mode = WAL");
+      database.exec(schema);
+      migrateDb(database);
+      assertDatabaseHealthy(inspectDatabase(database), "启动后数据库");
+      db = database;
+    } catch (error) {
+      database.close();
+      throw error;
     }
   }
-  return db;
+  return db!;
 }
 
 function migrateDb(database: Database.Database) {
@@ -53,9 +67,9 @@ function migrateDb(database: Database.Database) {
   ensureColumn(database, "repair_exchanges", "customerAddress", "TEXT NOT NULL DEFAULT ''");
   ensureColumn(database, "repair_exchanges", "storeName", "TEXT NOT NULL DEFAULT ''");
   database.exec(`
-    UPDATE suppliers SET storeAddress = COALESCE(storeAddress, address);
-    UPDATE products SET ssku = COALESCE(ssku, sku);
-    UPDATE stores SET operator = COALESCE(operator, owner);
+    UPDATE suppliers SET storeAddress = address WHERE storeAddress IS NULL AND address IS NOT NULL;
+    UPDATE products SET ssku = sku WHERE ssku IS NULL AND sku IS NOT NULL;
+    UPDATE stores SET operator = owner WHERE operator IS NULL AND owner IS NOT NULL;
     UPDATE returns SET action = '未出单号退款' WHERE action = '未发货退款';
     UPDATE returns SET status = '未出单号退款' WHERE status = '未发货退款';
     UPDATE returns

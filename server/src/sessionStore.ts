@@ -1,5 +1,6 @@
 import session from "express-session";
 import type { Request } from "express";
+import { config } from "./config.js";
 import { getDb } from "./db/index.js";
 
 type SessionRecord = {
@@ -8,7 +9,7 @@ type SessionRecord = {
   data: string;
 };
 
-export const sessionMaxAgeMs = 1000 * 60 * 60 * 24 * 30;
+export const sessionMaxAgeMs = config.sessionMaxAgeMs;
 
 export class SqliteSessionStore extends session.Store {
   get(sid: string, callback: (err: unknown, session?: session.SessionData | null) => void) {
@@ -52,8 +53,13 @@ export class SqliteSessionStore extends session.Store {
   }
 
   touch(sid: string, value: session.SessionData, callback?: () => void) {
-    const expires = value.cookie?.expires ? new Date(value.cookie.expires).getTime() : Date.now() + sessionMaxAgeMs;
-    getDb().prepare("UPDATE sessions SET expires = ? WHERE sid = ?").run(expires, sid);
+    const now = Date.now();
+    const expires = value.cookie?.expires ? new Date(value.cookie.expires).getTime() : now + sessionMaxAgeMs;
+    const refreshThreshold = now + sessionMaxAgeMs - 5 * 60 * 1000;
+    const current = getDb().prepare("SELECT expires FROM sessions WHERE sid = ?").get(sid) as { expires: number } | undefined;
+    if (!current || current.expires < refreshThreshold) {
+      getDb().prepare("UPDATE sessions SET expires = ? WHERE sid = ?").run(expires, sid);
+    }
     callback?.();
   }
 
@@ -67,14 +73,13 @@ export class SqliteSessionStore extends session.Store {
 }
 
 export function getRequestIp(req: Request) {
-  const forwarded = req.headers["x-forwarded-for"];
-  const raw = Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(",")[0] || req.ip || req.socket.remoteAddress || "";
-  return raw.trim().replace(/^::ffff:/, "");
+  return (req.ip || req.socket.remoteAddress || "").trim().replace(/^::ffff:/, "");
 }
 
-// 每6小时清理一次过期 session
-const cleanupInterval = setInterval(() => {
+export function startSessionCleanup() {
   SqliteSessionStore.cleanupExpired();
-}, 1000 * 60 * 60 * 6);
-cleanupInterval.unref();
-SqliteSessionStore.cleanupExpired();
+  const cleanupInterval = setInterval(() => {
+    SqliteSessionStore.cleanupExpired();
+  }, 1000 * 60 * 60 * 6);
+  cleanupInterval.unref();
+}

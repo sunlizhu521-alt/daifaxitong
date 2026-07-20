@@ -4,7 +4,7 @@ import { config } from "../config.js";
 export type SimpleLogisticsStatus = string;
 
 type CacheEntry = {
-  status: SimpleLogisticsStatus;
+  status: SimpleLogisticsStatus | null;
   expiresAt: number;
 };
 
@@ -36,7 +36,10 @@ type Kuaidi100AutoResponse = {
 
 const cache = new Map<string, CacheEntry>();
 const infoCache = new Map<string, InfoCacheEntry>();
+const inFlight = new Map<string, Promise<SimpleLogisticsStatus | null>>();
 const CACHE_TTL = 1000 * 60 * 30;
+const NEGATIVE_CACHE_TTL = 1000 * 60 * 5;
+const REQUEST_TIMEOUT_MS = 2500;
 
 const carrierCodeMap: Array<[RegExp, string]> = [
   [/顺丰|SF/i, "shunfeng"],
@@ -115,7 +118,9 @@ function phoneTail(value?: string | null) {
 async function detectCarrierByTrackingNo(trackingNo: string) {
   if (!config.kuaidi100Key || !trackingNo) return null;
   const params = new URLSearchParams({ key: config.kuaidi100Key, text: trackingNo, resultv2: "1" });
-  const response = await fetch(`https://www.kuaidi100.com/autonumber/autoComNum?${params.toString()}`);
+  const response = await fetch(`https://www.kuaidi100.com/autonumber/autoComNum?${params.toString()}`, {
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+  });
   if (!response.ok) return null;
   const data = (await response.json().catch(() => null)) as Kuaidi100AutoResponse | null;
   const first = data?.auto?.find((item) => String(item.comCode ?? item.id ?? "").trim());
@@ -144,11 +149,12 @@ export async function queryKuaidi100Info(options: {
   const com = detected?.code || carrierCodeFromName(options.carrierName);
   const carrierName = detected?.name || carrierNameFromCode(com) || String(options.carrierName ?? "").trim();
   if (!config.kuaidi100Customer || !config.kuaidi100Key || !com) {
+    infoCache.set(trackingNo, { status: null, carrierName, expiresAt: Date.now() + NEGATIVE_CACHE_TTL });
     return carrierName ? { status: null, carrierName } : null;
   }
 
   const status = await queryKuaidi100StatusByCode(com, trackingNo, options.phone);
-  infoCache.set(trackingNo, { status, carrierName, expiresAt: Date.now() + CACHE_TTL });
+  infoCache.set(trackingNo, { status, carrierName, expiresAt: Date.now() + (status ? CACHE_TTL : NEGATIVE_CACHE_TTL) });
   return carrierName ? { status, carrierName } : null;
 }
 
@@ -158,26 +164,57 @@ async function queryKuaidi100StatusByCode(com: string, trackingNo: string, phone
   const cacheKey = `${com}:${trackingNo}`;
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return cached.status;
+  const pending = inFlight.get(cacheKey);
+  if (pending) return pending;
 
-  const param = JSON.stringify({
-    com,
-    num: trackingNo,
-    phone: phoneTail(phone),
-    resultv2: "4",
-    show: "0",
-    order: "desc"
-  });
-  const sign = crypto.createHash("md5").update(param + config.kuaidi100Key + config.kuaidi100Customer).digest("hex").toUpperCase();
-  const body = new URLSearchParams({ customer: config.kuaidi100Customer, sign, param });
-  const response = await fetch("https://poll.kuaidi100.com/poll/query.do", { method: "POST", body });
-  if (!response.ok) return null;
-  const data = (await response.json().catch(() => null)) as Kuaidi100Response | null;
-  if (!data || data.result === false || data.status === "400") return null;
+  const request = (async () => {
+    try {
+      const param = JSON.stringify({
+        com,
+        num: trackingNo,
+        phone: phoneTail(phone),
+        resultv2: "4",
+        show: "0",
+        order: "desc"
+      });
+      const sign = crypto.createHash("md5").update(param + config.kuaidi100Key + config.kuaidi100Customer).digest("hex").toUpperCase();
+      const body = new URLSearchParams({ customer: config.kuaidi100Customer, sign, param });
+      const response = await fetch("https://poll.kuaidi100.com/poll/query.do", {
+        method: "POST",
+        body,
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+      });
+      if (!response.ok) return null;
+      const data = (await response.json().catch(() => null)) as Kuaidi100Response | null;
+      if (!data || data.result === false || data.status === "400") return null;
+      return mapKuaidi100State(data);
+    } catch {
+      return null;
+    }
+  })();
+  inFlight.set(cacheKey, request);
+  try {
+    const status = await request;
+    cache.set(cacheKey, { status, expiresAt: Date.now() + (status ? CACHE_TTL : NEGATIVE_CACHE_TTL) });
+    return status;
+  } finally {
+    inFlight.delete(cacheKey);
+  }
+}
 
-  const status = mapKuaidi100State(data);
-  if (!status) return null;
-  cache.set(cacheKey, { status, expiresAt: Date.now() + CACHE_TTL });
-  return status;
+export async function withLogisticsDeadline<T>(promise: Promise<T>, timeoutMs = 600): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), timeoutMs);
+        timer.unref?.();
+      })
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 export async function queryKuaidi100Status(options: {

@@ -1,14 +1,19 @@
 # 一件代发系统
 
-一个前后端一体的后台业务系统，覆盖商品/SKU、供应商、订单、发货、物流跟踪、Excel 导入导出和首页经营概览。
+前后端一体的后台业务系统，覆盖商品/SKU、供应商、订单、发货、物流跟踪、Excel 导入导出和经营概览。
 
 ## 技术栈
 
-- 前端：React、Vite、TypeScript、React Router、TanStack Query、lucide-react
-- 后端：Node.js、Express、TypeScript、SQLite、Zod、Multer、xlsx
-- 数据库：SQLite 文件数据库，默认路径 `server/data/daifa.sqlite`
+- 前端：React、Vite、TypeScript、React Router、TanStack Query
+- 后端：Node.js、Express、TypeScript、SQLite、Zod、Multer
+- 数据库：SQLite，默认路径为 `server/data/daifa.sqlite`
 
 ## 本地运行
+
+1. 复制 `.env.example` 为 `.env`。
+2. 为 `ADMIN_PASSWORD` 设置至少 12 个字符的独立强密码。
+3. 为 `SESSION_SECRET` 设置至少 32 个字符的随机值。
+4. 初始化并启动项目：
 
 ```bash
 npm install
@@ -16,79 +21,51 @@ npm run db:init
 npm run dev
 ```
 
-- 前端开发服务：http://localhost:5173
-- 后端 API：http://localhost:3000/api
-
-## 生产运行
+可使用密码管理器生成管理员密码，并使用以下命令生成会话密钥：
 
 ```bash
-npm install
-npm run db:init
-npm run build
-npm start
+openssl rand -base64 48
 ```
 
-生产模式由 Express 服务托管 API 和前端静态文件，默认访问地址为 http://localhost:3000。
+不要把 `.env`、密码、Webhook、Token、Secret、业务数据库或上传附件提交到 Git。
 
-## 默认账号
+## 生产安全要求
 
-复制 `.env.example` 为 `.env` 后修改：
+- 必须通过 HTTPS 反向代理访问，不要直接向公网开放 Node 服务端口。
+- 生产环境设置 `NODE_ENV=production` 和 `COOKIE_SECURE=true`。
+- `TRUST_PROXY` 只填写实际可信的反向代理范围，默认仅信任本机回环代理。
+- 通知机器人和快递接口凭据只能通过环境变量或 GitHub Secrets 注入。
+- 如果凭据曾进入 Git 历史，应先在对应平台轮换，再考虑清理历史。
 
-```env
-ADMIN_USERNAME=孙立柱
-ADMIN_PASSWORD=521sunlizhu
-SESSION_SECRET=change-me
-```
+## 数据保护
 
-系统支持用户注册和页面级权限管理。新用户注册后默认没有页面权限，需要管理员登录后进入“权限管理”为该用户勾选可访问页面。
+`server/data`、`server/uploads` 和 `server/backups` 都是运行时目录，不进入 Git。任何部署、初始化、迁移或重启前，都必须先建立经过完整性验证、位于发布目录之外的备份，并确认回滚步骤。
 
-## 数据备份
+不要在包含真实业务数据的环境中直接执行未经审查的 `npm run db:init`、迁移或全量测试。
 
-长期部署时请定期备份 `server/data/daifa.sqlite`。该目录属于运行时数据，不提交到 Git。
+## GitHub Actions 配置
 
-## 自动部署到服务器
-
-仓库已配置 GitHub Actions：推送到 `main` 或 `master` 后，会先执行测试和构建，再通过 SSH 部署到 `http://129.211.9.242:4006/`。
-
-### GitHub Secrets
-
-在 GitHub 仓库 `Settings -> Secrets and variables -> Actions` 中添加：
+在仓库环境 `production` 中配置以下 Secrets：
 
 ```text
-SERVER_USER=服务器 SSH 用户名
-SERVER_SSH_KEY=服务器 SSH 私钥
-SERVER_SSH_PORT=22
-DEPLOY_PATH=/www/wwwroot/daifaxitong
-ADMIN_USERNAME=孙立柱
-ADMIN_PASSWORD=请改成强密码
-SESSION_SECRET=请改成随机长字符串
+SERVER_HOST
+SERVER_USER
+SERVER_SSH_KEY
+SERVER_SSH_PORT
+DEPLOY_PATH
+ADMIN_USERNAME
+ADMIN_PASSWORD
+SESSION_SECRET
+DINGTALK_WEBHOOK
+DINGTALK_SECRET
+RETURN_DINGTALK_WEBHOOK
+RETURN_DINGTALK_SECRET
+REPAIR_DINGTALK_WEBHOOK
+REPAIR_DINGTALK_SECRET
+FEISHU_WEBHOOK
+FEISHU_SECRET
+KUAIDI100_CUSTOMER
+KUAIDI100_KEY
 ```
 
-`DEPLOY_PATH` 可按服务器实际目录调整；不设置时默认使用 `/www/wwwroot/daifaxitong`。
-
-### 服务器前置条件
-
-服务器需要安装：
-
-```bash
-git --version
-node -v
-npm -v
-```
-
-Node.js 建议使用 20 或 22。部署脚本会自动执行：
-
-```bash
-npm ci
-npm run db:init
-npm run build
-pm2 startOrReload ecosystem.config.cjs --env production
-```
-
-服务端口固定为 `4006`，健康检查地址为：
-
-```text
-http://127.0.0.1:4006/api/health
-```
-
-如果服务器开启防火墙或安全组，需要放行 TCP `4006` 端口。
+部署工作流不会打包 `.env`、数据库、上传附件或日志。推送或手动部署前仍需单独验证线上备份及恢复能力。

@@ -5,7 +5,7 @@ import multer from "multer";
 import { z } from "zod";
 import { config } from "../config.js";
 import { getDb, nowIso } from "../db/index.js";
-import { fallbackLogisticsStatus, queryKuaidi100Status } from "../logistics/kuaidi100.js";
+import { fallbackLogisticsStatus, queryKuaidi100Status, withLogisticsDeadline } from "../logistics/kuaidi100.js";
 import { notifyBusinessAction } from "../notifications/dingtalk.js";
 import { logOrderEvent, logOrderEventByOrderNo } from "../orderEvents.js";
 import { ROLE_ADMIN } from "../permissions.js";
@@ -22,7 +22,14 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   fileFilter: (_req, file, callback) => {
-    callback(null, file.mimetype.startsWith("image/"));
+    const extension = path.extname(file.originalname).toLowerCase();
+    const allowedExtensions = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);
+    const allowedMimeTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+    if (!allowedExtensions.has(extension) || !allowedMimeTypes.has(file.mimetype.toLowerCase())) {
+      callback(new Error("仅允许上传 JPG、PNG、WEBP 或 GIF 图片"));
+      return;
+    }
+    callback(null, true);
   },
   limits: { files: 8, fileSize: 5 * 1024 * 1024 }
 });
@@ -169,15 +176,20 @@ returnsRouter.get("/", async (req, res) => {
     )
     .all(...params) as Record<string, unknown>[];
   const enrichedRows = await Promise.all(
-    rows.map(async (row) => {
+    rows.map(async (row, index) => {
       const payload = rowToReturn(row);
       const trackingNo = String(payload.trackingNo ?? "");
       const carrierName = String(payload.returnCarrier ?? payload.shipmentCarrier ?? "");
-      const realStatus = await queryKuaidi100Status({
-        carrierName,
-        trackingNo,
-        phone: String(payload.customerPhone ?? "")
-      }).catch(() => null);
+      const realStatus =
+        index < 10
+          ? await withLogisticsDeadline(
+              queryKuaidi100Status({
+                carrierName,
+                trackingNo,
+                phone: String(payload.customerPhone ?? "")
+              })
+            )
+          : null;
       return {
         ...payload,
         returnLogisticsStatus: realStatus ?? fallbackLogisticsStatus("", trackingNo, String(payload.status ?? ""))
@@ -279,17 +291,21 @@ returnsRouter.get("/orders", async (req, res) => {
     )
     .all(...params) as Record<string, unknown>[];
   const enrichedRows = await Promise.all(
-    rows.map(async (row) => {
+    rows.map(async (row, index) => {
       const trackingNo = String(row.shipmentTrackingNo ?? "");
       const fallbackStatus = fallbackLogisticsStatus(String(row.orderStatus ?? ""), trackingNo, String(row.returnStatus ?? ""));
       const realStatus =
         fallbackStatus === "已签收"
           ? "已签收"
-          : await queryKuaidi100Status({
-              carrierName: String(row.shipmentCarrier ?? ""),
-              trackingNo,
-              phone: String(row.customerPhone ?? "")
-            });
+          : index < 10
+            ? await withLogisticsDeadline(
+                queryKuaidi100Status({
+                  carrierName: String(row.shipmentCarrier ?? ""),
+                  trackingNo,
+                  phone: String(row.customerPhone ?? "")
+                })
+              )
+            : null;
       return {
       ...row,
         logisticsStatus: realStatus ?? fallbackStatus,
@@ -342,6 +358,9 @@ returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
     isAutoShipmentReturn(parsed.data.action) ? shipment?.carrier ?? "" : parsed.data.action === "自行寄回" ? parsed.data.returnCarrier.trim() : "";
   const returnTrackingNo =
     isAutoShipmentReturn(parsed.data.action) ? shipment?.trackingNo ?? "" : parsed.data.action === "自行寄回" ? parsed.data.trackingNo.trim() : "";
+  let payload: ReturnType<typeof rowToReturn>;
+  try {
+    const createReturn = db.transaction(() => {
   const result = db
     .prepare(
       `INSERT INTO returns
@@ -370,6 +389,13 @@ returnsRouter.post("/", upload.array("attachments", 8), (req, res) => {
   const row = db.prepare("SELECT * FROM returns WHERE id = ?").get(result.lastInsertRowid) as Record<string, unknown>;
   const payload = rowToReturn(row);
   logOrderEvent(order.id, "提交退货", `${parsed.data.action} / ${parsed.data.reason}`, req.session.user?.username);
+      return payload;
+    });
+    payload = createReturn.immediate();
+  } catch (error) {
+    files.forEach((file) => fs.unlink(file.path, () => undefined));
+    throw error;
+  }
   void notifyBusinessAction({
     action: "退货登记",
     operator: req.session.user?.username,
