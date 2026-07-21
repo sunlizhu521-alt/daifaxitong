@@ -59,6 +59,14 @@ fi
 "${PM2[@]}" startOrReload ecosystem.config.cjs --env production
 "${PM2[@]}" save || true
 
+if command -v crontab >/dev/null 2>&1; then
+  watchdog_entry="*/5 * * * * /bin/bash '$APP_DIR/scripts/health-watchdog.sh' # daifaxitong-health-watchdog"
+  {
+    crontab -l 2>/dev/null | grep -v 'daifaxitong-health-watchdog' || true
+    echo "$watchdog_entry"
+  } | crontab -
+fi
+
 for attempt in {1..15}; do
   if curl -fsS "http://127.0.0.1:${DEPLOY_PORT}/api/health" >/dev/null; then
     echo "Deployment complete: http://127.0.0.1:${DEPLOY_PORT}"
