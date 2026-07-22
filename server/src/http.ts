@@ -3,9 +3,11 @@ import session from "express-session";
 import cors from "cors";
 import compression from "compression";
 import helmet from "helmet";
+import cookieParser from "cookie-parser";
 import fs from "node:fs";
 import path from "node:path";
 import { apiRateLimit } from "./auth/apiRateLimit.js";
+import { csrfProtect } from "./auth/csrf.js";
 import { config } from "./config.js";
 import { apiRouter } from "./routes/index.js";
 import { requireAuth } from "./routes/auth.js";
@@ -37,7 +39,7 @@ export function createApp() {
     next();
   });
   app.use("/api", apiRateLimit);
-  app.use(express.json({ limit: "2mb" }));
+  app.use(cookieParser());
   app.use(
     session({
       name: "daifa.sid",
@@ -54,6 +56,8 @@ export function createApp() {
       }
     })
   );
+  app.use(csrfProtect);
+  app.use(express.json({ limit: "2mb" }));
   app.use((req, res, next) => {
     if (["GET", "HEAD", "OPTIONS"].includes(req.method)) {
       next();

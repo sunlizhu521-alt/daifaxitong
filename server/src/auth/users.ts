@@ -44,18 +44,23 @@ export function toPublicUser(user: DbUser): PublicUser {
   };
 }
 
+let adminEnsured = false;
+
 export function ensureAdminUser(db: Database.Database = getDb()) {
+  if (adminEnsured) return;
   const existing = db.prepare("SELECT * FROM users WHERE username = ?").get(config.adminUsername) as DbUser | undefined;
   if (existing) {
     if (existing.role !== ROLE_ADMIN) {
       throw new Error("ADMIN_USERNAME 与现有普通用户重名，已拒绝自动提升权限");
     }
+    adminEnsured = true;
     return;
   }
 
   db.prepare(
     "INSERT INTO users (id, username, passwordHash, role, pageAccess, updatedAt) VALUES (?, ?, ?, ?, ?, ?)"
   ).run(crypto.randomUUID(), config.adminUsername, hashPassword(config.adminPassword), ROLE_ADMIN, JSON.stringify(allPageKeys), nowIso());
+  adminEnsured = true;
 }
 
 export function getUserByUsername(username: string) {

@@ -33,9 +33,34 @@ function writeWorkbook(filename: string, rows: Record<string, unknown>[]) {
   return filePath;
 }
 
+function csrfFromCookies(cookies: string[] | string) {
+  const cookieList = Array.isArray(cookies) ? cookies : [cookies];
+  const cookie = cookieList.find((item) => item.startsWith("csrf_token="));
+  assert.ok(cookie);
+  const token = cookie.split(";")[0].slice("csrf_token=".length);
+  return { cookie: cookie.split(";")[0], token };
+}
+
+async function enableCsrf(agent: ReturnType<typeof request.agent>) {
+  const response = await agent.get("/api/health").expect(200);
+  const { token } = csrfFromCookies(response.headers["set-cookie"] ?? []);
+  const mutableAgent = agent as unknown as Record<string, (url: string) => request.Test>;
+  for (const method of ["post", "put", "patch", "delete"]) {
+    const original = mutableAgent[method].bind(agent);
+    mutableAgent[method] = (url: string) => original(url).set("x-csrf-token", token);
+  }
+  return token;
+}
+
+async function csrfHeaders(app: ReturnType<typeof createApp>) {
+  const response = await request(app).get("/api/health").expect(200);
+  return csrfFromCookies(response.headers["set-cookie"] ?? []);
+}
+
 test("auth, supplier, product, order and shipment flow", async () => {
   const app = createApp();
   const agent = request.agent(app);
+  await enableCsrf(agent);
 
   const health = await request(app).get("/api/health").expect(200);
   assert.equal(health.headers["cache-control"], "no-store");
@@ -267,6 +292,8 @@ test("registered users must be authorized before accessing pages", async () => {
   const app = createApp();
   const admin = request.agent(app);
   const member = request.agent(app);
+  await enableCsrf(admin);
+  await enableCsrf(member);
 
   await member.post("/api/auth/register").send({ username: "member", password: "secret123456" }).expect(403);
   await member.post("/api/auth/login").send({ username: "member", password: "secret123456" }).expect(401);
@@ -313,6 +340,7 @@ test("registered users must be authorized before accessing pages", async () => {
   await member.delete(`/api/products/${product.body.id}`).expect(403);
   createUser("otherAdmin", "secret123456", "管理员", []);
   const otherAdmin = request.agent(app);
+  await enableCsrf(otherAdmin);
   await otherAdmin.post("/api/auth/login").send({ username: "otherAdmin", password: "secret123456" }).expect(200);
   const operationRecords = await otherAdmin.get("/api/operation-records?keyword=AUTH-DELETE-001").expect(200);
   assert.ok(operationRecords.body.total >= 1);
@@ -323,12 +351,15 @@ test("registered users must be authorized before accessing pages", async () => {
 
 test("sessions persist across app restarts and IP changes", async () => {
   const app = createApp();
+  const csrf = await csrfHeaders(app);
   const login = await request(app)
     .post("/api/auth/login")
+    .set("Cookie", csrf.cookie)
+    .set("x-csrf-token", csrf.token)
     .set("X-Forwarded-For", "10.0.0.1")
     .send({ username: "admin", password: "secret" })
     .expect(200);
-  const cookie = login.headers["set-cookie"];
+  const cookie = [csrf.cookie, ...(login.headers["set-cookie"] ?? [])];
   assert.ok(cookie);
 
   const restartedApp = createApp();
@@ -351,6 +382,7 @@ test("sessions persist across app restarts and IP changes", async () => {
 test("imports suppliers, products and stores from Excel", async () => {
   const app = createApp();
   const agent = request.agent(app);
+  await enableCsrf(agent);
 
   await agent.post("/api/auth/login").send({ username: "admin", password: "secret" }).expect(200);
 

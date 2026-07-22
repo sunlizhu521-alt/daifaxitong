@@ -260,15 +260,45 @@ function notifyResult(variant: "success" | "error", message: string) {
   window.dispatchEvent(new CustomEvent("app:notification", { detail: { variant, message } }));
 }
 
+function getCookie(name: string) {
+  return document.cookie
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${name}=`))
+    ?.slice(name.length + 1);
+}
+
+function isUnsafeMethod(method?: string) {
+  const normalized = (method || "GET").toUpperCase();
+  return !["GET", "HEAD", "OPTIONS"].includes(normalized);
+}
+
+async function ensureCsrfToken() {
+  let token = getCookie("csrf_token");
+  if (!token) {
+    await fetch("/api/auth/me", { credentials: "include" }).catch(() => undefined);
+    token = getCookie("csrf_token");
+  }
+  return token ? decodeURIComponent(token) : "";
+}
+
 export async function api<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const { notify, ...requestOptions } = options;
   const shouldNotify = notify === true;
   let response: Response;
   try {
+    const headers = new Headers(requestOptions.headers);
+    if (!(requestOptions.body instanceof FormData) && !headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
+    if (isUnsafeMethod(requestOptions.method)) {
+      const csrfToken = await ensureCsrfToken();
+      if (csrfToken) headers.set("x-csrf-token", csrfToken);
+    }
     response = await fetch(`/api${path}`, {
+      ...requestOptions,
       credentials: "include",
-      headers: requestOptions.body instanceof FormData ? undefined : { "Content-Type": "application/json" },
-      ...requestOptions
+      headers
     });
   } catch (error) {
     if (shouldNotify) notifyResult("error", "请求失败，请检查网络后重试");
