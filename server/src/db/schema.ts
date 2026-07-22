@@ -7,6 +7,13 @@ CREATE TABLE IF NOT EXISTS login_attempts (
   lastAttempt INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS api_rate (
+  ip TEXT NOT NULL,
+  windowStart INTEGER NOT NULL,
+  count INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (ip, windowStart)
+);
+
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   username TEXT NOT NULL UNIQUE,

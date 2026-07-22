@@ -4,6 +4,7 @@ import cors from "cors";
 import compression from "compression";
 import fs from "node:fs";
 import path from "node:path";
+import { apiRateLimit } from "./auth/apiRateLimit.js";
 import { config } from "./config.js";
 import { apiRouter } from "./routes/index.js";
 import { requireAuth } from "./routes/auth.js";
@@ -37,6 +38,7 @@ export function createApp() {
     res.setHeader("Cache-Control", "no-store");
     next();
   });
+  app.use("/api", apiRateLimit);
   app.use(express.json({ limit: "2mb" }));
   app.use(
     session({
