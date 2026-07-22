@@ -1,6 +1,12 @@
 export const schema = `
 PRAGMA foreign_keys = ON;
 
+CREATE TABLE IF NOT EXISTS login_attempts (
+  identifier TEXT PRIMARY KEY,
+  count INTEGER NOT NULL DEFAULT 0,
+  lastAttempt INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   username TEXT NOT NULL UNIQUE,
