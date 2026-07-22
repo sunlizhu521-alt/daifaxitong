@@ -2,6 +2,7 @@ import express from "express";
 import session from "express-session";
 import cors from "cors";
 import compression from "compression";
+import helmet from "helmet";
 import fs from "node:fs";
 import path from "node:path";
 import { apiRateLimit } from "./auth/apiRateLimit.js";
@@ -15,12 +16,9 @@ export function createApp() {
 
   const app = express();
   app.disable("x-powered-by");
+  app.use(helmet());
   app.set("trust proxy", config.trustProxy);
   app.use((_req, res, next) => {
-    res.setHeader("X-Content-Type-Options", "nosniff");
-    res.setHeader("X-Frame-Options", "DENY");
-    res.setHeader("Referrer-Policy", "no-referrer");
-    res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
     res.setHeader(
       "Content-Security-Policy",
       "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
