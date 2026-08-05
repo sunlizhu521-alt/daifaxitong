@@ -22,6 +22,12 @@ function currentStatusText(order: OrderListRow) {
   return order.returnStatus || statusText[order.status] || order.status;
 }
 
+function repairExchangeText(order: OrderListRow) {
+  const count = Number(order.repairExchangeCount ?? 0);
+  if (count <= 0) return "无";
+  return order.repairExchangeStatus ? `有（${order.repairExchangeStatus}）` : "有";
+}
+
 function formatCreatedAt(value?: string) {
   if (!value) return "-";
   return value.slice(0, 19).replace("T", " ");
@@ -364,6 +370,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
               <th>采购订单号填写人</th>
               <th>采购订单号</th>
               <th>状态</th>
+              {orderType === "dropship" ? <th>是否有维修换货记录</th> : null}
               <th>备注</th>
               <th>供应商备注</th>
               {orderType === "accessory" ? <th>客服操作</th> : null}
@@ -412,6 +419,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
                 <td>{order.purchaseOrderUser || "-"}</td>
                 <td>{order.purchaseOrderNo || "-"}</td>
                 <td><span className={`status ${order.status}`}>{currentStatusText(order)}</span></td>
+                {orderType === "dropship" ? <td>{repairExchangeText(order)}</td> : null}
                 <td>{mergeNotes(order)}</td>
                 <td>{order.supplierNote || "-"}</td>
                 {orderType === "accessory" ? (

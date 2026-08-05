@@ -79,6 +79,8 @@ export type OrderListRow = {
   returnCarrier?: string | null;
   returnTrackingNo?: string | null;
   returnLogisticsStatus?: string | null;
+  repairExchangeCount?: number | null;
+  repairExchangeStatus?: string | null;
   createdAt: string;
 };
 

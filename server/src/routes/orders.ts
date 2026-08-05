@@ -249,6 +249,18 @@ ordersRouter.get("/", async (req, res) => {
         latest.note AS shipmentNote,
         latestReturn.status AS returnStatus, latestReturn.action AS returnAction, latestReturn.reason AS returnReason,
         latestReturn.returnCarrier AS returnCarrier, latestReturn.trackingNo AS returnTrackingNo,
+        (SELECT COUNT(*)
+         FROM repair_exchanges repair
+         WHERE repair.storeOrderNo = o.orderNo
+           AND (COALESCE(repair.storeName, '') = '' OR COALESCE(o.storeName, '') = '' OR repair.storeName = o.storeName)
+        ) AS repairExchangeCount,
+        (SELECT repair.status
+         FROM repair_exchanges repair
+         WHERE repair.storeOrderNo = o.orderNo
+           AND (COALESCE(repair.storeName, '') = '' OR COALESCE(o.storeName, '') = '' OR repair.storeName = o.storeName)
+         ORDER BY repair.id DESC
+         LIMIT 1
+        ) AS repairExchangeStatus,
         COALESCE(shipSupplier.shortName, shipSupplier.name, orderSupplier.shortName, orderSupplier.name) AS supplierName,
         COALESCE(orderSupplier.shortName, orderSupplier.name) AS registrationSupplierName
        FROM orders o
