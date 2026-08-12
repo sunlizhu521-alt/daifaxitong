@@ -38,6 +38,7 @@ type OrderDetail = OrderListRow & {
     productId?: number | null;
     productName: string;
     productSku: string;
+    vehicleType?: string;
     quantity: number;
     unitCost?: number;
     unitSalePrice?: number;
@@ -257,6 +258,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
           productId: item.productId ?? null,
           productName: item.productName,
           productSku: item.productSku,
+          vehicleType: item.vehicleType ?? "",
           quantity: item.quantity,
           unitCost: item.unitCost ?? 0,
           unitSalePrice: item.unitSalePrice ?? 0
@@ -357,6 +359,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
               <th>商品</th>
               <th>系列</th>
               <th>SKU</th>
+              {orderType === "dropship" ? <th>整车/车架</th> : null}
               {orderType === "accessory" ? <th>更换配件</th> : null}
               {orderType !== "accessory" ? <th>数量</th> : null}
               <th>发货时间</th>
@@ -400,6 +403,7 @@ function SummaryPage({ title, description, panelTitle, editTitle, orderType, que
                 <td>{order.productName || "-"}</td>
                 <td>{order.productSeries || "-"}</td>
                 <td>{order.productSku || "-"}</td>
+                {orderType === "dropship" ? <td>{order.vehicleType || "-"}</td> : null}
                 {orderType === "accessory" ? (
                   <td>
                     <button type="button" className="primary-button" onClick={() => setAccessoryEditing(order)}>

@@ -16,6 +16,7 @@ const orderItemSchema = z.object({
   productId: optionalId,
   productName: z.string().trim().min(1, "商品名称不能为空"),
   productSku: z.string().trim().min(1, "SKU/规格不能为空"),
+  vehicleType: z.union([z.enum(["整车", "车架"]), z.literal("")]).optional().default(""),
   quantity: z.coerce.number().int().positive("数量必须大于 0"),
   unitCost: z.coerce.number().min(0).default(0),
   unitSalePrice: z.coerce.number().min(0).default(0)
@@ -35,6 +36,18 @@ const orderSchema = z.object({
   status: z.enum(["pending", "filled", "purchased", "shipped", "exception", "cancelled", "customer_cancelled"]).default("pending"),
   note: z.string().optional().default(""),
   items: z.array(orderItemSchema).min(1, "至少需要一个商品明细")
+});
+
+const createOrderSchema = orderSchema.superRefine((data, context) => {
+  if ((data.orderType ?? "dropship") !== "dropship") return;
+  data.items.forEach((item, index) => {
+    if (item.vehicleType) return;
+    context.addIssue({
+      code: "custom",
+      path: ["items", index, "vehicleType"],
+      message: "请选择整车或车架"
+    });
+  });
 });
 
 const shipSchema = z.object({
@@ -134,7 +147,7 @@ function saveOrder(data: z.infer<typeof orderSchema>, id?: number) {
       orderId = Number(result.lastInsertRowid);
     }
     const insertItem = db.prepare(
-      "INSERT INTO order_items (orderId, productId, productName, productSku, quantity, unitCost, unitSalePrice) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO order_items (orderId, productId, productName, productSku, vehicleType, quantity, unitCost, unitSalePrice) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     );
     for (const item of data.items) {
       insertItem.run(
@@ -142,6 +155,7 @@ function saveOrder(data: z.infer<typeof orderSchema>, id?: number) {
         item.productId ?? null,
         item.productName,
         item.productSku,
+        item.vehicleType,
         item.quantity,
         item.unitCost,
         item.unitSalePrice
@@ -243,6 +257,7 @@ ordersRouter.get("/", async (req, res) => {
         GROUP_CONCAT(DISTINCT p.series) AS productSeries,
         GROUP_CONCAT(DISTINCT p.materialCode) AS materialCode,
         GROUP_CONCAT(DISTINCT oi.productSku) AS productSku,
+        GROUP_CONCAT(DISTINCT NULLIF(oi.vehicleType, '')) AS vehicleType,
         GROUP_CONCAT(DISTINCT p.supplierModel) AS supplierModel,
         COALESCE((SELECT st.shortName FROM stores st WHERE st.name = o.storeName ORDER BY st.id DESC LIMIT 1), o.storeName) AS storeShortName,
         latest.carrierId AS carrierId, latest.carrier AS carrier, latest.trackingNo AS trackingNo, latest.shippedAt AS shippedAt,
@@ -340,6 +355,7 @@ ordersRouter.get("/template", async (_req, res) => {
       收货地址: "上海市浦东新区示例路 1 号",
       商品名称: "示例商品",
       SKU规格: "默认规格",
+      "整车/车架": "整车",
       数量: 1,
       备注: ""
     }
@@ -359,7 +375,7 @@ ordersRouter.get("/export", async (req, res) => {
       `SELECT o.orderNo AS 订单号, o.storeName AS 店铺, COALESCE(orderSupplier.shortName, orderSupplier.name) AS 供应商, o.registrarName AS 登记人,
         o.purchaseOrderNo AS 采购订单号, o.purchaseOrderUser AS 采购订单号填写人,
         o.customerName AS 客户姓名, o.customerPhone AS 客户电话, o.address AS 收货地址,
-        o.status AS 订单状态, oi.productName AS 商品名称, oi.productSku AS SKU规格, oi.quantity AS 数量,
+        o.status AS 订单状态, oi.productName AS 商品名称, oi.productSku AS SKU规格, oi.vehicleType AS "整车/车架", oi.quantity AS 数量,
         sh.carrier AS 快递公司, sh.trackingNo AS 发货单号, sh.shippedAt AS 发货时间, o.note AS 备注
        FROM orders o
        LEFT JOIN order_items oi ON oi.orderId = o.id
@@ -428,6 +444,7 @@ ordersRouter.get("/summary-export", async (req, res) => {
         GROUP_CONCAT(DISTINCT oi.productName) AS productName,
         GROUP_CONCAT(DISTINCT p.series) AS productSeries,
         GROUP_CONCAT(DISTINCT oi.productSku) AS productSku,
+        GROUP_CONCAT(DISTINCT NULLIF(oi.vehicleType, '')) AS vehicleType,
         COALESCE((SELECT st.shortName FROM stores st WHERE st.name = o.storeName ORDER BY st.id DESC LIMIT 1), o.storeName) AS storeShortName,
         latest.carrier AS carrier, latest.trackingNo AS trackingNo, latest.shippedAt AS shippedAt,
         latest.note AS shipmentNote,
@@ -488,6 +505,7 @@ ordersRouter.get("/summary-export", async (req, res) => {
         商品: row.productName ?? "",
         系列: row.productSeries ?? "",
         SKU: row.productSku ?? "",
+        "整车/车架": row.vehicleType ?? "",
         数量: row.totalQuantity ?? 0,
         发货时间: row.shippedAt ?? "",
         快递公司: row.carrier ?? "",
@@ -532,6 +550,7 @@ ordersRouter.get("/shipping-export", async (req, res) => {
       `SELECT COALESCE(shipSupplier.shortName, shipSupplier.name, orderSupplier.shortName, orderSupplier.name) AS 供应商,
         o.storeName AS 店铺, o.orderNo AS 订单编号, o.customerName AS 客户姓名, o.customerPhone AS 电话,
         o.address AS 地址, GROUP_CONCAT(DISTINCT p.series) AS 系列, GROUP_CONCAT(DISTINCT oi.productSku) AS SKU,
+        GROUP_CONCAT(DISTINCT NULLIF(oi.vehicleType, '')) AS "整车/车架",
         GROUP_CONCAT(DISTINCT oi.productName) AS 名称, GROUP_CONCAT(DISTINCT p.supplierModel) AS 供应商型号,
         SUM(oi.quantity) AS 数量,
         COALESCE(latestReturn.status, CASE o.status
@@ -580,7 +599,7 @@ ordersRouter.get("/:id", (req, res) => {
 });
 
 ordersRouter.post("/", (req, res) => {
-  const parsed = orderSchema.safeParse({ ...req.body, registrarName: req.body?.registrarName || req.session.user?.username || "" });
+  const parsed = createOrderSchema.safeParse({ ...req.body, registrarName: req.body?.registrarName || req.session.user?.username || "" });
   if (!parsed.success) {
     res.status(400).json({ message: parsed.error.issues[0]?.message ?? "参数错误" });
     return;
@@ -785,8 +804,8 @@ ordersRouter.patch("/:id/shipping-edit", (req, res) => {
     db.prepare("UPDATE orders SET supplierId = ?, note = ?, updatedAt = ? WHERE id = ?").run(supplierId, parsed.data.note, nowIso(), orderId);
     db.prepare("DELETE FROM order_items WHERE orderId = ?").run(orderId);
     db.prepare(
-      "INSERT INTO order_items (orderId, productId, productName, productSku, quantity, unitCost, unitSalePrice) VALUES (?, ?, ?, ?, ?, ?, ?)"
-    ).run(orderId, product?.id ?? parsed.data.productId ?? null, productName, productSku, parsed.data.quantity, product?.costPrice ?? 0, product?.salePrice ?? 0);
+      "INSERT INTO order_items (orderId, productId, productName, productSku, vehicleType, quantity, unitCost, unitSalePrice) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+    ).run(orderId, product?.id ?? parsed.data.productId ?? null, productName, productSku, "", parsed.data.quantity, product?.costPrice ?? 0, product?.salePrice ?? 0);
     logOrderEvent(
       orderId,
       "发货安排修改",
@@ -894,6 +913,7 @@ ordersRouter.post("/import", upload.single("file"), async (req, res) => {
   const parsedOrders = rows.map((row, index) => {
     const productName = String(row["商品名称"] ?? "").trim();
     const productSku = String(row["SKU规格"] ?? row["SKU"] ?? "").trim();
+    const vehicleType = String(row["整车/车架"] ?? row["商品类型"] ?? "").trim();
     const supplierName = String(row["供应商"] ?? row["供应商名称"] ?? "").trim();
     const supplier = supplierName
       ? (db.prepare("SELECT id FROM suppliers WHERE name = ? OR shortName = ?").get(supplierName, supplierName) as { id: number } | undefined)
@@ -917,13 +937,14 @@ ordersRouter.post("/import", upload.single("file"), async (req, res) => {
           productId: product?.id,
           productName,
           productSku,
+          vehicleType,
           quantity: Number(row["数量"] ?? 0),
           unitCost: product?.costPrice ?? 0,
           unitSalePrice: product?.salePrice ?? 0
         }
       ]
     };
-    const parsed = orderSchema.safeParse(payload);
+    const parsed = createOrderSchema.safeParse(payload);
     if (!parsed.success) {
       errors.push({ row: index + 2, message: parsed.error.issues[0]?.message ?? "参数错误" });
       return null;

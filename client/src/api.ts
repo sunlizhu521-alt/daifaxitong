@@ -66,6 +66,7 @@ export type OrderListRow = {
   productName?: string | null;
   productSeries?: string | null;
   productSku?: string | null;
+  vehicleType?: string | null;
   supplierModel?: string | null;
   carrierId?: number | null;
   carrier?: string | null;

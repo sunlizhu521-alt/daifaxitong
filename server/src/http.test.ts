@@ -77,6 +77,17 @@ test("auth, supplier, product, order and shipment flow", async () => {
     .send({ materialCode: "MAT001", productLine: "家居", series: "基础", ssku: "默认规格", name: "示例商品", supplierModel: "GYS-001", supplierId: supplier.body.id })
     .expect(201);
 
+  const missingVehicleType = await agent
+    .post("/api/orders")
+    .send({
+      orderNo: "DF-MISSING-TYPE",
+      customerName: "未选类型",
+      address: "上海市",
+      items: [{ productName: product.body.name, productSku: product.body.sku, quantity: 1 }]
+    })
+    .expect(400);
+  assert.equal(missingVehicleType.body.message, "请选择整车或车架");
+
   const order = await agent
     .post("/api/orders")
     .send({
@@ -92,6 +103,7 @@ test("auth, supplier, product, order and shipment flow", async () => {
           productId: product.body.id,
           productName: product.body.name,
           productSku: product.body.sku,
+          vehicleType: "整车",
           quantity: 2,
           unitCost: 10,
           unitSalePrice: 18
@@ -112,6 +124,7 @@ test("auth, supplier, product, order and shipment flow", async () => {
         productId: product.body.id,
         productName: product.body.name,
         productSku: product.body.sku,
+        vehicleType: "车架",
         quantity: 1,
         unitCost: 10,
         unitSalePrice: 18
@@ -162,6 +175,7 @@ test("auth, supplier, product, order and shipment flow", async () => {
   assert.equal(detail.body.supplierId, supplier.body.id);
   assert.equal(detail.body.storeName, "测试店铺");
   assert.equal(detail.body.registrarName, "admin");
+  assert.equal(detail.body.items[0].vehicleType, "整车");
   assert.equal(detail.body.shipments[0].carrier, "顺丰速运");
   assert.equal(detail.body.shipments[0].carrierId, carrier.body.id);
   assert.equal(detail.body.shipments[0].trackingNo, "SF123");
@@ -328,6 +342,7 @@ test("registered users must be authorized before accessing pages", async () => {
           productId: product.body.id,
           productName: product.body.name,
           productSku: product.body.sku,
+          vehicleType: "整车",
           quantity: 1,
           unitCost: 8,
           unitSalePrice: 16

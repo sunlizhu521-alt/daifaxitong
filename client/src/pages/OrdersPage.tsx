@@ -254,6 +254,7 @@ export function OrderEntryPage({
             productId: product?.id ?? null,
             productName: product?.name ?? manualProductName,
             productSku: product?.ssku ?? product?.sku ?? manualProductSku,
+            vehicleType: String(form.get("vehicleType") ?? ""),
             quantity: form.get("quantity"),
             unitCost: product?.costPrice ?? 0,
             unitSalePrice: product?.salePrice ?? 0
@@ -354,7 +355,7 @@ export function OrderEntryPage({
             <div className="order-detail-grid order-form-section section-detail">
               <div className="order-section-title">
                 <strong>订单与商品</strong>
-                <span>{itemInputMode === "manual" ? "店铺、订单、供应商、品号、商品名称均为必填，商品名称里 * 后面是数值" : "店铺、订单、供应商、SKU、数量均为必填"}</span>
+                <span>{itemInputMode === "manual" ? "店铺、订单、供应商、品号、商品名称均为必填，商品名称里 * 后面是数值" : "店铺、订单、供应商、SKU、整车/车架、数量均为必填"}</span>
               </div>
               <label className="field-block">
                 <span>选择店铺</span>
@@ -406,6 +407,16 @@ export function OrderEntryPage({
                   </select>
                 </label>
               )}
+              {orderType === "dropship" ? (
+                <label className="field-block">
+                  <span>整车/车架</span>
+                  <select name="vehicleType" defaultValue="" required>
+                    <option value="">请选择</option>
+                    <option value="整车">整车</option>
+                    <option value="车架">车架</option>
+                  </select>
+                </label>
+              ) : null}
               {itemInputMode === "manual" ? (
                 <input type="hidden" name="quantity" value="1" />
               ) : (

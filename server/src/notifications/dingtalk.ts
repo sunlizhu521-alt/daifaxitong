@@ -80,6 +80,7 @@ function buildNotification(input: NotifyInput) {
     { label: "地址", value: order?.address },
     { label: "商品", value: item?.productName },
     { label: "SKU/品号", value: item?.productSku },
+    { label: "整车/车架", value: item?.vehicleType },
     { label: "数量", value: item?.quantity },
     { label: "快递公司", value: shipment?.carrier },
     { label: "发货单号", value: shipment?.trackingNo },

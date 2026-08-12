@@ -56,6 +56,7 @@ function migrateDb(database: Database.Database) {
   ensureColumn(database, "orders", "storeName", "TEXT");
   ensureColumn(database, "orders", "registrarName", "TEXT");
   ensureColumn(database, "orders", "supplierNote", "TEXT");
+  ensureColumn(database, "order_items", "vehicleType", "TEXT NOT NULL DEFAULT ''");
   allowDuplicateOrderNo(database);
   ensureColumn(database, "shipments", "carrierId", "INTEGER");
   ensureColumn(database, "carriers", "note", "TEXT");

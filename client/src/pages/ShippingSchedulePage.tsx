@@ -80,6 +80,7 @@ export function ShippingSchedulePage() {
         order.address,
         order.productSeries,
         order.productSku,
+        order.vehicleType,
         order.productName,
         order.supplierModel,
         order.carrier,
@@ -244,6 +245,7 @@ export function ShippingSchedulePage() {
               <th>电话</th>
               <th>收货地址</th>
               <th>SKU</th>
+              <th>整车/车架</th>
               <th>名称</th>
               <th>供应商型号</th>
               <th>数量</th>
@@ -283,6 +285,7 @@ export function ShippingSchedulePage() {
                 <td>{order.customerPhone ?? "-"}</td>
                 <td>{order.address}</td>
                 <td className="shipping-nowrap">{order.productSku || "-"}</td>
+                <td className="shipping-nowrap">{order.vehicleType || "-"}</td>
                 <td className="shipping-product-name">{order.productName || "-"}</td>
                 <td>{order.supplierModel || "-"}</td>
                 <td>{order.totalQuantity ?? 0}</td>

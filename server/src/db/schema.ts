@@ -123,6 +123,7 @@ CREATE TABLE IF NOT EXISTS order_items (
   productId INTEGER,
   productName TEXT NOT NULL,
   productSku TEXT NOT NULL,
+  vehicleType TEXT NOT NULL DEFAULT '',
   quantity INTEGER NOT NULL,
   unitCost REAL NOT NULL DEFAULT 0,
   unitSalePrice REAL NOT NULL DEFAULT 0,
