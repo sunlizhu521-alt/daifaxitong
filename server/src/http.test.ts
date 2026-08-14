@@ -364,6 +364,31 @@ test("registered users must be authorized before accessing pages", async () => {
   await admin.delete(`/api/orders/${order.body.id}`).expect(200);
 });
 
+test("users with repair registration access can delete repair records", async () => {
+  const app = createApp();
+  const admin = request.agent(app);
+  const member = request.agent(app);
+  await enableCsrf(admin);
+  await enableCsrf(member);
+
+  await admin.post("/api/auth/login").send({ username: "admin", password: "secret" }).expect(200);
+  await admin.post("/api/auth/users").send({ username: "repairMember", password: "secret123456" }).expect(201);
+  const users = await admin.get("/api/auth/users").expect(200);
+  const target = users.body.users.find((user: { username: string }) => user.username === "repairMember");
+  assert.ok(target);
+  await admin.patch(`/api/auth/users/${target.id}/access`).send({ pageAccess: ["repairRegistration"] }).expect(200);
+
+  await member.post("/api/auth/login").send({ username: "repairMember", password: "secret123456" }).expect(200);
+  const repair = await member
+    .post("/api/repairs")
+    .send({ storeOrderNo: "REPAIR-DELETE-001", storeName: "测试店铺", sku: "TEST-SKU", name: "测试商品" })
+    .expect(201);
+
+  await member.delete(`/api/repairs/${repair.body.id}`).expect(200);
+  const rows = await member.get("/api/repairs").expect(200);
+  assert.equal(rows.body.some((row: { id: number }) => row.id === repair.body.id), false);
+});
+
 test("sessions persist across app restarts and IP changes", async () => {
   const app = createApp();
   const csrf = await csrfHeaders(app);

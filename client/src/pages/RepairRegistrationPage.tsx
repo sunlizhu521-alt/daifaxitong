@@ -158,7 +158,7 @@ export function RepairRegistrationPage() {
               <th>快递单号</th>
               <th>备注</th>
               <th>状态</th>
-              {isAdmin ? <th>操作</th> : null}
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -177,20 +177,31 @@ export function RepairRegistrationPage() {
                 <td>{row.trackingNo || "-"}</td>
                 <td>{row.note || "-"}</td>
                 <td><span className={`status ${row.isCompleted ? "shipped" : "pending"}`}>{row.status}</span></td>
-                {isAdmin ? (
-                  <td className="row-actions">
-                    <button type="button" onClick={() => setEditing(row)}>编辑</button>
-                    {row.isCompleted ? null : (
-                      <button type="button" className="primary-button" onClick={() => completeRepair.mutate(row.id)}>顾客确定没问题</button>
-                    )}
-                    <button type="button" onClick={() => { if (window.confirm("确定删除？")) deleteRepair.mutate(row.id); }}>删除</button>
-                  </td>
-                ) : null}
+                <td className="row-actions">
+                  {isAdmin ? (
+                    <>
+                      <button type="button" onClick={() => setEditing(row)}>编辑</button>
+                      {row.isCompleted ? null : (
+                        <button type="button" className="primary-button" onClick={() => completeRepair.mutate(row.id)}>顾客确定没问题</button>
+                      )}
+                    </>
+                  ) : null}
+                  <button
+                    type="button"
+                    disabled={deleteRepair.isPending}
+                    onClick={() => {
+                      if (window.confirm(`确定删除订单“${row.storeOrderNo}”的维修换货登记吗？删除后无法恢复。`)) {
+                        deleteRepair.mutate(row.id);
+                      }
+                    }}
+                  >删除</button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
         {completeRepair.error ? <div className="error">{completeRepair.error.message}</div> : null}
+        {deleteRepair.error ? <div className="error">{deleteRepair.error.message}</div> : null}
       </Panel>
       {editing ? (
         <div className="modal-backdrop">

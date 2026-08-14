@@ -3,7 +3,6 @@ import { z } from "zod";
 import { config } from "../config.js";
 import { getDb, nowIso } from "../db/index.js";
 import { notifyDingtalk, notifyFeishu } from "../notifications/dingtalk.js";
-import { ROLE_ADMIN } from "../permissions.js";
 
 export const repairsRouter = Router();
 
@@ -185,10 +184,6 @@ repairsRouter.patch("/:id", (req, res) => {
 });
 
 repairsRouter.delete("/:id", (req, res) => {
-  if (req.session.user?.role !== ROLE_ADMIN) {
-    res.status(403).json({ message: "只有管理员可以删除记录" });
-    return;
-  }
   const id = Number(req.params.id);
   const result = getDb().prepare("DELETE FROM repair_exchanges WHERE id = ?").run(id);
   if (result.changes === 0) {
