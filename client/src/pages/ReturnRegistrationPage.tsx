@@ -31,10 +31,11 @@ export function ReturnRegistrationPage() {
   const [appliedStartDate, setAppliedStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [appliedEndDate, setAppliedEndDate] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
   const [returnActions, setReturnActions] = useState<Record<number, string>>({});
   const [previewAttachment, setPreviewAttachment] = useState<{ url: string; title: string } | null>(null);
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me") });
-  const { data: rows = [] } = useQuery({
+  const { data: rows = [], isFetching: isLoadingRows } = useQuery({
     queryKey: ["return-orders", appliedKeyword, appliedStoreName, appliedSupplierId, appliedSeries, appliedSku, appliedStartDate, appliedEndDate],
     queryFn: () =>
       api<ReturnOrderRow[]>(
@@ -86,6 +87,59 @@ export function ReturnRegistrationPage() {
     setAppliedSku(sku);
     setAppliedStartDate(startDate);
     setAppliedEndDate(endDate);
+  }
+
+  async function exportRecords() {
+    if (rows.length === 0) {
+      window.alert("当前没有可导出的数据");
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const XLSX = await import("xlsx");
+      const exportRows = rows.map((row) => ({
+        分类: orderTypeText(row),
+        店铺简称: row.storeShortName || row.storeName || "",
+        店铺订单编号: row.orderNo,
+        客户: row.customerName,
+        电话: row.customerPhone || "",
+        地址: row.address,
+        供应商: row.supplierName || "",
+        系列: row.productSeries || "",
+        SKU: row.productSku || "",
+        型号: row.supplierModel || row.model || row.productName || row.productSku || "",
+        数量: row.totalQuantity ?? "",
+        状态: registrationStatus(row),
+        发货快递公司: row.shipmentCarrier || "",
+        发货单号: row.shipmentTrackingNo || "",
+        快递信息: logisticsText(row) === "-" ? "" : logisticsText(row),
+        退货操作: row.action === "寄回" ? "自行寄回" : row.action || "",
+        退货理由: row.reason || "",
+        备注: row.note || "",
+        退回快递公司: row.returnCarrier || "",
+        退回单号: row.returnTrackingNo || "",
+        附件数量: row.attachments.length,
+        附件链接: row.attachments.map((url) => new URL(url, window.location.origin).toString()).join("\n"),
+        退货登记时间: row.returnCreatedAt || ""
+      }));
+      const worksheet = XLSX.utils.json_to_sheet(exportRows);
+      worksheet["!cols"] = [
+        { wch: 8 }, { wch: 14 }, { wch: 22 }, { wch: 12 }, { wch: 16 }, { wch: 36 },
+        { wch: 18 }, { wch: 14 }, { wch: 18 }, { wch: 20 }, { wch: 8 }, { wch: 16 },
+        { wch: 16 }, { wch: 22 }, { wch: 14 }, { wch: 18 }, { wch: 14 }, { wch: 24 },
+        { wch: 18 }, { wch: 22 }, { wch: 10 }, { wch: 36 }, { wch: 22 }
+      ];
+      worksheet["!autofilter"] = { ref: worksheet["!ref"] || "A1:W1" };
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "退货登记");
+      const now = new Date();
+      const dateText = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+      XLSX.writeFile(workbook, `退货登记导出-${dateText}.xlsx`);
+    } catch (error) {
+      window.alert(error instanceof Error ? `导出失败：${error.message}` : "导出失败");
+    } finally {
+      setIsExporting(false);
+    }
   }
 
   function submitReturn(row: ReturnOrderRow, event: FormEvent<HTMLFormElement>) {
@@ -211,6 +265,9 @@ export function ReturnRegistrationPage() {
             <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
           </label>
           <button type="button" className="primary-button" onClick={searchRecords}>搜索</button>
+          <button type="button" className="primary-button" onClick={exportRecords} disabled={isExporting || isLoadingRows || rows.length === 0}>
+            {isLoadingRows ? "正在加载..." : isExporting ? "正在导出..." : "导出 Excel"}
+          </button>
         </div>
         <table className="nowrap-table">
           <thead>
